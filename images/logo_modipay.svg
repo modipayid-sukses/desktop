@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 180" width="500" height="180">
+  <text
+    x="250"
+    y="105"
+    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="96"
+    font-weight="200"
+    letter-spacing="-2"
+    fill="#FFFFFF"
+    text-anchor="middle"
+    dominant-baseline="auto"
+  >modipay</text>
+  <text
+    x="250"
+    y="145"
+    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="13"
+    font-weight="300"
+    letter-spacing="5"
+    fill="#CCDDCC"
+    text-anchor="middle"
+    dominant-baseline="auto"
+  >SATU PINTU SEMUA PEMBAYARAN</text>
+</svg>

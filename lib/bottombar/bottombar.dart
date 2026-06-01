@@ -1,0 +1,269 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:gobank/login/login.dart';
+import 'package:gobank/home/home.dart';
+import 'package:gobank/home/topup/topup_channel_screen.dart';
+import 'package:gobank/providers/auth_provider.dart';
+import 'package:gobank/utils/colornotifire.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../home/seealltransaction.dart';
+import '../promo/promo_screen.dart';
+import '../profile/profile.dart';
+
+class Bottombar extends StatefulWidget {
+  const Bottombar({super.key});
+
+  @override
+  State<Bottombar> createState() => _BottombarState();
+}
+
+class _BottombarState extends State<Bottombar> {
+  late ColorNotifire notifire;
+  int currentTab = 0;
+
+  final List<Widget> screens = [
+    const Home(),
+    const Seealltransaction(),
+    const PromoScreen(),
+    const Profile(),
+  ];
+
+  final PageStorageBucket bucket = PageStorageBucket();
+  Widget currentScreen = const Home();
+
+  getdarkmodepreviousstate() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool? previusstate = prefs.getBool("setIsDark");
+    if (previusstate == null) {
+      notifire.setIsDark = false;
+    } else {
+      notifire.setIsDark = previusstate;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  static const _activeColor = Color(0xFF0D47A1);
+  static const _inactiveColor = Color(0xFFB0BEC5);
+
+  @override
+  Widget build(BuildContext context) {
+    notifire = Provider.of<ColorNotifire>(context, listen: true);
+    final auth = Provider.of<AuthProvider>(context);
+
+    if (!auth.isLoggedIn) {
+      final wasKicked = auth.kickedByOtherDevice;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        if (wasKicked) {
+          auth.consumeKickedByOtherDevice();
+          await _showDeviceMismatchDialog(context);
+          if (!mounted) return;
+        }
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+          (route) => false,
+        );
+      });
+      return const SizedBox.shrink();
+    }
+
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: notifire.getprimerycolor,
+        body: PageStorage(bucket: bucket, child: currentScreen),
+        resizeToAvoidBottomInset: false,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        floatingActionButton: _buildTopupFab(),
+        bottomNavigationBar: _buildBottomNav(context),
+      ),
+    );
+  }
+
+  void _onNavTap(int index) {
+    if (currentTab == index) return;
+    HapticFeedback.lightImpact();
+    setState(() {
+      currentTab = index;
+      currentScreen = screens[index];
+    });
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required String asset,
+    required String label,
+  }) {
+    final isActive = currentTab == index;
+    return GestureDetector(
+      onTap: () => _onNavTap(index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        height: 52,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              asset,
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(
+                isActive ? _activeColor : _inactiveColor,
+                BlendMode.srcIn,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? _activeColor : _inactiveColor,
+                fontSize: 10,
+                fontFamily: isActive ? 'Gilroy Bold' : 'Gilroy Medium',
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopupFab() {
+    return Container(
+      width: 62,
+      height: 62,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D47A1).withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: FloatingActionButton(
+        onPressed: () {
+          HapticFeedback.mediumImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TopupChannelScreen()),
+          );
+        },
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context) {
+    final safePadding = MediaQuery.of(context).padding.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(10, 8, 10, safePadding > 0 ? 8 : 12),
+      decoration: BoxDecoration(
+        color: notifire.getprimerycolor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildNavItem(
+                index: 0,
+                asset: 'images/home.svg',
+                label: 'Beranda',
+              ),
+            ),
+            Expanded(
+              child: _buildNavItem(
+                index: 1,
+                asset: 'images/history.svg',
+                label: 'Transaksi',
+              ),
+            ),
+            const SizedBox(width: 70),
+            Expanded(
+              child: _buildNavItem(
+                index: 2,
+                asset: 'images/promo.svg',
+                label: 'Promo',
+              ),
+            ),
+            Expanded(
+              child: _buildNavItem(
+                index: 3,
+                asset: 'images/profile.svg',
+                label: 'Profil',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDeviceMismatchDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.devices_other_rounded, color: Color(0xFFD32F2F)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Login dari Perangkat Lain',
+                style: TextStyle(
+                  fontFamily: 'Gilroy Bold',
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Akun ini sedang aktif di perangkat lain. Demi keamanan, sesi di perangkat ini telah diakhiri. Silakan login kembali jika ini bukan Anda.',
+          style: TextStyle(
+            fontFamily: 'Gilroy Medium',
+            fontSize: 13.5,
+            height: 1.45,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Mengerti',
+              style: TextStyle(fontFamily: 'Gilroy Bold'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

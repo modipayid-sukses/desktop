@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1032573032955",
+    "project_id": "modipay-ppob",
+    "storage_bucket": "modipay-ppob.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1032573032955:android:7f6f3bdb46dcb310ced35e",
+        "android_client_info": {
+          "package_name": "com.modipay.company"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3gJ22c8lmEIzNslutBMH1-TsMfNf4chA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
