@@ -357,7 +357,9 @@ class UniversalReceipt extends StatelessWidget {
       final totalAdmin = _sumDetail(detailList, 'admin');
       final totalTagihan = _toDouble(firstDetail['nilai_tagihan']) > 0
           ? _toDouble(firstDetail['nilai_tagihan'])
-          : amount;
+          : (_toDouble(joined['nominal']) > 0
+              ? _toDouble(joined['nominal'])
+              : amount);
       final denda = _toDouble(firstDetail['denda']) > 0
           ? _toDouble(firstDetail['denda'])
           : _toDouble(joined['denda']);

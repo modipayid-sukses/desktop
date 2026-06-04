@@ -2,6 +2,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get.dart';
+import 'package:gobank/home/notifications.dart';
+import 'package:gobank/utils/string.dart';
 
 import 'api_service.dart';
 
@@ -36,7 +39,12 @@ class NotificationService {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
 
-    await _localNotifications.initialize(initializationSettings);
+    await _localNotifications.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        _navigateToNotificationPage();
+      },
+    );
 
     const channel = AndroidNotificationChannel(
       'transactions',
@@ -74,11 +82,31 @@ class NotificationService {
       );
     });
 
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _navigateToNotificationPage();
+    });
+
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        _navigateToNotificationPage();
+      }
+    });
+
     _messaging.onTokenRefresh.listen((token) async {
       await syncTokenWithServer(token);
     });
 
     _initialized = true;
+  }
+
+  void _navigateToNotificationPage() {
+    try {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        Get.to(() => const Notificationindex(CustomStrings.notification));
+      });
+    } catch (e) {
+      debugPrint('Error navigating to notification page: $e');
+    }
   }
 
   Future<String?> getToken() async {

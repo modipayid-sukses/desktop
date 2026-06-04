@@ -171,7 +171,9 @@ class PlnPostpaidReceipt extends StatelessWidget {
     final totalAdminDetail = _sumDetail(detailList, 'admin');
     final totalTagihan = _toDouble(firstDetail['nilai_tagihan']) > 0
         ? _toDouble(firstDetail['nilai_tagihan'])
-        : _toDouble(joined['amount']);
+        : (_toDouble(joined['nominal']) > 0
+            ? _toDouble(joined['nominal'])
+            : _toDouble(joined['amount']));
     final denda = _toDouble(firstDetail['denda']) > 0
         ? _toDouble(firstDetail['denda'])
         : _toDouble(joined['denda']);

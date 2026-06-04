@@ -157,7 +157,11 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   // brand berdasarkan prefix MSISDN.
   bool get _isCellularCategory {
     final cat = widget.category.toString().toLowerCase();
-    return cat.contains('pulsa') || cat.contains('paket data') || cat.contains('paket tel');
+    return cat.contains('pulsa') ||
+        cat.contains('data') ||
+        cat.contains('paket tel') ||
+        cat.contains('sms') ||
+        cat.contains('aktif');
   }
   // Kategori postpaid yang inquiry SKU-nya disimpan di ppob_categories
   // (dipakai panel cek-tagihan generic: BPJS, Indihome, PDAM, dll).
@@ -887,8 +891,16 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       if (upperBrand.contains(upperKeyword)) {
         return brand;
       }
+    }
+    for (final b in _brands) {
+      final brand = b.toString();
+      final upperBrand = brand.toUpperCase();
       if (upperKeyword == 'TRI' &&
           (upperBrand.contains('THREE') || upperBrand == '3')) {
+        return brand;
+      }
+      if (upperKeyword == 'AXIS' &&
+          (upperBrand.contains('XL') || upperBrand == 'XL AXIATA')) {
         return brand;
       }
     }
