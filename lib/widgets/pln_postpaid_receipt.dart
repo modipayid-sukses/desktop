@@ -146,8 +146,18 @@ class PlnPostpaidReceipt extends StatelessWidget {
     final name = (candidateName != '-' && !_isLikelyProductName(candidateName))
         ? candidateName
         : '-';
-    final tarif = (joined['tarif'] ?? firstDetail['tarif'] ?? '-').toString();
-    final daya = (joined['daya'] ?? firstDetail['daya'] ?? '-').toString();
+    final rawTariffDaya = (joined['tariff_daya'] ?? firstDetail['tariff_daya'] ?? '').toString().trim();
+    String tarif = (joined['tarif'] ?? firstDetail['tarif'] ?? '-').toString();
+    String daya = (joined['daya'] ?? firstDetail['daya'] ?? '-').toString();
+    if ((tarif == '-' || tarif.isEmpty) && (daya == '-' || daya.isEmpty) && rawTariffDaya.isNotEmpty && rawTariffDaya != '-') {
+      final parts = rawTariffDaya.split('/');
+      if (parts.length >= 2) {
+        tarif = parts[0].trim();
+        daya = parts[1].trim();
+      } else {
+        tarif = rawTariffDaya;
+      }
+    }
     final meterAwal = (firstDetail['meter_awal'] ?? '').toString();
     final meterAkhir = (firstDetail['meter_akhir'] ?? '').toString();
     final standMeter = (meterAwal.isNotEmpty || meterAkhir.isNotEmpty)
