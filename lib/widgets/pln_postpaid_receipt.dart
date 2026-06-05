@@ -121,7 +121,7 @@ class PlnPostpaidReceipt extends StatelessWidget {
     final detailList = _asMapList(joined['detail'].toString() == '[]' ? null : joined['detail']);
     final firstDetail = detailList.isNotEmpty ? detailList.first : <String, dynamic>{};
 
-    final createdAt = DateTime.tryParse((data['created_at'] ?? '').toString()) ?? DateTime.now();
+    final createdAt = (DateTime.tryParse((data['created_at'] ?? '').toString()) ?? DateTime.now()).toLocal();
 
     final idpel = _pickFirstNonEmpty([
       joined['customer_no'],

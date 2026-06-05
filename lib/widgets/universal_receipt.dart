@@ -195,8 +195,8 @@ class UniversalReceipt extends StatelessWidget {
     };
 
     final createdAt =
-        DateTime.tryParse((data['created_at'] ?? '').toString()) ??
-            DateTime.now();
+        (DateTime.tryParse((data['created_at'] ?? '').toString()) ??
+            DateTime.now()).toLocal();
     final orderId =
         (data['order_id'] ?? data['id'] ?? '-').toString();
     final amount = _toDouble(data['amount']);

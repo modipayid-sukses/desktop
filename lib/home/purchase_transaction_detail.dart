@@ -92,7 +92,7 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
     final productName =
         data['name']?.toString() ?? data['product_name']?.toString() ?? '-';
     final createdAt = data['created_at'] != null
-        ? DateTime.tryParse(data['created_at'].toString()) ?? DateTime.now()
+        ? (DateTime.tryParse(data['created_at'].toString()) ?? DateTime.now()).toLocal()
         : DateTime.now();
 
     final currency =
@@ -199,7 +199,7 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
     final productname =
         data['name']?.toString() ?? data['product_name']?.toString() ?? '';
     final createdAt = data['created_at'] != null
-        ? DateTime.tryParse(data['created_at'].toString()) ?? DateTime.now()
+        ? (DateTime.tryParse(data['created_at'].toString()) ?? DateTime.now()).toLocal()
         : DateTime.now();
     final storeName = (_receiptSettings['storeName'] ?? '').trim();
     final storePhone = (_receiptSettings['phone'] ?? '').trim();

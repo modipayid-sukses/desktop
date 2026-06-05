@@ -685,7 +685,7 @@ class _TransactionReceiptState extends State<TransactionReceipt> {
     final currencyFormat = NumberFormat('#,###', 'id_ID');
     final headerDateFormat = DateFormat('d MMM yyyy • HH:mm', 'id_ID');
     final detailDateFormat = DateFormat('dd MMM yyyy, HH:mm:ss', 'id_ID');
-    final now = widget.transactionTime ?? DateTime.now();
+    final now = (widget.transactionTime ?? DateTime.now()).toLocal();
 
     const headerBlue = Color(0xFF3F75B7);
     const pageBg = Color(0xFFF5F5F7);
