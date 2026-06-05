@@ -952,11 +952,22 @@ class _QrisPaymentDialogState extends State<_QrisPaymentDialog> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade100),
                 ),
-                child: QrImageView(
-                  data: widget.qrisString,
-                  version: QrVersions.auto,
-                  size: 200,
-                  backgroundColor: Colors.white,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    QrImageView(
+                      data: widget.qrisString,
+                      version: QrVersions.auto,
+                      size: 200,
+                      backgroundColor: Colors.white,
+                    ),
+                    const SizedBox(height: 8),
+                    Image.asset(
+                      'images/nobu_logo.png',
+                      height: 80,
+                      fit: BoxFit.contain,
+                    ),
+                  ],
                 ),
               ),
             if (isExpired)
@@ -1308,6 +1319,12 @@ class _QrisReceiptScreenState extends State<_QrisReceiptScreen> {
                                 child: Column(
                                   children: [
                                     QrImageView(data: qrisString, version: QrVersions.auto, size: 180, backgroundColor: Colors.white),
+                                    const SizedBox(height: 8),
+                                    Image.asset(
+                                      'images/nobu_logo.png',
+                                      height: 35,
+                                      fit: BoxFit.contain,
+                                    ),
                                     const SizedBox(height: 12),
                                     Text('Scan QR untuk membayar', style: TextStyle(color: Colors.grey.shade500, fontFamily: 'Gilroy Medium', fontSize: 12)),
                                   ],

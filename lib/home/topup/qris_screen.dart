@@ -302,29 +302,25 @@ class _QrisScreenState extends State<QrisScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(color: Colors.grey[200]!),
                                   ),
-                                  child: SizedBox(
-                                    width: MediaQuery.of(context).size.width * 0.5,
-                                    height: MediaQuery.of(context).size.width * 0.5,
-                                    child: QrImageView(
-                                      data: widget.qrisString,
-                                      version: QrVersions.auto,
-                                      size: MediaQuery.of(context).size.width * 0.5,
-                                      backgroundColor: Colors.white,
-                                      eyeStyle: const QrEyeStyle(
-                                        eyeShape: QrEyeShape.square,
-                                        color: Color(0xff1565C0),
-                                      ),
-                                      dataModuleStyle: const QrDataModuleStyle(
-                                        dataModuleShape: QrDataModuleShape.square,
-                                        color: Color(0xFF1A1A2E),
-                                      ),
-                                      errorStateBuilder: (cxt, err) {
-                                        debugPrint('QR Error: $err');
-                                        return const Center(
-                                          child: Text('QR Error', style: TextStyle(color: Colors.red)),
-                                        );
-                                      },
+                                  child: QrImageView(
+                                    data: widget.qrisString,
+                                    version: QrVersions.auto,
+                                    size: MediaQuery.of(context).size.width * 0.5,
+                                    backgroundColor: Colors.white,
+                                    eyeStyle: const QrEyeStyle(
+                                      eyeShape: QrEyeShape.square,
+                                      color: Color(0xff1565C0),
                                     ),
+                                    dataModuleStyle: const QrDataModuleStyle(
+                                      dataModuleShape: QrDataModuleShape.square,
+                                      color: Color(0xFF1A1A2E),
+                                    ),
+                                    errorStateBuilder: (cxt, err) {
+                                      debugPrint('QR Error: $err');
+                                      return const Center(
+                                        child: Text('QR Error', style: TextStyle(color: Colors.red)),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),

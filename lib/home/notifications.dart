@@ -191,107 +191,116 @@ class _NotificationindexState extends State<Notificationindex> {
   void _showNotificationDetail(Map<String, dynamic> notification, Color color, String imagePath) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: notifire.getprimerycolor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.all(width / 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 50,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.45,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: notifire.getprimerycolor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              SizedBox(height: height / 40),
-              Row(
+              padding: EdgeInsets.all(width / 20),
+              child: ListView(
+                controller: scrollController,
+                shrinkWrap: true,
                 children: [
-                  Container(
-                    height: height / 15,
-                    width: width / 6,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color.withOpacity(0.15),
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(height / 70),
-                        child: Image.asset(imagePath, color: color),
+                  Center(
+                    child: Container(
+                      width: 50,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
-                  SizedBox(width: width / 30),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          notification['title'] ?? 'Notifikasi',
-                          style: TextStyle(
-                            color: notifire.getdarkscolor,
-                            fontFamily: 'Gilroy Bold',
-                            fontSize: height / 45,
+                  SizedBox(height: height / 40),
+                  Row(
+                    children: [
+                      Container(
+                        height: height / 15,
+                        width: width / 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color.withOpacity(0.15),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(height / 70),
+                            child: Image.asset(imagePath, color: color),
                           ),
                         ),
-                        SizedBox(height: height / 150),
-                        Text(
-                          _formatDate(notification['created_at']),
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontFamily: 'Gilroy Medium',
-                            fontSize: height / 60,
-                          ),
+                      ),
+                      SizedBox(width: width / 30),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              notification['title'] ?? 'Notifikasi',
+                              style: TextStyle(
+                                color: notifire.getdarkscolor,
+                                fontFamily: 'Gilroy Bold',
+                                fontSize: height / 45,
+                              ),
+                            ),
+                            SizedBox(height: height / 150),
+                            Text(
+                              _formatDate(notification['created_at']),
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontFamily: 'Gilroy Medium',
+                                fontSize: height / 60,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 30),
+                  Text(
+                    notification['message'] ?? '',
+                    style: TextStyle(
+                      color: notifire.getdarkscolor,
+                      fontFamily: 'Gilroy Medium',
+                      fontSize: height / 50,
+                      height: 1.4,
                     ),
                   ),
+                  SizedBox(height: height / 30),
+                  SizedBox(
+                    width: double.infinity,
+                    height: height / 16,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff6C5CE7),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Tutup',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Gilroy Bold',
+                          fontSize: height / 50,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: height / 50),
                 ],
               ),
-              const Divider(height: 30),
-              Text(
-                notification['message'] ?? '',
-                style: TextStyle(
-                  color: notifire.getdarkscolor,
-                  fontFamily: 'Gilroy Medium',
-                  fontSize: height / 50,
-                  height: 1.4,
-                ),
-              ),
-              SizedBox(height: height / 30),
-              SizedBox(
-                width: double.infinity,
-                height: height / 16,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff6C5CE7),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Tutup',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Gilroy Bold',
-                      fontSize: height / 50,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: height / 50),
-            ],
-          ),
+            );
+          },
         );
       },
     );

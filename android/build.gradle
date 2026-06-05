@@ -58,7 +58,14 @@ subprojects { subproject ->
                 if (currentNamespace == null || currentNamespace.toString().trim().isEmpty()) {
                     def manifestFile = subproject.file("src/main/AndroidManifest.xml")
                     if (manifestFile.exists()) {
-                        def manifest = new XmlSlurper(false, false).parse(manifestFile)
+                        def slurperClass
+                        try {
+                            slurperClass = Class.forName("groovy.xml.XmlSlurper")
+                        } catch (ClassNotFoundException e) {
+                            slurperClass = Class.forName("groovy.util.XmlSlurper")
+                        }
+                        def slurper = slurperClass.getDeclaredConstructor(boolean.class, boolean.class).newInstance(false, false)
+                        def manifest = slurper.parse(manifestFile)
                         def manifestPackage = manifest.@package?.text()
                         if (manifestPackage != null && !manifestPackage.trim().isEmpty()) {
                             androidExtension.namespace = manifestPackage

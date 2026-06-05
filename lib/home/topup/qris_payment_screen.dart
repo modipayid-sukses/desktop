@@ -263,13 +263,20 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
             ),
             child: Column(
               children: [
-                if (_qrContent != null)
+                if (_qrContent != null) ...[
                   QrImageView(
                     data: _qrContent!,
                     version: QrVersions.auto,
-                    size: 240,
+                    size: 280,
                     gapless: true,
                   ),
+                  const SizedBox(height: 8),
+                  Image.asset(
+                    'images/nobu_logo.png',
+                    height: 80,
+                    fit: BoxFit.contain,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

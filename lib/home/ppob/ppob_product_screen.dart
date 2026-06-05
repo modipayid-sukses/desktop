@@ -144,6 +144,17 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       (widget.cmd.toLowerCase() == 'pasca' ||
           widget.category.toLowerCase().contains('pasca'));
   bool get _isEmoney => widget.inquiryType == 'emoney';
+  bool get _isInject {
+    final cat = widget.category.toLowerCase();
+    final title = widget.title.toLowerCase();
+    final filter = widget.productTypeFilter?.toLowerCase() ?? '';
+    return cat.contains('inject') ||
+        cat.contains('voucher') ||
+        title.contains('inject') ||
+        title.contains('voucher') ||
+        filter.contains('inject') ||
+        filter.contains('voucher');
+  }
   // Mode TopUp Game: dipakai untuk override label input ("ID Player") dan
   // menyembunyikan tab brand (karena brand sudah dipilih dari list provider
   // di layar sebelumnya).
@@ -408,7 +419,18 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         final cachedBrands =
             List<dynamic>.from(jsonDecode(cachedBrandsJson) as List);
         if (mounted && cachedBrands.isNotEmpty) {
-          final orderedCachedBrands = _reorderTelkomselFirst(cachedBrands);
+          var orderedCachedBrands = _reorderTelkomselFirst(cachedBrands);
+          if (_isInject) {
+            const cellBrands = {
+              'telkomsel', 'indosat', 'indosat ooredoo', 'indosat ooredoo hutchison',
+              'xl', 'xl axiata', 'axis', 'three', 'tri', 'tri indonesia',
+              'smartfren', 'smart', 'byu', 'by.u'
+            };
+            orderedCachedBrands = orderedCachedBrands.where((b) {
+              final name = b.toString().toLowerCase().trim();
+              return cellBrands.any((c) => name == c || name.contains(c) || c.contains(name));
+            }).toList();
+          }
           final brandStrings =
               orderedCachedBrands.map((b) => b.toString()).toList();
           final cachedBrand = prefs.getString(_selectedBrandCacheKey);
@@ -482,7 +504,18 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       );
       if (!mounted) return;
 
-      final orderedBrands = _reorderTelkomselFirst(brands);
+      var orderedBrands = _reorderTelkomselFirst(brands);
+      if (_isInject) {
+        const cellBrands = {
+          'telkomsel', 'indosat', 'indosat ooredoo', 'indosat ooredoo hutchison',
+          'xl', 'xl axiata', 'axis', 'three', 'tri', 'tri indonesia',
+          'smartfren', 'smart', 'byu', 'by.u'
+        };
+        orderedBrands = orderedBrands.where((b) {
+          final name = b.toString().toLowerCase().trim();
+          return cellBrands.any((c) => name == c || name.contains(c) || c.contains(name));
+        }).toList();
+      }
 
       setState(() {
         _brands = orderedBrands;
@@ -524,7 +557,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           _products.isEmpty) {
         await _loadProducts(showLoading: true);
       }
-      if (_isCellularCategory && _customerIdController.text.isNotEmpty) {
+      if (_isCellularCategory && _customerIdController.text.isNotEmpty && !_isInject) {
         unawaited(_handlePulsaPrefixAutoSwitch(_customerIdController.text));
       }
     } catch (_) {
@@ -1005,6 +1038,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         _inquiryResult = null;
       }
     });
+
+    if (_isInject) return;
 
     if (_isCellularCategory && (_isPulsaCategory ? _pulsaTabIndex == 0 : true)) {
       unawaited(_handlePulsaPrefixAutoSwitch(_customerIdController.text));
@@ -3829,6 +3864,13 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       return null;
     }
 
+    if (_isInject) {
+      if (customerId.length < 5 || customerId.length > 30) {
+        return 'Format serial number tidak valid';
+      }
+      return null;
+    }
+
     if (!RegExp(r'^0[0-9]{9,14}$').hasMatch(customerId)) {
       return 'Format nomor tidak valid';
     }
@@ -3862,7 +3904,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         hasCustomerInput;
     final isPulsaTransferTab = _isPulsaCategory && _pulsaTabIndex == 1;
     final shouldShowProducts =
-        !isPlnPostpaidTab && (!_isCellularCategory || _isPulsaPrefixDetected);
+        !isPlnPostpaidTab && (!_isCellularCategory || _isPulsaPrefixDetected || _isInject);
     // Sembunyikan tab brand horizontal jika:
     // 1. User datang dari brand-selection screen (initialBrand sudah di-set).
     // 2. Kategori E-Money/E-Wallet dengan brand spesifik.
