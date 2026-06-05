@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/colornotifire.dart';
+import '../utils/transaction_helpers.dart';
 
 class Notificationindex extends StatefulWidget {
   final String title;
@@ -88,7 +89,7 @@ class _NotificationindexState extends State<Notificationindex> {
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
     try {
-      final date = DateTime.parse(dateStr).toLocal();
+      final date = parseDateTime(dateStr);
       final now = DateTime.now();
       final diff = now.difference(date);
       if (diff.inDays == 0) return 'Hari ini';

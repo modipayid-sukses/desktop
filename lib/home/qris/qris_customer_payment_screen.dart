@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../../services/biometric_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/qris_parser.dart';
+import '../../utils/transaction_helpers.dart';
 import '../../widgets/transaction_receipt.dart';
 
 class QrisCustomerPaymentScreen extends StatefulWidget {
@@ -385,7 +386,7 @@ class _QrisCustomerPaymentScreenState extends State<QrisCustomerPaymentScreen> {
               providerRef: txData['reference_id'],
               notes: _notesController.text.isEmpty ? null : _notesController.text,
               transactionTime: txData['created_at'] != null
-                  ? DateTime.parse(txData['created_at']).toLocal()
+                  ? parseDateTime(txData['created_at'])
                   : DateTime.now(),
             ),
           ),
@@ -437,7 +438,7 @@ class _QrisCustomerPaymentScreenState extends State<QrisCustomerPaymentScreen> {
               providerRef: txData['reference_id'],
               notes: _notesController.text.isEmpty ? null : _notesController.text,
               transactionTime: txData['created_at'] != null
-                  ? DateTime.parse(txData['created_at']).toLocal()
+                  ? parseDateTime(txData['created_at'])
                   : DateTime.now(),
             ),
           ),

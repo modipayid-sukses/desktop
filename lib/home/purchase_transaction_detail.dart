@@ -41,6 +41,21 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
     setState(() => _receiptSettings = settings);
   }
 
+  DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    String raw = value.toString().trim();
+    if (raw.isEmpty) return DateTime.now();
+    if (!raw.endsWith('Z') &&
+        !raw.contains(RegExp(r'[+-]\d{2}:?\d{2}$')) &&
+        !raw.contains(RegExp(r'[+-]\d{4}$'))) {
+      if (!raw.contains('T')) {
+        raw = raw.replaceAll(' ', 'T');
+      }
+      raw = '${raw}Z';
+    }
+    return DateTime.tryParse(raw)?.toLocal() ?? DateTime.now();
+  }
+
   bool _isPlnTokenData(Map<String, dynamic> data) {
     final category = (data['category'] ?? '').toString().toLowerCase();
     final name = (data['name'] ?? data['product_name'] ?? '').toString().toLowerCase();
@@ -92,7 +107,7 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
     final productName =
         data['name']?.toString() ?? data['product_name']?.toString() ?? '-';
     final createdAt = data['created_at'] != null
-        ? (DateTime.tryParse(data['created_at'].toString()) ?? DateTime.now()).toLocal()
+        ? _parseDateTime(data['created_at'])
         : DateTime.now();
 
     final currency =
@@ -199,7 +214,7 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
     final productname =
         data['name']?.toString() ?? data['product_name']?.toString() ?? '';
     final createdAt = data['created_at'] != null
-        ? (DateTime.tryParse(data['created_at'].toString()) ?? DateTime.now()).toLocal()
+        ? _parseDateTime(data['created_at'])
         : DateTime.now();
     final storeName = (_receiptSettings['storeName'] ?? '').trim();
     final storePhone = (_receiptSettings['phone'] ?? '').trim();

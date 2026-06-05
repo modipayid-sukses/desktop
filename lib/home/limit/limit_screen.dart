@@ -9,6 +9,7 @@ import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
 import 'bayar_tagihan_screen.dart';
 import 'merchant_kyc_screen.dart';
+import '../../utils/transaction_helpers.dart';
 
 class LimitScreen extends StatefulWidget {
   const LimitScreen({Key? key}) : super(key: key);
@@ -441,7 +442,7 @@ class _LimitScreenState extends State<LimitScreen> {
         final createdAt = item['created_at']?.toString() ?? '';
         String dateStr = '';
         try {
-          final dt = DateTime.parse(createdAt).toLocal();
+          final dt = parseDateTime(createdAt);
           dateStr = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(dt);
         } catch (_) {
           dateStr = createdAt;

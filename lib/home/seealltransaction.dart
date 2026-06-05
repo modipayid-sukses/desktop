@@ -138,8 +138,8 @@ class _SeealltransactionState extends State<Seealltransaction> {
 
     final all = [...topupItems, ...completed];
     all.sort((a, b) {
-      final aDate = (DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(2000)).toLocal();
-      final bDate = (DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(2000)).toLocal();
+      final aDate = parseDateTime(a['created_at']);
+      final bDate = parseDateTime(b['created_at']);
       return bDate.compareTo(aDate);
     });
     return all;
@@ -155,18 +155,15 @@ class _SeealltransactionState extends State<Seealltransaction> {
       return !cat.contains('topup') && !cat.contains('bayar') && !cat.contains('withdraw');
     }).where((tx) {
       if (_selectedDate == null) return true;
-      final date = DateTime.tryParse((tx['created_at'] ?? '').toString());
-      if (date == null) return false;
-      return _isSameDate(date.toLocal(), _selectedDate!);
+      final date = parseDateTime(tx['created_at']);
+      return _isSameDate(date, _selectedDate!);
     }).toList();
     final grouped = <String, List<Map<String, dynamic>>>{};
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     for (final tx in items) {
-      var date = DateTime.tryParse(tx['created_at'] ?? '');
-      if (date == null) continue;
-      date = date.toLocal();
+      final date = parseDateTime(tx['created_at']);
       final d = DateTime(date.year, date.month, date.day);
       String label;
       if (d == today) {
@@ -578,7 +575,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
             : '-Rp ${_formatAmount(amount)}');
     final dateStr = tx['created_at'] != null
         ? DateFormat('d MMM yyyy • HH:mm', 'id_ID')
-            .format(DateTime.parse(tx['created_at']).toLocal())
+            .format(parseDateTime(tx['created_at']))
         : '';
     final category = tx['category'] ?? '';
     final statusColor = isExpired

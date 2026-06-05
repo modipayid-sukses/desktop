@@ -6,6 +6,7 @@ import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/home/print_receipt_page.dart';
 import 'package:modipay/services/api_service.dart' show ApiService;
 import 'package:intl/intl.dart';
+import 'package:modipay/utils/transaction_helpers.dart';
 
 class TransactionDetail extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -674,9 +675,7 @@ class _TransactionDetailState extends State<TransactionDetail> {
             'pending')
         .toString();
     final status = _normalizeStatus(rawStatus);
-    final createdAt =
-        DateTime.tryParse((data['created_at'] ?? '').toString()) ??
-            DateTime.now();
+    final createdAt = parseDateTime(data['created_at']);
     final customerNo = _pickFirstNonEmpty([
       data['customer_no'],
       data['customer_id'],

@@ -111,8 +111,8 @@ class _HistoryTransactionState extends State<HistoryTransaction> {
 
       final allItems = [...topupItems, ...completedTx];
       allItems.sort((a, b) {
-        final aDate = (DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(2000)).toLocal();
-        final bDate = (DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(2000)).toLocal();
+        final aDate = parseDateTime(a['created_at']);
+        final bDate = parseDateTime(b['created_at']);
         return bDate.compareTo(aDate);
       });
 
@@ -123,9 +123,7 @@ class _HistoryTransactionState extends State<HistoryTransaction> {
       final yesterday = today.subtract(const Duration(days: 1));
 
       for (final tx in allItems) {
-        var date = DateTime.tryParse(tx['created_at'] ?? '');
-        if (date == null) continue;
-        date = date.toLocal();
+        final date = parseDateTime(tx['created_at']);
         final d = DateTime(date.year, date.month, date.day);
         String label;
         if (d == today) {
@@ -257,7 +255,7 @@ class _HistoryTransactionState extends State<HistoryTransaction> {
                                       final amount = _effectiveTotal(tx);
                                       final dateStr = tx['created_at'] != null
                                           ? DateFormat('HH:mm')
-                                              .format(DateTime.parse(tx['created_at']).toLocal())
+                                              .format(parseDateTime(tx['created_at']))
                                           : '';
                                       final category = tx['category'] ?? '';
                                       final statusColor = isExpired

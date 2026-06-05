@@ -29,6 +29,7 @@ import 'package:modipay/utils/string.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:modipay/utils/transaction_helpers.dart';
 
 import 'transfer/bank_transfer_screen.dart';
 import 'limit/limit_screen.dart';
@@ -1272,7 +1273,7 @@ class _HomeState extends State<Home> {
 
   String _formatPromoEnd(String dateStr) {
     try {
-      final dt = DateTime.parse(dateStr).toLocal();
+      final dt = parseDateTime(dateStr);
       final now = DateTime.now();
       final diff = dt.difference(now);
       if (diff.isNegative) return 'Promo sudah berakhir';

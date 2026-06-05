@@ -75,7 +75,22 @@ class PlnPrepaidReceipt extends StatelessWidget {
       ...data,
     };
 
-    final createdAt = (DateTime.tryParse((data['created_at'] ?? '').toString()) ?? DateTime.now()).toLocal();
+    DateTime _parseDateTime(dynamic val) {
+      if (val == null) return DateTime.now();
+      String raw = val.toString().trim();
+      if (raw.isEmpty) return DateTime.now();
+      if (!raw.endsWith('Z') &&
+          !raw.contains(RegExp(r'[+-]\d{2}:?\d{2}$')) &&
+          !raw.contains(RegExp(r'[+-]\d{4}$'))) {
+        if (!raw.contains('T')) {
+          raw = raw.replaceAll(' ', 'T');
+        }
+        raw = '${raw}Z';
+      }
+      return DateTime.tryParse(raw)?.toLocal() ?? DateTime.now();
+    }
+
+    final createdAt = _parseDateTime(data['created_at']);
     final orderId = (data['order_id'] ?? data['id'] ?? '-').toString();
 
     final idpel = _pickFirst([

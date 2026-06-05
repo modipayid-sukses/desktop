@@ -54,3 +54,24 @@ double effectiveTransactionTotal(Map<String, dynamic> tx) {
 
   return amount;
 }
+
+/// Parse string datetime ke DateTime lokal secara aman.
+///
+/// Jika string datetime tidak mengandung penanda zona waktu seperti Z atau offset,
+/// fungsi ini akan memaksa menambahkan Z agar Dart mem-parse nilainya sebagai UTC,
+/// lalu memanggil `.toLocal()` untuk mengonversinya ke zona waktu setempat (WIB).
+DateTime parseDateTime(dynamic value) {
+  if (value == null) return DateTime.now();
+  String raw = value.toString().trim();
+  if (raw.isEmpty) return DateTime.now();
+  if (!raw.endsWith('Z') &&
+      !raw.contains(RegExp(r'[+-]\d{2}:?\d{2}$')) &&
+      !raw.contains(RegExp(r'[+-]\d{4}$'))) {
+    if (!raw.contains('T')) {
+      raw = raw.replaceAll(' ', 'T');
+    }
+    raw = '${raw}Z';
+  }
+  return DateTime.tryParse(raw)?.toLocal() ?? DateTime.now();
+}
+

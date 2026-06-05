@@ -216,7 +216,7 @@ class _AnalyticsState extends State<Analytics> {
                               : '-Rp ${formatter.format(amount.toInt())}');
                       final dateStr = tx['created_at'] != null
                           ? DateFormat('d MMM yyyy . HH:mm')
-                              .format(DateTime.parse(tx['created_at']).toLocal())
+                              .format(parseDateTime(tx['created_at']))
                           : '';
                       final statusColor = isFailed
                           ? Colors.red
