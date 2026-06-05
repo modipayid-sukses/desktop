@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:gobank/login/login.dart';
-import 'package:gobank/home/home.dart';
-import 'package:gobank/home/topup/topup_channel_screen.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/utils/colornotifire.dart';
+import 'package:modipay/login/login.dart';
+import 'package:modipay/home/home.dart';
+import 'package:modipay/home/topup/topup_channel_screen.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/utils/colornotifire.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

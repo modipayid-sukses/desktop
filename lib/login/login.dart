@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gobank/login/forgot_pin_screen.dart';
-import 'package:gobank/login/login_otp_screen.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/utils/color.dart';
+import 'package:modipay/login/forgot_pin_screen.dart';
+import 'package:modipay/login/login_otp_screen.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/color.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class Login extends StatefulWidget {

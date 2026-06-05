@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -39,15 +39,18 @@ class _NotificationindexState extends State<Notificationindex> {
   Future<void> _loadNotifications() async {
     try {
       final result = await ApiService.getNotifications();
-      if (result['success'] == true) {
+      debugPrint('[Notifications] API Result: $result');
+      if (result['success'] == true || result['data'] != null) {
         setState(() {
-          _notifications = List<Map<String, dynamic>>.from(result['data'] ?? []);
+          final rawList = result['data'] as List? ?? [];
+          _notifications = rawList.map((e) => Map<String, dynamic>.from(e as Map)).toList();
           _isLoading = false;
         });
       } else {
         setState(() => _isLoading = false);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[Notifications] Error loading notifications: $e\n$stack');
       setState(() => _isLoading = false);
     }
   }
@@ -85,7 +88,7 @@ class _NotificationindexState extends State<Notificationindex> {
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
     try {
-      final date = DateTime.parse(dateStr);
+      final date = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
       final diff = now.difference(date);
       if (diff.inDays == 0) return 'Hari ini';
@@ -142,14 +145,36 @@ class _NotificationindexState extends State<Notificationindex> {
                       ),
                       itemBuilder: (context, index) {
                         final n = _notifications[index];
-                        final type = n['type'] ?? 'info';
+                        final type = n['icon'] ?? n['type'] ?? 'info';
+                        final isRead = n['is_read'] == true;
+                        final color = _getNotificationColor(type);
+                        final img = _getNotificationImage(type);
                         return Column(
                           children: [
-                            not(
-                              _getNotificationColor(type),
-                              _getNotificationImage(type),
-                              n['title'] ?? '',
-                              _formatDate(n['created_at']),
+                            InkWell(
+                              borderRadius: const BorderRadius.all(
+                                Radius.circular(20),
+                              ),
+                              onTap: () async {
+                                _showNotificationDetail(n, color, img);
+                                if (!isRead) {
+                                  try {
+                                    await ApiService.markNotificationRead(n['id']);
+                                    setState(() {
+                                      _notifications[index]['is_read'] = true;
+                                    });
+                                  } catch (e) {
+                                    // Silent error
+                                  }
+                                }
+                              },
+                              child: not(
+                                color,
+                                img,
+                                n['title'] ?? '',
+                                _formatDate(n['created_at']),
+                                isRead,
+                              ),
                             ),
                             SizedBox(
                               height: height / 60,
@@ -163,7 +188,116 @@ class _NotificationindexState extends State<Notificationindex> {
     );
   }
 
-  Widget not(clr, img, txt, txt2) {
+  void _showNotificationDetail(Map<String, dynamic> notification, Color color, String imagePath) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: notifire.getprimerycolor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.all(width / 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 50,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              SizedBox(height: height / 40),
+              Row(
+                children: [
+                  Container(
+                    height: height / 15,
+                    width: width / 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withOpacity(0.15),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(height / 70),
+                        child: Image.asset(imagePath, color: color),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: width / 30),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          notification['title'] ?? 'Notifikasi',
+                          style: TextStyle(
+                            color: notifire.getdarkscolor,
+                            fontFamily: 'Gilroy Bold',
+                            fontSize: height / 45,
+                          ),
+                        ),
+                        SizedBox(height: height / 150),
+                        Text(
+                          _formatDate(notification['created_at']),
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontFamily: 'Gilroy Medium',
+                            fontSize: height / 60,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 30),
+              Text(
+                notification['message'] ?? '',
+                style: TextStyle(
+                  color: notifire.getdarkscolor,
+                  fontFamily: 'Gilroy Medium',
+                  fontSize: height / 50,
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: height / 30),
+              SizedBox(
+                width: double.infinity,
+                height: height / 16,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff6C5CE7),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Tutup',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Gilroy Bold',
+                      fontSize: height / 50,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: height / 50),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget not(clr, img, txt, txt2, bool isRead) {
     return Container(
       height: height / 11,
       width: width,
@@ -183,12 +317,12 @@ class _NotificationindexState extends State<Notificationindex> {
             width: width / 6,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: clr,
+              color: isRead ? clr.withOpacity(0.1) : clr,
             ),
             child: Center(
               child: Padding(
                 padding: EdgeInsets.all(height / 70),
-                child: Image.asset(img),
+                child: Image.asset(img, color: isRead ? clr : Colors.white),
               ),
             ),
           ),
@@ -198,10 +332,8 @@ class _NotificationindexState extends State<Notificationindex> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  height: height / 60,
-                ),
                 Text(
                   txt,
                   maxLines: 1,
@@ -209,22 +341,32 @@ class _NotificationindexState extends State<Notificationindex> {
                   softWrap: false,
                   style: TextStyle(
                       color: notifire.getdarkscolor,
-                      fontFamily: 'Gilroy Bold',
+                      fontFamily: isRead ? 'Gilroy Medium' : 'Gilroy Bold',
                       fontSize: height / 54),
                 ),
                 SizedBox(
-                  height: height / 100,
+                  height: height / 150,
                 ),
                 Text(
                   txt2,
                   style: TextStyle(
                       color: Colors.grey,
                       fontFamily: 'Gilroy Medium',
-                      fontSize: height / 55),
+                      fontSize: height / 60),
                 ),
               ],
             ),
           ),
+          if (!isRead)
+            Container(
+              margin: EdgeInsets.only(right: width / 20),
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xffFF3B30),
+              ),
+            ),
         ],
       ),
     );

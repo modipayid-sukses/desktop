@@ -4,11 +4,11 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/services/app_exception.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/services/biometric_service.dart';
-import 'package:gobank/home/transaction_detail.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/services/app_exception.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/services/biometric_service.dart';
+import 'package:modipay/home/transaction_detail.dart';
 
 import '../topup_channel_screen.dart';
 import 'package:provider/provider.dart';

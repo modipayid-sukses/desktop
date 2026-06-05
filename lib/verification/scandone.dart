@@ -1,10 +1,10 @@
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
-import 'package:gobank/login/setyourpin.dart';
-import 'package:gobank/utils/button.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/login/setyourpin.dart';
+import 'package:modipay/utils/button.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 
 class ScanDone extends StatefulWidget {

@@ -134,7 +134,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
   // ── E-Wallet: Nominal custom (produk dinamis Loket Bayar) ──────────
   final TextEditingController _customAmountController = TextEditingController();
-  bool _isCustomAmountMode = false; // true = user memilih input nominal custom
+  bool _isCustomAmountMode = true; // true = user memilih input nominal custom
 
   bool get _isPln => widget.inquiryType == 'pln';
   // True khusus untuk halaman PLN Pasca (cmd=pasca atau kategori PLN Pasca).
@@ -3623,13 +3623,15 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         );
       } else {
         final checkSku = (product['inquiry_sku'] ?? product['buyer_sku_code'] ?? '').toString();
+        final simulatedAmount = product['simulated_amount'];
         final customAmount = product['custom_amount'];
+        final finalAmount = simulatedAmount ?? customAmount;
         recipientName = await _validateEmoneyRecipient(
           customerId,
           checkSku,
           categoryOverride: categoryOverride,
           brand: brandForInquiry,
-          amount: customAmount is num ? customAmount.toDouble() : null,
+          amount: finalAmount is num ? finalAmount.toDouble() : null,
         );
         if (recipientName == _verifiedWithoutNameToken) {
           recipientName = null;
@@ -4686,13 +4688,51 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   /// (nominal custom, dari Loket Bayar) berdasarkan flag `is_dynamic` atau
   /// provider == 'loketbayar'.
   bool _isDynamicProduct(Map<String, dynamic> p) {
+    if (p['simulated_amount'] != null) return false;
     if (p['is_dynamic'] == true) return true;
     final provider = (p['provider'] ?? '').toString().toLowerCase();
-    return provider.contains('loketbayar') || provider.contains('loket_bayar');
+    final isLb = provider.contains('loketbayar') || provider.contains('loket_bayar');
+    if (isLb) {
+      final name = (p['product_name'] ?? '').toString().toLowerCase();
+      if (!name.contains('nominal bebas') && !name.contains('bebas')) {
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
-  List<dynamic> get _staticProducts =>
-      _products.where((p) => !_isDynamicProduct(Map<String, dynamic>.from(p))).toList();
+  List<dynamic> get _staticProducts {
+    final list = _products.where((p) => !_isDynamicProduct(Map<String, dynamic>.from(p))).toList();
+    if (list.isNotEmpty) return list;
+
+    if (!_isEmoney) return [];
+
+    final dynamicProd = _products.firstWhere(
+      (p) => _isDynamicProduct(Map<String, dynamic>.from(p)),
+      orElse: () => null,
+    );
+    if (dynamicProd == null) return [];
+
+    final dp = Map<String, dynamic>.from(dynamicProd as Map);
+    final brandName = _selectedBrand ?? dp['operator_name'] ?? dp['brand'] ?? '';
+    
+    final simulated = <dynamic>[];
+    final presets = [10000, 20000, 50000, 100000, 200000, 500000];
+    for (final amt in presets) {
+      final newProd = Map<String, dynamic>.from(dp);
+      final adminFee = (dp['admin_fee'] ?? dp['admin'] ?? 0.0) is num
+          ? (dp['admin_fee'] ?? dp['admin'] ?? 0.0).toDouble()
+          : double.tryParse((dp['admin_fee'] ?? dp['admin'] ?? 0.0).toString()) ?? 0.0;
+      final price = amt.toDouble() + adminFee;
+      
+      newProd['product_name'] = '$brandName ${NumberFormat('#,###', 'id_ID').format(amt)}';
+      newProd['price'] = price;
+      newProd['simulated_amount'] = amt;
+      simulated.add(newProd);
+    }
+    return simulated;
+  }
 
   List<dynamic> get _dynamicProducts =>
       _products.where((p) => _isDynamicProduct(Map<String, dynamic>.from(p))).toList();
@@ -4740,57 +4780,16 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
   Widget _buildEwalletWithDynamicView(
       Color textPrimary, Color textSecondary, Color accent) {
-    final staticList = _staticProducts;
-
-    // Nominal preset cepat untuk custom amount
     final quickAmounts = [10000, 20000, 50000, 100000, 200000, 500000];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ─── Tab: Nominal Tetap / Nominal Custom ───────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Row(
-            children: [
-              _buildTabChip(
-                label: 'Nominal Tetap',
-                isActive: !_isCustomAmountMode,
-                accent: accent,
-                textPrimary: textPrimary,
-                onTap: () => setState(() => _isCustomAmountMode = false),
-              ),
-              const SizedBox(width: 8),
-              _buildTabChip(
-                label: 'Nominal Lainnya',
-                isActive: _isCustomAmountMode,
-                accent: accent,
-                textPrimary: textPrimary,
-                onTap: () => setState(() => _isCustomAmountMode = true),
-              ),
-            ],
-          ),
-        ),
-
-        // ─── Content ───────────────────────────────────────────────
         Expanded(
           child: _isLoadingProducts
               ? _buildShimmerProducts()
-              : _isCustomAmountMode
-                  ? _buildCustomAmountSection(
-                      textPrimary, textSecondary, accent, quickAmounts)
-                  : staticList.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Belum ada produk tersedia',
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontFamily: 'Gilroy Medium',
-                            ),
-                          ),
-                        )
-                      : _buildStaticProductGrid(
-                          staticList, textPrimary, textSecondary, accent),
+              : _buildCustomAmountSection(
+                  textPrimary, textSecondary, accent, quickAmounts),
         ),
       ],
     );
@@ -5072,7 +5071,6 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
   Widget _buildEwalletProductsView(
       Color textPrimary, Color textSecondary, Color accent) {
-    final staticList = _staticProducts;
     final quickAmounts = [10000, 20000, 50000, 100000, 200000, 500000];
 
     return Column(
@@ -5098,47 +5096,11 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             ],
           ),
         ),
-        // ─── Tab: Nominal Tetap / Nominal Lainnya ──────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Row(
-            children: [
-              _buildTabChip(
-                label: 'Nominal Tetap',
-                isActive: !_isCustomAmountMode,
-                accent: accent,
-                textPrimary: textPrimary,
-                onTap: () => setState(() => _isCustomAmountMode = false),
-              ),
-              const SizedBox(width: 8),
-              _buildTabChip(
-                label: 'Nominal Lainnya',
-                isActive: _isCustomAmountMode,
-                accent: accent,
-                textPrimary: textPrimary,
-                onTap: () => setState(() => _isCustomAmountMode = true),
-              ),
-            ],
-          ),
-        ),
         Expanded(
           child: _isLoadingProducts
               ? _buildShimmerProducts()
-              : _isCustomAmountMode
-                  ? _buildCustomAmountSection(
-                      textPrimary, textSecondary, accent, quickAmounts)
-                  : staticList.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Belum ada produk tersedia',
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontFamily: 'Gilroy Medium',
-                            ),
-                          ),
-                        )
-                      : _buildStaticProductGrid(
-                          staticList, textPrimary, textSecondary, accent),
+              : _buildCustomAmountSection(
+                  textPrimary, textSecondary, accent, quickAmounts),
         ),
       ],
     );

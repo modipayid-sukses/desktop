@@ -385,7 +385,7 @@ class _QrisCustomerPaymentScreenState extends State<QrisCustomerPaymentScreen> {
               providerRef: txData['reference_id'],
               notes: _notesController.text.isEmpty ? null : _notesController.text,
               transactionTime: txData['created_at'] != null
-                  ? DateTime.parse(txData['created_at'])
+                  ? DateTime.parse(txData['created_at']).toLocal()
                   : DateTime.now(),
             ),
           ),
@@ -437,7 +437,7 @@ class _QrisCustomerPaymentScreenState extends State<QrisCustomerPaymentScreen> {
               providerRef: txData['reference_id'],
               notes: _notesController.text.isEmpty ? null : _notesController.text,
               transactionTime: txData['created_at'] != null
-                  ? DateTime.parse(txData['created_at'])
+                  ? DateTime.parse(txData['created_at']).toLocal()
                   : DateTime.now(),
             ),
           ),

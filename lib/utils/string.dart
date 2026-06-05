@@ -1,5 +1,5 @@
 class CustomStrings {
-  static const String algorithm = 'GoBank';
+  static const String algorithm = 'modipay';
   static const String skip = 'LEWATI';
   static const String setupprofile = 'Atur Profil';
   static const String onbonding1 = 'Mudah Diakses';
@@ -193,7 +193,7 @@ class CustomStrings {
   static const String top1 = 'Isi Ulang Kartu Kredit atau';
   static const String top2 = 'pulsa HP Anda kapan saja di mana saja';
   static const String top3 = 'Isi ulang kartu atau pulsa HP Anda kapan saja';
-  static const String top4 = ' GoBank membuatnya mudah dan praktis';
+  static const String top4 = ' modipay membuatnya mudah dan praktis';
   static const String health = 'Kesehatan';
   static const String topcredit = 'Isi Ulang Kartu Kredit';
   static const String topphone = 'Isi Ulang Pulsa';
@@ -224,7 +224,7 @@ class CustomStrings {
   static const String startsccepting = 'Dapatkan QR All-in-One & mulai';
   static const String startsccepting2 = 'terima pembayaran';
   static const String relatedpaytm = 'Dapatkan solusi cepat untuk pertanyaan';
-  static const String relatedpaytm2 = 'seputar GoBank';
+  static const String relatedpaytm2 = 'seputar modipay';
   static const String assurance = 'Bank';
   static const String wallet = 'E-Wallet';
   static const String shopping = 'Belanja';
@@ -295,9 +295,9 @@ class CustomStrings {
   static const String female = 'Perempuan';
   static const String fullnames = 'Nama lengkap';
   static const String fullnamee = 'Nama Lengkap';
-  static const String addcreditionalstoloop = 'Tambahkan Kartu ke GoBank';
+  static const String addcreditionalstoloop = 'Tambahkan Kartu ke modipay';
   static const String addyourbankcradite =
-      'Tambahkan kartu kredit/debit bank Anda ke GoBank untuk\nkelola pengeluaran dan atur anggaran tabungan Anda';
+      'Tambahkan kartu kredit/debit bank Anda ke modipay untuk\nkelola pengeluaran dan atur anggaran tabungan Anda';
   static const String next = 'Selanjutnya';
   static const String addcreditcard = 'Tambah Kartu Kredit';
   static const String cardnumber = 'Nomor Kartu';

@@ -4,10 +4,10 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gobank/services/receipt_settings_service.dart';
-import 'package:gobank/widgets/purchase_receipt.dart';
-import 'package:gobank/widgets/pln_prepaid_receipt.dart';
-import 'package:gobank/utils/media.dart';
+import 'package:modipay/services/receipt_settings_service.dart';
+import 'package:modipay/widgets/purchase_receipt.dart';
+import 'package:modipay/widgets/pln_prepaid_receipt.dart';
+import 'package:modipay/utils/media.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/media.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/media.dart';
 import 'package:provider/provider.dart';
 
 class ChangePinScreen extends StatefulWidget {

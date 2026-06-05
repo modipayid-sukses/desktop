@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/verification/indetyfiyverifiy.dart';
+import 'package:modipay/verification/indetyfiyverifiy.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/button.dart';

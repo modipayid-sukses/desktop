@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/home/transaction_detail.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
-import 'package:gobank/utils/transaction_helpers.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/home/transaction_detail.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
+import 'package:modipay/utils/transaction_helpers.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -111,8 +111,8 @@ class _HistoryTransactionState extends State<HistoryTransaction> {
 
       final allItems = [...topupItems, ...completedTx];
       allItems.sort((a, b) {
-        final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(2000);
-        final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(2000);
+        final aDate = (DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(2000)).toLocal();
+        final bDate = (DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(2000)).toLocal();
         return bDate.compareTo(aDate);
       });
 
@@ -123,8 +123,9 @@ class _HistoryTransactionState extends State<HistoryTransaction> {
       final yesterday = today.subtract(const Duration(days: 1));
 
       for (final tx in allItems) {
-        final date = DateTime.tryParse(tx['created_at'] ?? '');
+        var date = DateTime.tryParse(tx['created_at'] ?? '');
         if (date == null) continue;
+        date = date.toLocal();
         final d = DateTime(date.year, date.month, date.day);
         String label;
         if (d == today) {
@@ -256,7 +257,7 @@ class _HistoryTransactionState extends State<HistoryTransaction> {
                                       final amount = _effectiveTotal(tx);
                                       final dateStr = tx['created_at'] != null
                                           ? DateFormat('HH:mm')
-                                              .format(DateTime.parse(tx['created_at']))
+                                              .format(DateTime.parse(tx['created_at']).toLocal())
                                           : '';
                                       final category = tx['category'] ?? '';
                                       final statusColor = isExpired

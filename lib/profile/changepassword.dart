@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/colornotifire.dart';

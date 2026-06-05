@@ -1,6 +1,6 @@
 {
-    "name": "gobank",
-    "short_name": "gobank",
+    "name": "modipay",
+    "short_name": "modipay",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

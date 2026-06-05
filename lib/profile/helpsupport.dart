@@ -1,7 +1,7 @@
 import 'package:accordion/accordion.dart';
 import 'package:accordion/controllers.dart';
 import 'package:flutter/material.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 import '../utils/colornotifire.dart';
 import '../utils/media.dart';
@@ -17,7 +17,7 @@ class HelpSupport extends StatefulWidget {
 class _HelpSupportState extends State<HelpSupport> {
   late ColorNotifire notifire;
   final _loremIpsum =
-      "Open the GoBank app to get started and follow the\nsteps. GoBank doesn't charge a fee to create or\nmaintain your GoBank account.";
+      "Open the modipay app to get started and follow the\nsteps. modipay doesn't charge a fee to create or\nmaintain your modipay account.";
   final _contentStyle = const TextStyle(
       color: Color(0xff999999), fontSize: 14, fontWeight: FontWeight.normal);
 
@@ -93,7 +93,7 @@ class _HelpSupportState extends State<HelpSupport> {
                                     headerBackgroundColor:
                                         notifire.gettabwhitecolor,
                                     header: Text(
-                                      'What is GoBank?',
+                                      'What is modipay?',
                                       style: TextStyle(
                                           color: notifire.getdarkscolor,
                                           fontSize: 15,
@@ -110,7 +110,7 @@ class _HelpSupportState extends State<HelpSupport> {
                                     contentBackgroundColor:
                                         notifire.gettabwhitecolor,
                                     header: Text(
-                                      'How to use GoBank?',
+                                      'How to use modipay?',
                                       style: TextStyle(
                                           color: notifire.getdarkscolor,
                                           fontSize: 15,
@@ -144,7 +144,7 @@ class _HelpSupportState extends State<HelpSupport> {
                                     contentBackgroundColor:
                                         notifire.gettabwhitecolor,
                                     header: Text(
-                                      'Is GoBank free to use?',
+                                      'Is modipay free to use?',
                                       style: TextStyle(
                                           color: notifire.getdarkscolor,
                                           fontSize: 15,
@@ -161,7 +161,7 @@ class _HelpSupportState extends State<HelpSupport> {
                                     contentBackgroundColor:
                                         notifire.gettabwhitecolor,
                                     header: Text(
-                                      'How to make offer on GoBank?',
+                                      'How to make offer on modipay?',
                                       style: TextStyle(
                                           color: notifire.getdarkscolor,
                                           fontSize: 15,

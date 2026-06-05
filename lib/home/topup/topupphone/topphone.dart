@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/home/topup/topupphone/topphoneamount.dart';
-import 'package:gobank/utils/colornotifire.dart';
+import 'package:modipay/home/topup/topupphone/topphoneamount.dart';
+import 'package:modipay/utils/colornotifire.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

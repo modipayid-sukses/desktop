@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 class RootDetectionService {
-  static const MethodChannel _securityChannel = MethodChannel('gobank/security');
+  static const MethodChannel _securityChannel = MethodChannel('modipay/security');
 
   /// Check if device is rooted (Android) or jailbroken (iOS)
   static Future<bool> isDeviceRooted() async {

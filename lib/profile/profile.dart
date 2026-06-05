@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:gobank/login/login.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/services/api_service.dart';
+import 'package:modipay/login/login.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/biometric_service.dart';

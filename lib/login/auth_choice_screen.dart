@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/utils/color.dart';
-import 'package:gobank/login/login.dart';
-import 'package:gobank/login/register.dart';
+import 'package:modipay/utils/color.dart';
+import 'package:modipay/login/login.dart';
+import 'package:modipay/login/register.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AuthChoiceScreen extends StatelessWidget {

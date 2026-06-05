@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/services/biometric_service.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/widgets/transaction_receipt.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/services/biometric_service.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/widgets/transaction_receipt.dart';
 import 'package:otp_text_field/otp_field.dart';
 import 'package:otp_text_field/otp_field_style.dart';
 import 'package:otp_text_field/style.dart';

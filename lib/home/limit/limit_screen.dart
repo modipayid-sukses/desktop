@@ -441,7 +441,7 @@ class _LimitScreenState extends State<LimitScreen> {
         final createdAt = item['created_at']?.toString() ?? '';
         String dateStr = '';
         try {
-          final dt = DateTime.parse(createdAt);
+          final dt = DateTime.parse(createdAt).toLocal();
           dateStr = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(dt);
         } catch (_) {
           dateStr = createdAt;

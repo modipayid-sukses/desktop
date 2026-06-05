@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
-import 'package:gobank/verification/verificationdone.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
+import 'package:modipay/verification/verificationdone.dart';
 import 'package:otp_text_field/otp_field.dart';
 import 'package:otp_text_field/otp_field_style.dart';
 import 'package:otp_text_field/style.dart';

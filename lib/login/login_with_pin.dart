@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gobank/bottombar/bottombar.dart';
-import 'package:gobank/login/setup_pin_screen.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/utils/color.dart';
+import 'package:modipay/bottombar/bottombar.dart';
+import 'package:modipay/login/setup_pin_screen.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/color.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 

@@ -131,7 +131,7 @@ class DeviceIdentityService {
 
   static String _generateFallbackDeviceId() {
     final random = Random.secure();
-    final buffer = StringBuffer('gobank_');
+    final buffer = StringBuffer('modipay_');
     for (var i = 0; i < 16; i++) {
       buffer.write(random.nextInt(16).toRadixString(16));
     }

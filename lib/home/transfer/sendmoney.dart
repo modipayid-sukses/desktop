@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/home/transfer/sendall.dart';
+import 'package:modipay/home/transfer/sendall.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/colornotifire.dart';

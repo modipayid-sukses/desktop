@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:gobank/home/ppob/ppob_product_screen.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/media.dart';
+import 'package:modipay/home/ppob/ppob_product_screen.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/media.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';

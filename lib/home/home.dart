@@ -8,24 +8,24 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:gobank/home/notifications.dart';
-import 'package:gobank/home/ppob/ppob_all_services_screen.dart';
-import 'package:gobank/home/ppob/nfc_toll_scan_screen.dart';
-import 'package:gobank/home/ppob/ppob_emoney_brand_screen.dart';
-import 'package:gobank/home/ppob/ppob_menu_route.dart';
-import 'package:gobank/home/ppob/bpjs_screen.dart';
-import 'package:gobank/home/ppob/pdam_screen.dart';
-import 'package:gobank/home/ppob/ppob_postpaid_screen.dart';
-import 'package:gobank/home/ppob/ppob_product_screen.dart';
-import 'package:gobank/home/ppob/ppob_topup_game_list_screen.dart';
-import 'package:gobank/home/request/request.dart';
-import 'package:gobank/home/seealltransaction.dart';
-import 'package:gobank/home/transaction_detail.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/home/notifications.dart';
+import 'package:modipay/home/ppob/ppob_all_services_screen.dart';
+import 'package:modipay/home/ppob/nfc_toll_scan_screen.dart';
+import 'package:modipay/home/ppob/ppob_emoney_brand_screen.dart';
+import 'package:modipay/home/ppob/ppob_menu_route.dart';
+import 'package:modipay/home/ppob/bpjs_screen.dart';
+import 'package:modipay/home/ppob/pdam_screen.dart';
+import 'package:modipay/home/ppob/ppob_postpaid_screen.dart';
+import 'package:modipay/home/ppob/ppob_product_screen.dart';
+import 'package:modipay/home/ppob/ppob_topup_game_list_screen.dart';
+import 'package:modipay/home/request/request.dart';
+import 'package:modipay/home/seealltransaction.dart';
+import 'package:modipay/home/transaction_detail.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,6 +69,7 @@ class _HomeState extends State<Home> {
   late PageController _promoController;
   Timer? _promoTimer;
   int _promoPage = 0;
+  int _unreadNotificationCount = 0;
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -171,6 +172,24 @@ class _HomeState extends State<Home> {
     }
   }
 
+  Future<void> _loadNotificationCount() async {
+    try {
+      final response = await ApiService.getNotifications();
+      if (response['data'] != null) {
+        final rawList = response['data'] as List? ?? [];
+        final unread = rawList.where((e) {
+          final isRead = e['is_read'];
+          return isRead == false || isRead == 0 || isRead == '0';
+        }).length;
+        if (mounted) {
+          setState(() {
+            _unreadNotificationCount = unread;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   List<Map<String, dynamic>> get _bannerList {
     if (_apiBanners.isNotEmpty) return _apiBanners;
     return [
@@ -187,6 +206,7 @@ class _HomeState extends State<Home> {
       _loadBanners(),
       _loadMenu(),
       _loadPromoProducts(),
+      _loadNotificationCount(),
     ]);
   }
 
@@ -311,6 +331,7 @@ class _HomeState extends State<Home> {
       auth.fetchProfile(),
       _loadTransactions(),
       _loadTopups(),
+      _loadNotificationCount(),
       ApiService.checkPendingTopups(),
       ApiService.checkPendingPpob(),
     ]);
@@ -471,7 +492,7 @@ class _HomeState extends State<Home> {
           Positioned(
             left: 0,
             right: 0,
-            top: height * 0.36,
+            top: height * 0.445,
             bottom: 0,
             child: Container(
               decoration: const BoxDecoration(
@@ -569,19 +590,49 @@ class _HomeState extends State<Home> {
                         ),
                         const SizedBox(width: 8),
                         GestureDetector(
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Notificationindex(CustomStrings.notification))),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.notifications_none_rounded,
-                              color: notifire.getdarkscolor,
-                              size: 20,
-                            ),
+                          onTap: () => _navigateAndRefresh(const Notificationindex(CustomStrings.notification)),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.notifications_none_rounded,
+                                  color: notifire.getdarkscolor,
+                                  size: 20,
+                                ),
+                              ),
+                              if (_unreadNotificationCount > 0)
+                                Positioned(
+                                  top: -2,
+                                  right: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xffFF3B30),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 14,
+                                      minHeight: 14,
+                                    ),
+                                    child: Text(
+                                      '$_unreadNotificationCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontFamily: 'Gilroy Bold',
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],
@@ -1221,7 +1272,7 @@ class _HomeState extends State<Home> {
 
   String _formatPromoEnd(String dateStr) {
     try {
-      final dt = DateTime.parse(dateStr);
+      final dt = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
       final diff = dt.difference(now);
       if (diff.isNegative) return 'Promo sudah berakhir';

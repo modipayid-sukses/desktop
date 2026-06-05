@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gobank/bottombar/bottombar.dart';
-import 'package:gobank/home/print_receipt_page.dart';
-import 'package:gobank/services/api_service.dart' show ApiService;
+import 'package:modipay/bottombar/bottombar.dart';
+import 'package:modipay/home/print_receipt_page.dart';
+import 'package:modipay/services/api_service.dart' show ApiService;
 import 'package:intl/intl.dart';
 
 class TransactionDetail extends StatefulWidget {

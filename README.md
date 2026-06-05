@@ -1,4 +1,4 @@
-# gobank
+# modipay
 
 A new Flutter project.
 

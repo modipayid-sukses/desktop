@@ -4,8 +4,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gobank/services/receipt_settings_service.dart';
-import 'package:gobank/widgets/universal_receipt.dart';
+import 'package:modipay/services/receipt_settings_service.dart';
+import 'package:modipay/widgets/universal_receipt.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';

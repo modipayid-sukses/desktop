@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/home/request/requestpayment.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/home/request/requestpayment.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

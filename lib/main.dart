@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
-import 'package:gobank/splashscreen.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/color.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/services/device_identity_service.dart';
-import 'package:gobank/services/notification_service.dart';
+import 'package:modipay/splashscreen.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/color.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/services/device_identity_service.dart';
+import 'package:modipay/services/notification_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 

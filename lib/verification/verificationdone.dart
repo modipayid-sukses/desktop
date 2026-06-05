@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/utils/colornotifire.dart';
-import 'package:gobank/utils/media.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 import '../bottombar/bottombar.dart';
 import '../utils/button.dart';

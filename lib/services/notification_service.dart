@@ -3,8 +3,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
-import 'package:gobank/home/notifications.dart';
-import 'package:gobank/utils/string.dart';
+import 'package:modipay/home/notifications.dart';
+import 'package:modipay/utils/string.dart';
 
 import 'api_service.dart';
 

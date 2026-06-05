@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gobank/home/transaction_detail.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/utils/transaction_helpers.dart';
+import 'package:modipay/home/transaction_detail.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/transaction_helpers.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -216,7 +216,7 @@ class _AnalyticsState extends State<Analytics> {
                               : '-Rp ${formatter.format(amount.toInt())}');
                       final dateStr = tx['created_at'] != null
                           ? DateFormat('d MMM yyyy . HH:mm')
-                              .format(DateTime.parse(tx['created_at']))
+                              .format(DateTime.parse(tx['created_at']).toLocal())
                           : '';
                       final statusColor = isFailed
                           ? Colors.red

@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gobank/bottombar/bottombar.dart';
-import 'package:gobank/providers/auth_provider.dart';
-import 'package:gobank/services/api_service.dart';
-import 'package:gobank/services/wilayah_service.dart';
-import 'package:gobank/utils/colornotifire.dart';
+import 'package:modipay/bottombar/bottombar.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/services/api_service.dart';
+import 'package:modipay/services/wilayah_service.dart';
+import 'package:modipay/utils/colornotifire.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
