@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../home/seealltransaction.dart';
 import '../promo/promo_screen.dart';
-import '../profile/profile.dart';
+import '../profile/profile.dart' as profile_page;
 
 class Bottombar extends StatefulWidget {
   const Bottombar({super.key});
@@ -28,7 +28,7 @@ class _BottombarState extends State<Bottombar> {
     const Home(),
     const Seealltransaction(),
     const PromoScreen(),
-    const Profile(),
+    const profile_page.Profile(),
   ];
 
   final PageStorageBucket bucket = PageStorageBucket();
@@ -232,10 +232,10 @@ class _BottombarState extends State<Bottombar> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
-          children: const [
-            Icon(Icons.devices_other_rounded, color: Color(0xFFD32F2F)),
-            SizedBox(width: 10),
-            Expanded(
+          children: [
+            const Icon(Icons.devices_other_rounded, color: Color(0xFFD32F2F)),
+            const SizedBox(width: 10),
+            const Expanded(
               child: Text(
                 'Login dari Perangkat Lain',
                 style: TextStyle(

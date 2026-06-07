@@ -20,6 +20,10 @@ import '../../services/biometric_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../widgets/transaction_receipt.dart';
 import '../topup/topupcard/confirmpayment.dart';
+import 'components/ppob_numpad.dart';
+import 'components/ppob_cellular_form.dart';
+import 'components/saved_customers_bottom_sheet.dart';
+
 
 class PPOBProductScreen extends StatefulWidget {
   final String category;
@@ -1122,115 +1126,14 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
   Widget _buildCustomNumpad(
       Color accent, Color textPrimary, Color textSecondary) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 16,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Numpad',
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontFamily: 'Gilroy Bold',
-                    fontSize: 13,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => setState(() => _showCustomNumpad = false),
-                  icon: Icon(Icons.keyboard_hide_rounded, color: accent),
-                  splashRadius: 20,
-                ),
-              ],
-            ),
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.9,
-              children: [
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('1'),
-                    label: '1',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('2'),
-                    label: '2',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('3'),
-                    label: '3',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('4'),
-                    label: '4',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('5'),
-                    label: '5',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('6'),
-                    label: '6',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('7'),
-                    label: '7',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('8'),
-                    label: '8',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('9'),
-                    label: '9',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _setCustomerId(''),
-                    icon: Icons.close_rounded,
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: () => _appendDigit('0'),
-                    label: '0',
-                    accent: accent,
-                    textPrimary: textPrimary),
-                _buildNumpadButton(
-                    onTap: _deleteDigit,
-                    icon: Icons.backspace_outlined,
-                    accent: accent,
-                    textPrimary: textPrimary),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return PPOBNumpad(
+      accentColor: accent,
+      textPrimaryColor: textPrimary,
+      textSecondaryColor: textSecondary,
+      onDigitPressed: _appendDigit,
+      onDeletePressed: _deleteDigit,
+      onClearPressed: () => _setCustomerId(''),
+      onClosePressed: () => setState(() => _showCustomNumpad = false),
     );
   }
 
@@ -1258,6 +1161,17 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       _setCustomerId(normalized);
     } catch (_) {
       Fluttertoast.showToast(msg: 'Gagal mengambil kontak');
+    }
+  }
+
+  Future<void> _openSavedCustomers(Color accentColor) async {
+    final selectedNo = await SavedCustomersBottomSheet.show(
+      context,
+      category: widget.category.toLowerCase(),
+      accentColor: accentColor,
+    );
+    if (selectedNo != null && selectedNo.isNotEmpty) {
+      _setCustomerId(selectedNo);
     }
   }
 
@@ -4109,7 +4023,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                             const SizedBox(width: 10),
                             InkWell(
                               borderRadius: BorderRadius.circular(8),
-                              onTap: _pickNumberFromContact,
+                              onTap: () => _openSavedCustomers(accent),
                               child: Padding(
                                 padding: const EdgeInsets.all(2),
                                 child: Icon(
@@ -4318,6 +4232,39 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                           ? _buildBpjsSection(textPrimary, textSecondary)
                           : isPlnPostpaidTab
                           ? _buildPlnPostpaidSection(textPrimary, textSecondary)
+                          : _isCellularCategory
+                          ? PPOBCellularForm(
+                              controller: _customerIdController,
+                              focusNode: _customerIdFocusNode,
+                              brands: _brands,
+                              selectedBrand: _selectedBrand,
+                              products: _products,
+                              selectedProduct: _selectedProduct,
+                              showBrandTabs: showBrandTabs,
+                              isPulsaPrefixDetected: _isPulsaPrefixDetected,
+                              isInject: _isInject,
+                              onBrandSelected: _selectBrand,
+                              onProductSelected: _onProductSelected,
+                              onContactPickerPressed: _pickNumberFromContact,
+                              pulsaTabIndex: _pulsaTabIndex,
+                              onPulsaTabChanged: (index) => setState(() => _pulsaTabIndex = index),
+                              validator: _validateCustomerIdByBrand,
+                              formatPrice: _formatPrice,
+                              productDescription: _productDescription,
+                              buildShimmerProducts: _buildShimmerProducts,
+                              isLoadingProducts: _isLoadingProducts,
+                              isPulsaTransferTab: isPulsaTransferTab,
+                              hasCustomerInput: hasCustomerInput,
+                              originalPrice: _originalPrice,
+                              promoPrice: _promoPrice,
+                              isPromoProduct: _isPromoProduct,
+                              extractRewardCoins: _extractRewardCoins,
+                              promoRemainingLabel: _promoRemainingLabel,
+                              pulsaProviderLogoAsset: _pulsaProviderLogoAsset,
+                              accentColor: accent,
+                              textPrimary: textPrimary,
+                              textSecondary: textSecondary,
+                            )
                           : (showBrandTabs ||
                                   _isTopupGameFiltered ||
                                   // Admin config kasih layout eksplisit

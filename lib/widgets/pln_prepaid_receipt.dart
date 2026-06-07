@@ -102,15 +102,42 @@ class PlnPrepaidReceipt extends StatelessWidget {
     final customerName = _pickFirst([joined['customer_name'], joined['nama']]);
     final tariffDaya = _pickFirst([joined['tariff_daya'], joined['tarif_daya']]);
     final productCode = _pickFirst([joined['product_code'], joined['kode_produk']]);
-    final noRef = _pickFirst([
+    String _extractPlnToken(String input) {
+      final digits = input.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 20) {
+        return digits.substring(0, 20);
+      }
+      return '';
+    }
+
+    final candidateSn = _pickFirst([
+      joined['provider_ref'],
       joined['serial_number'],
+      joined['sn'],
+    ], fallback: '');
+
+    final extractedToken = _extractPlnToken(candidateSn);
+    final rawToken = extractedToken.isNotEmpty ? extractedToken : (joined['token'] ?? '').toString();
+
+    final noRefRaw = _pickFirst([
+      joined['ref_id'],
       joined['reff'],
       joined['provider_ref'],
-      joined['ref_id'],
+      joined['serial_number'],
     ]);
+    final noRef = _extractPlnToken(noRefRaw) == _extractPlnToken(rawToken) ? orderId : noRefRaw;
+
     final kwh = (joined['kwh'] ?? '').toString();
-    final rawToken = (joined['token'] ?? '').toString();
-    final info = (joined['info'] ?? '').toString();
+    final infoRaw = (joined['info'] ?? '').toString();
+    String info = infoRaw.trim();
+    final tokenDigits = rawToken.replaceAll(RegExp(r'\s+'), '');
+    if (tokenDigits.isNotEmpty) {
+      info = info.replaceAll(rawToken, '')
+                 .replaceAll(_formatTokenCode(rawToken), '')
+                 .replaceAll(tokenDigits, '')
+                 .trim();
+      info = info.replaceAll(RegExp(r'^[\s/|-]+|[\s/|-]+$'), '').trim();
+    }
 
     final nominal = _toDouble(joined['nominal']);
     final ppj = _toDouble(joined['ppj']);

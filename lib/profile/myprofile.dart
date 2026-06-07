@@ -216,6 +216,8 @@ class _MyProfileState extends State<MyProfile> {
                     color: Colors.transparent,
                     height: height / 4,
                     child: TextField(
+                      controller: TextEditingController(text: auth.userAddress),
+                      readOnly: true,
                       maxLines: 3,
                       autofocus: false,
                       style: TextStyle(

@@ -15,6 +15,7 @@ import '../../services/biometric_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
 import '../../widgets/transaction_receipt.dart';
+import 'components/saved_customers_bottom_sheet.dart';
 
 class PPOBPostpaidScreen extends StatefulWidget {
   final String brand;
@@ -579,6 +580,30 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
     );
   }
 
+  String _getCategory() {
+    final b = widget.brand.toLowerCase();
+    if (b.contains('pln')) return 'pln';
+    if (b.contains('pdam')) return 'pdam';
+    if (b.contains('bpjs')) return 'bpjs';
+    if (b.contains('internet') || b.contains('indihome')) return 'internet';
+    if (b.contains('tv')) return 'tv';
+    if (b.contains('hp') || b.contains('pascabayar')) return 'pulsa';
+    return b;
+  }
+
+  Future<void> _openSavedCustomers() async {
+    final selectedNo = await SavedCustomersBottomSheet.show(
+      context,
+      category: _getCategory(),
+      accentColor: notifire.getbluecolor,
+    );
+    if (selectedNo != null && selectedNo.isNotEmpty) {
+      setState(() {
+        _customerIdController.text = selectedNo;
+        _inquiryResult = null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -702,6 +727,10 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                         fontFamily: 'Gilroy Medium',
                       ),
                       prefixIcon: Icon(_getInputIcon(), color: notifire.getbluecolor),
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.contact_page_outlined, color: notifire.getbluecolor),
+                        onPressed: _openSavedCustomers,
+                      ),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: width / 30,

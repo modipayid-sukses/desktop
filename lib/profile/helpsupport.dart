@@ -5,6 +5,8 @@ import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 import '../utils/colornotifire.dart';
 import '../utils/media.dart';
+import 'complaint_form_screen.dart';
+import 'complaint_history_screen.dart';
 
 class HelpSupport extends StatefulWidget {
   final String title;
@@ -73,6 +75,99 @@ class _HelpSupportState extends State<HelpSupport> {
                                 notifire.getbluecolor,
                                 CustomStrings.search,
                               ),
+                              SizedBox(height: height / 40),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const ComplaintFormScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                                        decoration: BoxDecoration(
+                                          color: notifire.getbluecolor.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: notifire.getbluecolor.withOpacity(0.3)),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Icon(Icons.support_agent, color: notifire.getbluecolor, size: 28),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "Hubungi CS",
+                                              style: TextStyle(
+                                                color: notifire.getbluecolor,
+                                                fontFamily: 'Gilroy Bold',
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              "Buat Laporan",
+                                              style: TextStyle(
+                                                color: notifire.getbluecolor.withOpacity(0.7),
+                                                fontFamily: 'Gilroy Medium',
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const ComplaintHistoryScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                                        decoration: BoxDecoration(
+                                          color: notifire.getdarkwhitecolor,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Icon(Icons.receipt_long, color: notifire.getdarkscolor, size: 28),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "Riwayat Laporan",
+                                              style: TextStyle(
+                                                color: notifire.getdarkscolor,
+                                                fontFamily: 'Gilroy Bold',
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              "Cek Status Tiket",
+                                              style: TextStyle(
+                                                color: notifire.getdarkscolor.withOpacity(0.6),
+                                                fontFamily: 'Gilroy Medium',
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: height / 40),
                               Accordion(
                                 disableScrolling: true,
                                 flipRightIconIfOpen: true,

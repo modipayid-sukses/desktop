@@ -84,6 +84,7 @@ class _HistoryTransactionState extends State<HistoryTransaction> {
               'is_pending': status == 'pending',
               'is_expired': status == 'expired',
               'status_label': statusLabel,
+              'status': status,
             };
           })
           .toList();

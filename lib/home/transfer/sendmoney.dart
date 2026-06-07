@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/home/transfer/sendall.dart';
+import 'package:modipay/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/colornotifire.dart';
@@ -28,17 +29,314 @@ class _SendMoneyState extends State<SendMoney>
   }
 
   TabController? controller;
-  List<Widget> tabs = [
-    const SendAll(),
-    const SendAll(),
-    const SendAll(),
-    const SendAll(),
+  List<Widget> get _tabs => [
+    SendAll(key: UniqueKey()),
+    SendAll(key: UniqueKey()),
+    SendAll(key: UniqueKey()),
+    SendAll(key: UniqueKey()),
   ];
 
   @override
   void initState() {
     super.initState();
     controller = TabController(length: 4, vsync: this);
+  }
+
+  void _showAddContactDialog() {
+    final phoneController = TextEditingController();
+    bool searching = false;
+    bool found = false;
+    bool saving = false;
+    Map<String, dynamic>? foundUser;
+    String? errorMessage;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: notifire.getprimerycolor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20, 
+                18, 
+                20, 
+                MediaQuery.of(context).viewInsets.bottom + 20
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Tambah Kontak Modipay',
+                    style: TextStyle(
+                      fontFamily: 'Gilroy Bold',
+                      fontSize: 18,
+                      color: Color(0xFF1F1F1F),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (!found) ...[
+                    const Text(
+                      'Masukkan Nomor HP Pengguna',
+                      style: TextStyle(
+                        fontFamily: 'Gilroy Medium',
+                        fontSize: 13,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      autofocus: true,
+                      style: TextStyle(
+                        fontFamily: 'Gilroy Medium',
+                        fontSize: 15,
+                        color: notifire.getdarkscolor,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Contoh: 0812xxxxxxxx',
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: notifire.getbluecolor, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        errorMessage!,
+                        style: const TextStyle(
+                          fontFamily: 'Gilroy Medium',
+                          fontSize: 12,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: searching
+                            ? null
+                            : () async {
+                                final phone = phoneController.text.trim();
+                                if (phone.isEmpty) {
+                                  setSheetState(() => errorMessage = 'Nomor HP tidak boleh kosong');
+                                  return;
+                                }
+                                setSheetState(() {
+                                  searching = true;
+                                  errorMessage = null;
+                                });
+                                try {
+                                  final res = await ApiService.searchUser(phone);
+                                  setSheetState(() {
+                                    searching = false;
+                                    found = true;
+                                    foundUser = res;
+                                  });
+                                } catch (e) {
+                                  setSheetState(() {
+                                    searching = false;
+                                    errorMessage = ApiService.userFriendlyMessage(e, fallback: 'Pengguna tidak ditemukan');
+                                  });
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: notifire.getbluecolor,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: searching
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text(
+                                'Cari Pengguna',
+                                style: TextStyle(
+                                  fontFamily: 'Gilroy Bold',
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ] else ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.green.shade200, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Pengguna Ditemukan!',
+                                style: TextStyle(
+                                  fontFamily: 'Gilroy Bold',
+                                  fontSize: 14,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            foundUser?['name'] ?? '',
+                            style: const TextStyle(
+                              fontFamily: 'Gilroy Bold',
+                              fontSize: 16,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            foundUser?['phone'] ?? '',
+                            style: TextStyle(
+                              fontFamily: 'Gilroy Medium',
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setSheetState(() {
+                                  found = false;
+                                  foundUser = null;
+                                  phoneController.clear();
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.grey.shade300),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text(
+                                'Cari Lagi',
+                                style: TextStyle(
+                                  fontFamily: 'Gilroy Bold',
+                                  fontSize: 15,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: saving
+                                  ? null
+                                  : () async {
+                                      setSheetState(() => saving = true);
+                                      try {
+                                        final res = await ApiService.createContact(
+                                          name: foundUser?['name'] ?? '',
+                                          phone: foundUser?['phone'] ?? '',
+                                          category: 'favorite',
+                                        );
+                                        if (res.containsKey('contact')) {
+                                          Navigator.pop(ctx);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Kontak berhasil ditambahkan ke daftar transfer'),
+                                              behavior: SnackBarBehavior.floating,
+                                            ),
+                                          );
+                                          setState(() {}); // Trigger rebuild to reload list
+                                        } else {
+                                          setSheetState(() {
+                                            saving = false;
+                                            errorMessage = res['message'] ?? 'Gagal menyimpan kontak';
+                                          });
+                                        }
+                                      } catch (e) {
+                                        setSheetState(() {
+                                          saving = false;
+                                          errorMessage = ApiService.userFriendlyMessage(e, fallback: 'Gagal menyimpan kontak');
+                                        });
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: notifire.getbluecolor,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: saving
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text(
+                                      'Simpan Kontak',
+                                      style: TextStyle(
+                                        fontFamily: 'Gilroy Bold',
+                                        fontSize: 15,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -58,7 +356,7 @@ class _SendMoneyState extends State<SendMoney>
         ),
         actions: [
           GestureDetector(
-            onTap: () {},
+            onTap: _showAddContactDialog,
             child: Container(
               height: 40,
               width: 40,
@@ -192,7 +490,7 @@ class _SendMoneyState extends State<SendMoney>
                             Expanded(
                               child: TabBarView(
                                 controller: controller,
-                                children: tabs.map((tab) => tab).toList(),
+                                children: _tabs,
                               ),
                             ),
                           ],

@@ -75,7 +75,7 @@ class _SendAllState extends State<SendAll> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => TransferMoney(
-                                        contactId: contact['id'],
+                                        contactId: contact['receiver_user_id'] ?? contact['id'],
                                         contactName: contact['name'] ?? '',
                                         contactPhone: contact['phone'] ?? '',
                                         contactCategory: contact['category'] ?? 'bank',

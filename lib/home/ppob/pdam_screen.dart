@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../utils/colornotifire.dart';
 import 'pdam_inquiry_screen.dart';
+import 'components/saved_customers_bottom_sheet.dart';
 
 // ── Tokens warna mengikuti style PPOB (BPJS / Indihome) ─────────────────────
 const Color _kHeaderBlue = Color(0xFF3F6FB4);
@@ -417,6 +418,20 @@ class _PdamScreenState extends State<PdamScreen> {
     }
   }
 
+  Future<void> _openSavedCustomers() async {
+    final selectedNo = await SavedCustomersBottomSheet.show(
+      context,
+      category: 'pdam',
+      accentColor: _kHeaderBlue,
+    );
+    if (selectedNo != null && selectedNo.isNotEmpty) {
+      setState(() {
+        _customerIdController.text = selectedNo;
+        _inquiryError = null;
+      });
+    }
+  }
+
   // ─── Build ──────────────────────────────────────────────────────────────
 
   @override
@@ -575,12 +590,16 @@ class _PdamScreenState extends State<PdamScreen> {
                               ),
                             ),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.only(right: 12),
-                            child: Icon(
-                              Icons.contact_page_outlined,
-                              color: _kHeaderBlue,
-                              size: 22,
+                          InkWell(
+                            onTap: _openSavedCustomers,
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Icon(
+                                Icons.contact_page_outlined,
+                                color: _kHeaderBlue,
+                                size: 24,
+                              ),
                             ),
                           ),
                         ],

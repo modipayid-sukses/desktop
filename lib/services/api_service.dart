@@ -1497,6 +1497,129 @@ class ApiService {
     } catch (_) {}
     return [];
   }
+
+  // ==================== PPOB SAVED CUSTOMERS ====================
+
+  static Future<List<dynamic>> getSavedCustomers({String? category}) async {
+    String url = '$_baseUrl/ppob/saved-customers';
+    if (category != null) url += '?category=${Uri.encodeComponent(category)}';
+    final response = await _getJson(url, auth: true, fallbackMessage: 'Gagal memuat daftar pelanggan.');
+    final data = response['data'] ?? response;
+    return data is List ? data : <dynamic>[];
+  }
+
+  static Future<Map<String, dynamic>> saveCustomer({
+    required String name,
+    required String customerNumber,
+    String? category,
+    String? notes,
+  }) async {
+    return _postJson(
+      '$_baseUrl/ppob/saved-customers',
+      auth: true,
+      body: jsonEncode({
+        'name': name,
+        'customer_number': customerNumber,
+        if (category != null) 'category': category,
+        if (notes != null) 'notes': notes,
+      }),
+      fallbackMessage: 'Gagal menyimpan pelanggan.',
+    );
+  }
+
+  static Future<void> deleteSavedCustomer(int id) async {
+    await _sendRequest(
+      () => http.delete(Uri.parse('$_baseUrl/ppob/saved-customers/$id'), headers: _headers(auth: true)),
+      fallbackMessage: 'Gagal menghapus pelanggan.',
+    );
+  }
+
+  // ==================== COMPLAINTS ====================
+
+  static Future<Map<String, dynamic>> createComplaint({
+    required String category,
+    required String subject,
+    required String message,
+    int? transactionId,
+    String? transactionCode,
+  }) async {
+    return _postJson(
+      '$_baseUrl/complaints',
+      auth: true,
+      body: jsonEncode({
+        'category': category,
+        'subject': subject,
+        'message': message,
+        if (transactionId != null) 'transaction_id': transactionId,
+        if (transactionCode != null) 'transaction_code': transactionCode,
+      }),
+      fallbackMessage: 'Gagal mengirim pengaduan.',
+    );
+  }
+
+  static Future<List<dynamic>> getComplaints() async {
+    final response = await _getJson('$_baseUrl/complaints', auth: true, fallbackMessage: 'Gagal memuat pengaduan.');
+    final data = response['data'] ?? response;
+    return data is List ? data : <dynamic>[];
+  }
+
+  // ==================== TRANSFERS SEARCH ====================
+
+  static Future<Map<String, dynamic>> searchUser(String phone) async {
+    return _postJson(
+      '$_baseUrl/transfers/search-user',
+      auth: true,
+      body: jsonEncode({'phone': phone}),
+      fallbackMessage: 'Pengguna tidak ditemukan.',
+    );
+  }
+
+  // ==================== AGENTS ====================
+
+  static Future<Map<String, dynamic>> getAgens() async {
+    return _getJson('$_baseUrl/hierarchy/agens', auth: true, fallbackMessage: 'Gagal memuat daftar agen.');
+  }
+
+  static Future<Map<String, dynamic>> updateMargin(double margin) async {
+    return _putJson(
+      '$_baseUrl/hierarchy/margin',
+      auth: true,
+      body: jsonEncode({'markup_margin': margin}),
+      fallbackMessage: 'Gagal memperbarui margin.',
+    );
+  }
+
+  static Future<Map<String, dynamic>> topupAgen({required int agenId, required double amount}) async {
+    return _postJson(
+      '$_baseUrl/hierarchy/topup-agen',
+      auth: true,
+      body: jsonEncode({'agen_id': agenId, 'amount': amount}),
+      fallbackMessage: 'Gagal melakukan top up agen.',
+    );
+  }
+
+  static Future<Map<String, dynamic>> addAgen({int? userId, String? name, String? phone}) async {
+    return _postJson(
+      '$_baseUrl/hierarchy/agens',
+      auth: true,
+      body: jsonEncode({
+        if (userId != null) 'user_id': userId,
+        if (name != null && name.isNotEmpty) 'name': name,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+      }),
+      fallbackMessage: 'Gagal menambah agen.',
+    );
+  }
+
+  /// Cari user berdasarkan nomor HP untuk keperluan tambah agen.
+  static Future<Map<String, dynamic>> searchUserForAgen(String query) async {
+    final encoded = Uri.encodeComponent(query);
+    return _getJson(
+      '$_baseUrl/contacts/search-user?phone=$encoded',
+      auth: true,
+      fallbackMessage: 'Pengguna tidak ditemukan.',
+    );
+  }
 }
 
 /// HTTP client yang tidak follow redirect.

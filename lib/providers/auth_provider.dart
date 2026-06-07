@@ -35,6 +35,7 @@ class AuthProvider extends ChangeNotifier {
   String get userName => _user?['name'] ?? 'User';
   String get userEmail => _user?['email'] ?? '';
   String get userPhone => _user?['phone'] ?? '';
+  String get userAddress => _user?['address'] ?? '';
   String get userBalance => _user?['balance'] ?? '0.00';
   String? get userAvatar => _user?['avatar'];
   String get userLevel => _user?['level'] ?? 'bronze';
@@ -44,6 +45,9 @@ class AuthProvider extends ChangeNotifier {
   bool get qrisMerchantActive => _user?['qris_merchant_active'] == true || _user?['qris_merchant_active'] == 1;
   bool get kreditVerified => _user?['kredit_verified'] == true || _user?['kredit_verified'] == 1;
   double get kreditLimit => double.tryParse(_user?['kredit_limit']?.toString() ?? '0') ?? 0;
+  /// Hierarchy level dari backend: 'master', 'agent', atau null jika biasa.
+  String? get hierarchyLevel => _user?['hierarchy_level']?.toString();
+  bool get isMasterAgent => hierarchyLevel == 'master';
 
   Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();

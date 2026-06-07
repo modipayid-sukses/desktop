@@ -19,6 +19,7 @@ import 'level_detail_screen.dart';
 import 'kyc_screen.dart';
 import 'notification.dart';
 import 'receipt_settings_screen.dart';
+import 'agent_management_screen.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -304,8 +305,18 @@ class _ProfileState extends State<Profile> {
                       context,
                       MaterialPageRoute(builder: (_) => const LevelDetailScreen()),
                     ),
-                    showDivider: false,
+                    showDivider: auth.isMasterAgent,
                   ),
+                  if (auth.isMasterAgent)
+                    _menuTile(
+                      icon: Icons.supervised_user_circle_outlined,
+                      title: 'Kelola Agen',
+                      showDivider: false,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AgentManagementScreen()),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 12),

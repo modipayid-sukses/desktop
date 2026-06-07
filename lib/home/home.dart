@@ -32,6 +32,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:modipay/utils/transaction_helpers.dart';
 
 import 'transfer/bank_transfer_screen.dart';
+import 'transfer/sendmoney.dart';
 import 'limit/limit_screen.dart';
 import 'topup/topup_channel_screen.dart';
 import 'qris/qris_merchant_screen.dart';
@@ -297,7 +298,9 @@ class _HomeState extends State<Home> {
             'order_id': t['reference_id'] ?? '',
             'created_at': t['created_at'],
             'is_pending': status == 'pending',
+            'is_expired': status == 'expired',
             'status_label': statusLabel,
+            'status': status,
           };
         })
         .toList();
@@ -344,6 +347,100 @@ class _HomeState extends State<Home> {
       context,
       MaterialPageRoute(builder: (context) => screen),
     ).then((_) => _onRefresh());
+  }
+
+  void _showTransferOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Pilih Metode Transfer',
+                style: TextStyle(
+                  fontFamily: 'Gilroy Bold',
+                  fontSize: 18,
+                  color: Color(0xFF1F1F1F),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.account_balance_rounded, color: Color(0xFF1E88E5)),
+                ),
+                title: const Text(
+                  'Transfer ke Rekening Bank',
+                  style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
+                ),
+                subtitle: const Text(
+                  'Kirim saldo ke berbagai rekening bank di Indonesia',
+                  style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateAndRefresh(const BankTransferScreen());
+                },
+              ),
+              const Divider(height: 24, thickness: 1, color: Color(0xFFF3F4F6)),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.people_alt_rounded, color: Color(0xFF43A047)),
+                ),
+                title: const Text(
+                  'Transfer Sesama Modipay',
+                  style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
+                ),
+                subtitle: const Text(
+                  'Kirim saldo instan ke sesama pengguna Modipay',
+                  style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateAndRefresh(const SendMoney());
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   String _formatBalance(String balance) {
@@ -787,7 +884,7 @@ class _HomeState extends State<Home> {
                                 icon: Icons.swap_horiz_rounded,
                                 label: 'Transfer',
                                 color: const Color(0xFF10B981),
-                                onTap: () => _navigateAndRefresh(const BankTransferScreen()),
+                                onTap: () => _showTransferOptions(),
                               ),
                               _buildCardAction(
                                 icon: Icons.credit_card_rounded,

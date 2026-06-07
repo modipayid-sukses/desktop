@@ -47,6 +47,8 @@ class _EditProfileState extends State<EditProfile> {
   String _villageCode = '';
   String _villageName = '';
 
+  List<String> _initialAddressParts = [];
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +56,13 @@ class _EditProfileState extends State<EditProfile> {
     _nameController.text = auth.userName;
     _emailController.text = auth.userEmail;
     _phoneController.text = auth.userPhone;
+
+    final address = auth.userAddress;
+    if (address.isNotEmpty) {
+      _initialAddressParts = address.split(', ').map((e) => e.trim()).toList();
+    }
     _streetController.text = '';
+
     _loadRegions();
   }
 
@@ -107,9 +115,23 @@ class _EditProfileState extends State<EditProfile> {
         _provinces = provinces;
       });
 
-      if (_provinces.isNotEmpty) {
-        _provinceCode = _provinces.first['code'] ?? '';
-        _provinceName = _provinces.first['name'] ?? '';
+      if (_initialAddressParts.isNotEmpty) {
+        final match = _provinces.firstWhere(
+          (p) => p['name']?.toLowerCase() == _initialAddressParts[0].toLowerCase(),
+          orElse: () => {},
+        );
+        if (match.isNotEmpty) {
+          setState(() {
+            _provinceCode = match['code'] ?? '';
+            _provinceName = match['name'] ?? '';
+          });
+          await _loadRegencies();
+        }
+      } else if (_provinces.isNotEmpty) {
+        setState(() {
+          _provinceCode = _provinces.first['code'] ?? '';
+          _provinceName = _provinces.first['name'] ?? '';
+        });
         await _loadRegencies();
       }
     } catch (_) {
@@ -136,6 +158,20 @@ class _EditProfileState extends State<EditProfile> {
         _districts = [];
         _villages = [];
       });
+
+      if (_initialAddressParts.length >= 2) {
+        final match = _regencies.firstWhere(
+          (r) => r['name']?.toLowerCase() == _initialAddressParts[1].toLowerCase(),
+          orElse: () => {},
+        );
+        if (match.isNotEmpty) {
+          setState(() {
+            _regencyCode = match['code'] ?? '';
+            _regencyName = match['name'] ?? '';
+          });
+          await _loadDistricts();
+        }
+      }
     } catch (_) {
       Fluttertoast.showToast(msg: 'Gagal memuat kota/kabupaten');
     } finally {
@@ -157,6 +193,20 @@ class _EditProfileState extends State<EditProfile> {
         _villageName = '';
         _villages = [];
       });
+
+      if (_initialAddressParts.length >= 3) {
+        final match = _districts.firstWhere(
+          (d) => d['name']?.toLowerCase() == _initialAddressParts[2].toLowerCase(),
+          orElse: () => {},
+        );
+        if (match.isNotEmpty) {
+          setState(() {
+            _districtCode = match['code'] ?? '';
+            _districtName = match['name'] ?? '';
+          });
+          await _loadVillages();
+        }
+      }
     } catch (_) {
       Fluttertoast.showToast(msg: 'Gagal memuat kecamatan');
     } finally {
@@ -175,6 +225,23 @@ class _EditProfileState extends State<EditProfile> {
         _villageCode = '';
         _villageName = '';
       });
+
+      if (_initialAddressParts.length >= 4) {
+        final match = _villages.firstWhere(
+          (v) => v['name']?.toLowerCase() == _initialAddressParts[3].toLowerCase(),
+          orElse: () => {},
+        );
+        if (match.isNotEmpty) {
+          setState(() {
+            _villageCode = match['code'] ?? '';
+            _villageName = match['name'] ?? '';
+          });
+        }
+
+        if (_initialAddressParts.length >= 5) {
+          _streetController.text = _initialAddressParts.sublist(4).join(', ');
+        }
+      }
     } catch (_) {
       Fluttertoast.showToast(msg: 'Gagal memuat desa/kelurahan');
     } finally {
@@ -517,6 +584,7 @@ class _EditProfileState extends State<EditProfile> {
                       if (val == null) return;
                       final selected = _provinces.firstWhere((item) => item['code'] == val);
                       setState(() {
+                        _initialAddressParts = [];
                         _provinceCode = selected['code'] ?? '';
                         _provinceName = selected['name'] ?? '';
                         _regencyCode = '';
@@ -542,6 +610,7 @@ class _EditProfileState extends State<EditProfile> {
                       if (val == null) return;
                       final selected = _regencies.firstWhere((item) => item['code'] == val);
                       setState(() {
+                        _initialAddressParts = [];
                         _regencyCode = selected['code'] ?? '';
                         _regencyName = selected['name'] ?? '';
                         _districtCode = '';
@@ -564,6 +633,7 @@ class _EditProfileState extends State<EditProfile> {
                       if (val == null) return;
                       final selected = _districts.firstWhere((item) => item['code'] == val);
                       setState(() {
+                        _initialAddressParts = [];
                         _districtCode = selected['code'] ?? '';
                         _districtName = selected['name'] ?? '';
                         _villageCode = '';
@@ -583,6 +653,7 @@ class _EditProfileState extends State<EditProfile> {
                       if (val == null) return;
                       final selected = _villages.firstWhere((item) => item['code'] == val);
                       setState(() {
+                        _initialAddressParts = [];
                         _villageCode = selected['code'] ?? '';
                         _villageName = selected['name'] ?? '';
                       });

@@ -273,8 +273,33 @@ class UniversalReceipt extends StatelessWidget {
       // Hindari duplikat: kalau Stand Meter sama dengan IDPEL, kosongkan.
       final standMeter = standMeterRaw == idpel ? '-' : standMeterRaw;
       final noRef = orderId.startsWith('PPOB-') ? orderId.substring(5) : orderId;
-      final rawToken = (joined['token'] ?? '').toString();
-      final info = (joined['info'] ?? '').toString();
+      String _extractPlnToken(String input) {
+        final digits = input.replaceAll(RegExp(r'[^0-9]'), '');
+        if (digits.length >= 20) {
+          return digits.substring(0, 20);
+        }
+        return '';
+      }
+
+      final candidateSn = _pickFirst([
+        joined['provider_ref'],
+        joined['serial_number'],
+        joined['sn'],
+      ], fallback: '');
+
+      final extractedToken = _extractPlnToken(candidateSn);
+      final rawToken = extractedToken.isNotEmpty ? extractedToken : (joined['token'] ?? '').toString();
+
+      final infoRaw = (joined['info'] ?? '').toString();
+      String info = infoRaw.trim();
+      final tokenDigits = rawToken.replaceAll(RegExp(r'\s+'), '');
+      if (tokenDigits.isNotEmpty) {
+        info = info.replaceAll(rawToken, '')
+                   .replaceAll(_formatTokenCode(rawToken), '')
+                   .replaceAll(tokenDigits, '')
+                   .trim();
+        info = info.replaceAll(RegExp(r'^[\s/|-]+|[\s/|-]+$'), '').trim();
+      }
 
       final admin = _toDouble(joined['admin']);
       final totalBayar = _toDouble(joined['total']) > 0

@@ -7,6 +7,7 @@ import 'package:modipay/home/print_receipt_page.dart';
 import 'package:modipay/services/api_service.dart' show ApiService;
 import 'package:intl/intl.dart';
 import 'package:modipay/utils/transaction_helpers.dart';
+import 'package:modipay/profile/complaint_form_screen.dart';
 
 class TransactionDetail extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -104,9 +105,11 @@ class _TransactionDetailState extends State<TransactionDetail> {
     if (s.contains('pending') ||
         s.contains('proses') ||
         s.contains('process')) return 'pending';
+    if (s.contains('expired') ||
+        s.contains('kadalursa') ||
+        s.contains('kedaluwarsa')) return 'expired';
     if (s.contains('failed') ||
         s.contains('gagal') ||
-        s.contains('expired') ||
         s.contains('cancel') ||
         s.contains('reject') ||
         s.contains('error')) return 'failed';
@@ -689,24 +692,33 @@ class _TransactionDetailState extends State<TransactionDetail> {
 
     final isPending = status == 'pending';
     final isSuccess = status == 'success';
+    final isExpired = status == 'expired';
 
     final statusColor = isSuccess
         ? const Color(0xFF2E7D32)
-        : (isPending ? const Color(0xFFED9D00) : const Color(0xFFD32F2F));
+        : (isPending 
+            ? const Color(0xFFED9D00) 
+            : (isExpired ? Colors.grey : const Color(0xFFD32F2F)));
     final statusBg = isSuccess
         ? const Color(0xFFE8F5E9)
-        : (isPending ? const Color(0xFFFFF3E0) : const Color(0xFFFFEBEE));
+        : (isPending 
+            ? const Color(0xFFFFF3E0) 
+            : (isExpired ? const Color(0xFFEEEEEE) : const Color(0xFFFFEBEE)));
     final statusIcon = isSuccess
         ? Icons.check_circle_outline_rounded
         : (isPending
             ? Icons.access_time_rounded
-            : Icons.error_outline_rounded);
+            : (isExpired ? Icons.timer_off_outlined : Icons.error_outline_rounded));
     final statusLabel = isSuccess
         ? 'Sukses'
-        : (isPending ? 'Dalam Proses' : 'Gagal');
+        : (isPending 
+            ? 'Dalam Proses' 
+            : (isExpired ? 'Kedaluwarsa' : 'Gagal'));
     final statusBanner = isSuccess
         ? 'Transaksi Berhasil'
-        : (isPending ? 'Transaksi Dalam Proses' : 'Transaksi Gagal');
+        : (isPending 
+            ? 'Transaksi Dalam Proses' 
+            : (isExpired ? 'Transaksi Kedaluwarsa' : 'Transaksi Gagal'));
 
     final currencyFormat = NumberFormat('#,###', 'id_ID');
     final amountText = 'Rp ${currencyFormat.format(amount.toInt())}';
@@ -1057,6 +1069,36 @@ class _TransactionDetailState extends State<TransactionDetail> {
                                     ),
                             ),
                           ),
+                        if (status == 'pending' || status == 'failed') ...[
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () {
+                              final txId = data['id'] is int 
+                                  ? data['id'] as int 
+                                  : int.tryParse(data['id']?.toString() ?? '');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ComplaintFormScreen(
+                                    transactionId: txId,
+                                    transactionCode: orderId,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 6),
+                              child: Text(
+                                'Laporkan Masalah',
+                                style: TextStyle(
+                                  fontFamily: 'Gilroy Bold',
+                                  fontSize: 16,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         GestureDetector(
                           onTap: () => Navigator.pushAndRemoveUntil(

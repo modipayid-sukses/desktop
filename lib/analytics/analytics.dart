@@ -77,6 +77,7 @@ class _AnalyticsState extends State<Analytics> {
         'created_at': t['created_at'],
         'is_pending': status == 'pending',
         'status_label': status == 'pending' ? 'Menunggu' : (status == 'expired' ? 'Kedaluwarsa' : ''),
+        'status': status,
       };
     }).toList();
     final completed = _transactions.map((t) {

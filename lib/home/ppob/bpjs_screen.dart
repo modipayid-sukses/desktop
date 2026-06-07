@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../utils/colornotifire.dart';
 import 'bpjs_inquiry_screen.dart';
+import 'components/saved_customers_bottom_sheet.dart';
 
 // ── Tokens warna mengikuti style PPOB ────────────────────────────────────────
 const Color _kHeaderBlue = Color(0xFF3F6FB4);
@@ -419,6 +420,20 @@ class _BpjsScreenState extends State<BpjsScreen> {
     }
   }
 
+  Future<void> _openSavedCustomers() async {
+    final selectedNo = await SavedCustomersBottomSheet.show(
+      context,
+      category: 'bpjs',
+      accentColor: _kHeaderBlue,
+    );
+    if (selectedNo != null && selectedNo.isNotEmpty) {
+      setState(() {
+        _customerIdController.text = selectedNo;
+        _inquiryError = null;
+      });
+    }
+  }
+
   // ─── Build ──────────────────────────────────────────────────────────────
 
   @override
@@ -577,12 +592,16 @@ class _BpjsScreenState extends State<BpjsScreen> {
                               ),
                             ),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.only(right: 12),
-                            child: Icon(
-                              Icons.health_and_safety,
-                              color: _kHeaderBlue,
-                              size: 22,
+                          InkWell(
+                            onTap: _openSavedCustomers,
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Icon(
+                                Icons.contact_page_outlined,
+                                color: _kHeaderBlue,
+                                size: 24,
+                              ),
                             ),
                           ),
                         ],
