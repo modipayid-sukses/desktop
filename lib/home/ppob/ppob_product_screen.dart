@@ -136,6 +136,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   // Pesan error inline untuk panel cek tagihan (mengganti dialog/toast).
   String? _plnPostpaidError;
 
+  Timer? _inputDebounce;
+
   // ── E-Wallet: Nominal custom (produk dinamis Loket Bayar) ──────────
   final TextEditingController _customAmountController = TextEditingController();
   bool _isCustomAmountMode = true; // true = user memilih input nominal custom
@@ -777,15 +779,24 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   }
 
   List<dynamic> _enrichWithPromo(List<dynamic> source) {
-    if (_promoIndex.isEmpty) return source;
     return source.map((item) {
       final p = Map<String, dynamic>.from(item as Map);
+      
+      // Pre-calculate expensive fields
+      p['_is_promo_pre'] = _isPromoProduct(p);
+      p['_promo_price_pre'] = _promoPrice(p);
+      p['_original_price_pre'] = _originalPrice(p);
+      p['_reward_coins_pre'] = _extractRewardCoins(p);
+      p['_description_pre'] = _productDescription(p);
+      p['_promo_label_pre'] = _promoRemainingLabel(p);
+      p['_logo_asset_pre'] = _pulsaProviderLogoAsset(p);
+
+      if (_promoIndex.isEmpty) return p;
       final key = _skuKey(p);
       if (key.isEmpty) return p;
       final promo = _promoIndex[key];
       if (promo == null) return p;
-      // Promo endpoint: `price` = promo price, `original_price` = harga normal,
-      // `promo_end` = waktu berakhir, juga ada flag `is_promo`.
+      
       final promoPrice = promo['promo_price'] ?? promo['price'];
       final originalPrice = promo['original_price'] ?? p['price'];
       p['is_promo'] = true;
@@ -795,6 +806,13 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       if (promo['promo_end_at'] != null) {
         p['promo_end_at'] = promo['promo_end_at'];
       }
+      
+      // Re-calculate after promo enrichment
+      p['_is_promo_pre'] = _isPromoProduct(p);
+      p['_promo_price_pre'] = _promoPrice(p);
+      p['_original_price_pre'] = _originalPrice(p);
+      p['_promo_label_pre'] = _promoRemainingLabel(p);
+
       return p;
     }).toList();
   }
@@ -1037,17 +1055,22 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   void _onCustomerInputChanged() {
     if (!mounted) return;
 
-    setState(() {
-      if (_isPln) {
+    if (_isPln && _inquiryResult != null) {
+      setState(() {
         _inquiryResult = null;
-      }
-    });
+      });
+    }
 
     if (_isInject) return;
 
-    if (_isCellularCategory && (_isPulsaCategory ? _pulsaTabIndex == 0 : true)) {
-      unawaited(_handlePulsaPrefixAutoSwitch(_customerIdController.text));
-    }
+    _inputDebounce?.cancel();
+    _inputDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      if (_isCellularCategory &&
+          (_isPulsaCategory ? _pulsaTabIndex == 0 : true)) {
+        unawaited(_handlePulsaPrefixAutoSwitch(_customerIdController.text));
+      }
+    });
   }
 
   void _setCustomerId(String value) {
@@ -3969,22 +3992,24 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                       return;
                                     }
                                     _onCustomerInputChanged();
-                                    if (_isPln &&
-                                        _plnTabIndex == 1 &&
-                                        (_plnPostpaidInquiryResult != null ||
-                                            _plnPostpaidError != null)) {
-                                      setState(() {
-                                        _plnPostpaidInquiryResult = null;
-                                        _plnPostpaidError = null;
-                                      });
+
+                                    if (_isPln && _plnTabIndex == 1) {
+                                      if (_plnPostpaidInquiryResult != null ||
+                                          _plnPostpaidError != null) {
+                                        setState(() {
+                                          _plnPostpaidInquiryResult = null;
+                                          _plnPostpaidError = null;
+                                        });
+                                      }
                                     }
-                                    if (_isCategoryInquiry &&
-                                        (_bpjsInquiryResult != null ||
-                                            _bpjsInquiryError != null)) {
-                                      setState(() {
-                                        _bpjsInquiryResult = null;
-                                        _bpjsInquiryError = null;
-                                      });
+                                    if (_isCategoryInquiry) {
+                                      if (_bpjsInquiryResult != null ||
+                                          _bpjsInquiryError != null) {
+                                        setState(() {
+                                          _bpjsInquiryResult = null;
+                                          _bpjsInquiryError = null;
+                                        });
+                                      }
                                     }
                                   },
                                   onTap: () {
@@ -4400,12 +4425,14 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                                           itemBuilder: (_, i) {
                                                             final p = Map<String, dynamic>.from(
                                                                 _products[i]);
-                                                            final isPromo = _isPromoProduct(p);
+                                                            final isPromo = p['_is_promo_pre'] ?? _isPromoProduct(p);
                                                             final originalPrice =
-                                                                _originalPrice(p);
-                                                            final promoPrice = _promoPrice(p);
+                                                                p['_original_price_pre'] ?? _originalPrice(p);
+                                                            final promoPrice = p['_promo_price_pre'] ?? _promoPrice(p);
                                                             final rewardCoins =
-                                                                _extractRewardCoins(p);
+                                                                p['_reward_coins_pre'] ?? _extractRewardCoins(p);
+                                                            final promoLabel = p['_promo_label_pre'] ?? _promoRemainingLabel(p);
+                                                            
                                                             final isSelected = (_isEmoney ||
                                                                     (_isPln &&
                                                                         _plnTabIndex == 0)) &&
@@ -4414,9 +4441,9 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                                                         'buyer_sku_code'] ==
                                                                     p['buyer_sku_code'];
                                                             final providerLogoAsset =
-                                                                _isCellularCategory
+                                                                p['_logo_asset_pre'] ?? (_isCellularCategory
                                                                     ? _pulsaProviderLogoAsset(p)
-                                                                    : '';
+                                                                    : '');
 
                                                             return Material(
                                                               color: Colors.white,
@@ -4553,7 +4580,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                                                       ),
                                                                       const SizedBox(height: 4),
                                                                       Text(
-                                                                        _promoRemainingLabel(p),
+                                                                        promoLabel,
                                                                         style: const TextStyle(
                                                                           color: Color(0xFFEF6C00),
                                                                           fontFamily: 'Gilroy Medium',

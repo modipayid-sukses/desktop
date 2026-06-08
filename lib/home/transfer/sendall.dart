@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:modipay/home/transfer/transfermoney.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +9,10 @@ import '../../utils/media.dart';
 import '../../utils/string.dart';
 
 class SendAll extends StatefulWidget {
-  const SendAll({Key? key}) : super(key: key);
+  final String? category;
+  final String searchQuery;
+
+  const SendAll({Key? key, this.category, this.searchQuery = ''}) : super(key: key);
 
   @override
   State<SendAll> createState() => _SendAllState();
@@ -26,16 +30,34 @@ class _SendAllState extends State<SendAll> {
     _loadContacts();
   }
 
+  @override
+  void didUpdateWidget(SendAll oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.searchQuery != widget.searchQuery || oldWidget.category != widget.category) {
+      _loadContacts();
+    }
+  }
+
   Future<void> _loadContacts() async {
+    if (mounted) setState(() => _loading = true);
     try {
-      final data = await ApiService.getContacts();
+      final data = await ApiService.getContacts(
+        category: widget.category ?? 'favorite',
+        search: widget.searchQuery.isEmpty ? null : widget.searchQuery,
+      );
+      debugPrint('[SendAll] Received contacts data: $data');
       if (mounted) {
         setState(() {
-          _contacts = List<Map<String, dynamic>>.from(data);
+          _contacts = (data as List).map((e) {
+            final map = Map<String, dynamic>.from(e as Map);
+            debugPrint('[SendAll] Contact item: $map');
+            return map;
+          }).toList();
           _loading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[SendAll] Error loading contacts: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -50,12 +72,27 @@ class _SendAllState extends State<SendAll> {
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: _loading
+    return Container(
+      color: Colors.transparent,
+      child: _loading
           ? Center(child: CircularProgressIndicator(color: notifire.getbluecolor))
           : _contacts.isEmpty
-              ? Center(child: Text('Belum ada kontak', style: TextStyle(color: notifire.getdarkgreycolor)))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.contact_support_outlined, size: 48, color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Belum ada kontak',
+                        style: TextStyle(
+                          color: notifire.getdarkgreycolor,
+                          fontFamily: 'Gilroy Medium',
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               : SingleChildScrollView(
                   child: Column(
                     children: [
@@ -71,14 +108,24 @@ class _SendAllState extends State<SendAll> {
                             children: [
                               GestureDetector(
                                 onTap: () {
+                                  final receiverId = contact['receiver_user_id'];
+                                  if (receiverId == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Kontak ini bukan pengguna Modipay aktif'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => TransferMoney(
-                                        contactId: contact['receiver_user_id'] ?? contact['id'],
+                                        contactId: receiverId,
                                         contactName: contact['name'] ?? '',
                                         contactPhone: contact['phone'] ?? '',
-                                        contactCategory: contact['category'] ?? 'bank',
+                                        contactCategory: contact['category'] ?? 'favorite',
                                       ),
                                     ),
                                   );
@@ -93,8 +140,27 @@ class _SendAllState extends State<SendAll> {
                                         decoration: const BoxDecoration(
                                             color: Colors.transparent,
                                             shape: BoxShape.circle),
-                                        child: Image.asset(
-                                          avatarImages[index % avatarImages.length],
+                                        child: ClipOval(
+                                          child: () {
+                                            final avatarPath = contact['avatar']?.toString();
+                                            final avatarUrl = ApiService.avatarUrl(avatarPath);
+                                            if (avatarUrl.isNotEmpty) {
+                                              return CachedNetworkImage(
+                                                imageUrl: avatarUrl,
+                                                cacheKey: avatarPath,
+                                                fit: BoxFit.cover,
+                                                fadeInDuration: Duration.zero,
+                                                errorWidget: (_, __, ___) => Image.asset(
+                                                  avatarImages[index % avatarImages.length],
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              );
+                                            }
+                                            return Image.asset(
+                                              avatarImages[index % avatarImages.length],
+                                              fit: BoxFit.cover,
+                                            );
+                                          }(),
                                         ),
                                       ),
                                       SizedBox(width: width / 30),
@@ -109,12 +175,52 @@ class _SendAllState extends State<SendAll> {
                                                 fontFamily: 'Gilroy Bold'),
                                           ),
                                           SizedBox(height: height / 200),
-                                          Text(
-                                            '${contact['category']?.toString().toUpperCase() ?? 'BANK'} | ${contact['phone'] ?? ''}',
-                                            style: TextStyle(
-                                                fontSize: height / 55,
-                                                color: Colors.grey,
-                                                fontFamily: 'Gilroy Medium'),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                contact['phone'] ?? '',
+                                                style: TextStyle(
+                                                    fontSize: height / 55,
+                                                    color: Colors.grey,
+                                                    fontFamily: 'Gilroy Medium'),
+                                              ),
+                                              if (contact['is_modipay_user'] == true) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.blue.shade50,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    'Modipay',
+                                                    style: TextStyle(
+                                                      fontSize: height / 70,
+                                                      color: Colors.blue.shade700,
+                                                      fontFamily: 'Gilroy Bold',
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                              if (contact['is_modipay_user'] != true) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey.shade100,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    'Non-Modipay',
+                                                    style: TextStyle(
+                                                      fontSize: height / 70,
+                                                      color: Colors.grey,
+                                                      fontFamily: 'Gilroy Bold',
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                         ],
                                       ),

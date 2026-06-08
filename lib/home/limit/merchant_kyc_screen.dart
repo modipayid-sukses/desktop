@@ -94,21 +94,32 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
   }
 
   Future<void> _loadProvinces() async {
+    debugPrint('[MerchantKyc] Loading provinces...');
     try {
       final provinces = await WilayahService.getProvinces();
-      if (mounted) setState(() { _provinces = provinces; _isLoadingProvinces = false; });
-    } catch (_) {
+      debugPrint('[MerchantKyc] Provinces loaded: ${provinces.length}');
+      if (mounted) {
+        setState(() { 
+          _provinces = provinces; 
+          _isLoadingProvinces = false; 
+        });
+      }
+    } catch (e) {
+      debugPrint('[MerchantKyc] Error loading provinces: $e');
       if (mounted) setState(() => _isLoadingProvinces = false);
     }
   }
 
   Future<void> _loadRegencies() async {
     if (_provinceCode.isEmpty) return;
+    debugPrint('[MerchantKyc] Loading regencies for province: $_provinceCode');
     setState(() { _isLoadingRegencies = true; _regencies = []; _districts = []; _villages = []; });
     try {
       final regencies = await WilayahService.getRegencies(_provinceCode);
+      debugPrint('[MerchantKyc] Regencies loaded: ${regencies.length}');
       if (mounted) setState(() { _regencies = regencies; _isLoadingRegencies = false; });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[MerchantKyc] Error loading regencies: $e');
       if (mounted) setState(() => _isLoadingRegencies = false);
     }
   }
@@ -360,7 +371,7 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
                     _buildLabel('Provinsi'),
                     const SizedBox(height: 8),
                     _buildWilayahDropdown(
-                      hint: 'Pilih Provinsi',
+                      hint: _isLoadingProvinces ? 'Memuat Provinsi...' : 'Pilih Provinsi',
                       value: _provinceCode,
                       items: _provinces,
                       isLoading: _isLoadingProvinces,
@@ -378,12 +389,28 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
                         await _loadRegencies();
                       },
                     ),
+                    if (!_isLoadingProvinces && _provinces.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => _isLoadingProvinces = true);
+                            _loadProvinces();
+                          },
+                          child: Text(
+                            'Gagal memuat provinsi. Ketuk untuk coba lagi.',
+                            style: TextStyle(color: blueColor, fontSize: 12, fontFamily: 'Gilroy Medium'),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 12),
 
                     _buildLabel('Kota/Kabupaten'),
                     const SizedBox(height: 8),
                     _buildWilayahDropdown(
-                      hint: _provinceCode.isEmpty ? 'Pilih provinsi dulu' : 'Pilih Kota/Kabupaten',
+                      hint: _isLoadingRegencies 
+                          ? 'Memuat Kota/Kabupaten...' 
+                          : (_provinceCode.isEmpty ? 'Pilih provinsi dulu' : 'Pilih Kota/Kabupaten'),
                       value: _regencyCode,
                       items: _regencies,
                       isLoading: _isLoadingRegencies,
@@ -405,7 +432,9 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
                     _buildLabel('Kecamatan'),
                     const SizedBox(height: 8),
                     _buildWilayahDropdown(
-                      hint: _regencyCode.isEmpty ? 'Pilih kota dulu' : 'Pilih Kecamatan',
+                      hint: _isLoadingDistricts
+                          ? 'Memuat Kecamatan...'
+                          : (_regencyCode.isEmpty ? 'Pilih kota dulu' : 'Pilih Kecamatan'),
                       value: _districtCode,
                       items: _districts,
                       isLoading: _isLoadingDistricts,
@@ -426,7 +455,9 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
                     _buildLabel('Desa/Kelurahan'),
                     const SizedBox(height: 8),
                     _buildWilayahDropdown(
-                      hint: _districtCode.isEmpty ? 'Pilih kecamatan dulu' : 'Pilih Desa/Kelurahan',
+                      hint: _isLoadingVillages
+                          ? 'Memuat Desa/Kelurahan...'
+                          : (_districtCode.isEmpty ? 'Pilih kecamatan dulu' : 'Pilih Desa/Kelurahan'),
                       value: _villageCode,
                       items: _villages,
                       isLoading: _isLoadingVillages,

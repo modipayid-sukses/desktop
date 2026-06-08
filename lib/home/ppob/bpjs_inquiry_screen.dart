@@ -38,13 +38,18 @@ class BpjsInquiryResultScreen extends StatelessWidget {
   static double _toDouble(dynamic value) {
     if (value == null) return 0;
     if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0;
+    if (value is String) {
+      // Remove common non-numeric characters like commas or spaces if any
+      final clean = value.replaceAll(RegExp(r'[^0-9.]'), '');
+      return double.tryParse(clean) ?? 0;
+    }
     return double.tryParse(value.toString()) ?? 0;
   }
 
   String _money(dynamic v) {
+    if (v == null) return 'Rp 0';
     final n = _toDouble(v);
-    if (n <= 0) return 'Gratis!';
+    if (n == 0) return 'Gratis!';
     return 'Rp ${NumberFormat('#,###', 'id_ID').format(n.toInt())}';
   }
 
@@ -170,7 +175,7 @@ class BpjsInquiryResultScreen extends StatelessWidget {
                     _Card(
                       title: 'Ringkasan Pembayaran',
                       children: [
-                        _row('Total Tagihan', _money(data['nominal'])),
+                        _row('Total Tagihan', _money(data['nominal'] ?? data['tagihan'])),
                         if (_toDouble(data['denda']) > 0)
                           _row('Total Denda', _money(data['denda'])),
                         _row('Biaya Admin', _money(data['admin'])),

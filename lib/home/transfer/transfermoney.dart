@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:modipay/home/transfer/transferconfirm.dart';
+import 'package:modipay/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/colornotifire.dart';
@@ -28,6 +30,9 @@ class _TransferMoneyState extends State<TransferMoney> {
   late ColorNotifire notifire;
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
+  final _currencyFormat = NumberFormat('#,###', 'id_ID');
+
+  final List<int> _quickAmounts = [50000, 100000, 200000, 500000];
 
   @override
   void dispose() {
@@ -36,627 +41,381 @@ class _TransferMoneyState extends State<TransferMoney> {
     super.dispose();
   }
 
-  getdarkmodepreviousstate() async {
-    final prefs = await SharedPreferences.getInstance();
-    bool? previusstate = prefs.getBool("setIsDark");
-    if (previusstate == null) {
-      notifire.setIsDark = false;
-    } else {
-      notifire.setIsDark = previusstate;
-    }
+  void _updateAmount(int val) {
+    setState(() {
+      _amountController.text = _currencyFormat.format(val);
+    });
   }
-
-  final List<Map> _myjson = [
-    {
-      'id': '1',
-      'image': 'images/dollar.png',
-      'Text': "USD",
-    },
-    {
-      'id': '2',
-      'image': 'images/dollar.png',
-      'Text': "USD",
-    },
-    {
-      'id': '3',
-      'image': 'images/dollar.png',
-      'Text': "USD",
-    },
-    {
-      'id': '4',
-      'image': 'images/dollar.png',
-      'Text': "USD",
-    },
-    {
-      'id': '5',
-      'image': 'images/dollar.png',
-      'Text': "USD",
-    }
-  ];
-  var items = [
-    CustomStrings.salary,
-  ];
-
-  String dropdownvalue = CustomStrings.salary;
-  String? _selectedindex;
-
-  DateTime selectedDate = DateTime.now();
-  TimeOfDay? selectedTime;
 
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
+    final auth = Provider.of<AuthProvider>(context);
+    final balanceValue = double.tryParse(auth.userBalance.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final isBalanceZero = balanceValue <= 0;
+    
+    final amountText = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final amount = double.tryParse(amountText) ?? 0;
+    final isInsufficient = amount > balanceValue;
+    final isOverLimit = amount > 2000000;
+
     return Scaffold(
+      backgroundColor: notifire.getprimerycolor,
       appBar: AppBar(
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
+        centerTitle: true,
         title: Text(
-          'Transfer Money',
+          'Transfer',
           style: TextStyle(
             fontFamily: 'Gilroy Bold',
             color: notifire.getdarkscolor,
+            fontSize: 18,
           ),
         ),
-        actions: [
-          Image.asset(
-            "images/fillstar.png",
-            scale: 4,
-          ),
-          const SizedBox(
-            width: 10,
-          )
-        ],
       ),
-      backgroundColor: notifire.getprimerycolor,
-      body: SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  height: height * 0.9,
-                  width: width,
-                  color: Colors.transparent,
-                  child: Image.asset(
-                    "images/background.png",
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Column(
-                  children: [
-                    SizedBox(
-                      height: height / 80,
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  // Recipient Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: notifire.getprimerydarkcolor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.withOpacity(0.1)),
                     ),
-                    Container(
-                      height: height / 10,
-                      width: width / 5,
-                      decoration: const BoxDecoration(
-                        color: Colors.transparent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Image.asset("images/man4.png"),
-                    ),
-                    SizedBox(
-                      height: height / 60,
-                    ),
-                    Text(
-                      widget.contactName,
-                      style: TextStyle(
-                        color: notifire.getdarkscolor,
-                        fontFamily: 'Gilroy Bold',
-                        fontSize: height / 40,
-                      ),
-                    ),
-                    SizedBox(
-                      height: height / 200,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(
                       children: [
-                        Text(
-                          widget.contactCategory.toUpperCase(),
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontFamily: 'Gilroy Medium',
-                            fontSize: height / 50,
+                        Container(
+                          height: 56,
+                          width: 56,
+                          decoration: BoxDecoration(
+                            color: notifire.getbluecolor.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              widget.contactName.isNotEmpty ? widget.contactName[0].toUpperCase() : '?',
+                              style: TextStyle(
+                                color: notifire.getbluecolor,
+                                fontFamily: 'Gilroy Bold',
+                                fontSize: 24,
+                              ),
+                            ),
                           ),
                         ),
-                        SizedBox(
-                          width: width / 100,
-                        ),
-                        Text(
-                          "|",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontFamily: 'Gilroy Medium',
-                            fontSize: height / 50,
-                          ),
-                        ),
-                        SizedBox(
-                          width: width / 100,
-                        ),
-                        Text(
-                          widget.contactPhone,
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontFamily: 'Gilroy Medium',
-                            fontSize: height / 50,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.contactName,
+                                style: TextStyle(
+                                  color: notifire.getdarkscolor,
+                                  fontFamily: 'Gilroy Bold',
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.contactPhone,
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontFamily: 'Gilroy Medium',
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(
-                      height: height / 50,
-                    ),
-                    const Divider(
-                      thickness: 0.6,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(
-                      height: height / 60,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Container(
-                        height: height / 10,
-                        width: width,
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Balance Info
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Nominal Transfer',
+                        style: TextStyle(
+                          color: notifire.getdarkscolor,
+                          fontFamily: 'Gilroy Bold',
+                          fontSize: 16,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          border: Border.all(color: notifire.getbluecolor),
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(15),
+                          color: isBalanceZero ? Colors.red.withOpacity(0.1) : notifire.getbluecolor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Saldo: Rp ${auth.userBalance}',
+                          style: TextStyle(
+                            color: isBalanceZero ? Colors.red : notifire.getbluecolor,
+                            fontFamily: 'Gilroy Bold',
+                            fontSize: 12,
                           ),
                         ),
-                        child: Row(
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Amount Input
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: notifire.getprimerydarkcolor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isInsufficient ? Colors.red : (amount > 0 ? notifire.getbluecolor : Colors.grey.withOpacity(0.2)),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              children: [
-                                SizedBox(
-                                  width: width / 20,
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color:
-                                        notifire.getbluecolor.withOpacity(0.4),
-                                    borderRadius: const BorderRadius.all(
-                                      Radius.circular(30),
-                                    ),
-                                  ),
-                                  height: height / 20,
-                                  child: DropdownButtonHideUnderline(
-                                    child: ButtonTheme(
-                                      buttonColor: notifire.getdarkscolor,
-                                      child: DropdownButton<String>(
-                                        dropdownColor: notifire.getprimerycolor,
-                                        icon: Padding(
-                                          padding: EdgeInsets.only(
-                                              right: width / 50),
-                                          child: Image.asset(
-                                            "images/arrow-down.png",
-                                            scale: 4,
-                                            color: notifire.getdarkscolor,
-                                          ),
-                                        ),
-                                        hint: Row(
-                                          children: [
-                                            SizedBox(
-                                              width: width / 40,
-                                            ),
-                                            Image.asset(
-                                              "images/dollar.png",
-                                              height: height / 28,
-                                              color: notifire.getbluecolor,
-                                            ),
-                                            SizedBox(
-                                              width: width / 80,
-                                            ),
-                                            Text(
-                                              "USD",
-                                              style: TextStyle(
-                                                  color: notifire.getdarkscolor,
-                                                  fontFamily: 'Gilroy Bold'),
-                                            ),
-                                          ],
-                                        ),
-                                        value: _selectedindex,
-                                        onChanged: (newValue) {
-                                          setState(() {
-                                            _selectedindex = newValue;
-                                          });
-                                        },
-                                        items: _myjson.map(
-                                          (Map map) {
-                                            return DropdownMenuItem<String>(
-                                              value: map["id"].toString(),
-                                              child: Row(
-                                                children: <Widget>[
-                                                  SizedBox(
-                                                    width: width / 40,
-                                                  ),
-                                                  Image.asset(
-                                                    map["image"].toString(),
-                                                    width: width / 15,
-                                                    color:
-                                                        notifire.getbluecolor,
-                                                  ),
-                                                  SizedBox(
-                                                    width: width / 80,
-                                                  ),
-                                                  Text(
-                                                    map["Text"].toString(),
-                                                    style: TextStyle(
-                                                        color: notifire
-                                                            .getdarkscolor,
-                                                        fontFamily:
-                                                            'Gilroy Bold'),
-                                                  ),
-                                                  SizedBox(
-                                                    width: width / 50,
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ).toList(),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              "Rp",
+                              style: TextStyle(
+                                color: notifire.getdarkscolor,
+                                fontSize: 24,
+                                fontFamily: 'Gilroy Bold',
+                              ),
                             ),
-                            Padding(
-                              padding: EdgeInsets.only(left: width / 20),
-                              child: Container(
-                                width: width / 2.1,
-                                color: Colors.transparent,
-                                child: TextFormField(
-                                  controller: _amountController,
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                      color: notifire.getdarkscolor,
-                                      fontSize: height / 30,
-                                      fontFamily: 'Gilroy Bold'),
-                                  cursorColor: Colors.black,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      errorBorder: InputBorder.none,
-                                      disabledBorder: InputBorder.none,
-                                      hintText: "Rp 129.500",
-                                      hintStyle: TextStyle(
-                                          fontSize: height / 30,
-                                          color: notifire.getdarkgreycolor
-                                              .withOpacity(0.4),
-                                          fontFamily: 'Gilroy Bold')),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _amountController,
+                                enabled: !isBalanceZero,
+                                style: TextStyle(
+                                  color: isInsufficient ? Colors.red : notifire.getdarkscolor,
+                                  fontSize: 32,
+                                  fontFamily: 'Gilroy Bold',
                                 ),
+                                cursorColor: notifire.getbluecolor,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: "0",
+                                  contentPadding: EdgeInsets.zero,
+                                  isDense: true,
+                                  hintStyle: TextStyle(
+                                    fontSize: 32,
+                                    color: Colors.grey.withOpacity(0.3),
+                                    fontFamily: 'Gilroy Bold',
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  if (value.isNotEmpty) {
+                                    String plain = value.replaceAll(RegExp(r'[^0-9]'), '');
+                                    if (plain.isNotEmpty) {
+                                      _amountController.value = TextEditingValue(
+                                        text: _currencyFormat.format(int.parse(plain)),
+                                        selection: TextSelection.collapsed(offset: _currencyFormat.format(int.parse(plain)).length),
+                                      );
+                                    }
+                                  }
+                                  setState(() {});
+                                },
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: height / 60,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Row(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        if (isInsufficient) ...[
+                          const SizedBox(height: 8),
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    CustomStrings.schedule,
-                                    style: TextStyle(
-                                        color: notifire.getdarkscolor,
-                                        fontSize: height / 50,
-                                        fontFamily: 'Gilroy Bold'),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(
-                                height: height / 50,
-                              ),
-                              Container(
-                                height: height / 17,
-                                width: width / 2.3,
-                                decoration: BoxDecoration(
-                                  color: notifire.getprimerydarkcolor,
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(10),
-                                  ),
-                                  border: Border.all(
-                                    color: Colors.grey.withOpacity(0.4),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: width / 40,
-                                    ),
-                                    Text(
-                                      CustomStrings.news,
-                                      style: TextStyle(
-                                          color: notifire.getdarkgreycolor),
-                                    ),
-                                    const Spacer(),
-                                    InkWell(
-                                      onTap: () async {
-                                        final DateTime? dateTime =
-                                            await showDatePicker(
-                                          context: context,
-                                          initialDate: selectedDate,
-                                          firstDate: DateTime(2000),
-                                          lastDate: DateTime(3000),
-                                        );
-                                        if (dateTime != null) {
-                                          setState(() {
-                                            selectedDate
-                                                .toString()
-                                                .split(" ")
-                                                .first;
-                                          });
-                                        }
-                                      },
-                                      child: Icon(Icons.date_range,
-                                          color: notifire.getdarkgreycolor,
-                                          size: height / 40),
-                                    ),
-                                    SizedBox(
-                                      width: width / 40,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    CustomStrings.schedule,
-                                    style: TextStyle(
-                                        color: notifire.getdarkscolor,
-                                        fontSize: height / 50,
-                                        fontFamily: 'Gilroy Bold'),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(
-                                height: height / 50,
-                              ),
-                              Container(
-                                height: height / 17,
-                                width: width / 2.3,
-                                decoration: BoxDecoration(
-                                  color: notifire.getprimerydarkcolor,
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(10),
-                                  ),
-                                  border: Border.all(
-                                    color: Colors.grey.withOpacity(0.4),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: width / 40,
-                                    ),
-                                    Text(
-                                      CustomStrings.news,
-                                      style: TextStyle(
-                                          color: notifire.getdarkgreycolor),
-                                    ),
-                                    const Spacer(),
-                                    InkWell(
-                                      onTap: () async {
-                                        final TimeOfDay? time =
-                                            await showTimePicker(
-                                          context: context,
-                                          initialTime:
-                                              selectedTime ?? TimeOfDay.now(),
-                                          initialEntryMode:
-                                              TimePickerEntryMode.dial,
-                                        );
-                                        setState(() {
-                                          selectedTime = time;
-                                        });
-                                      },
-                                      child: Icon(
-                                        Icons.alarm,
-                                        color: notifire.getdarkgreycolor,
-                                        size: height / 40,
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: width / 40,
-                                    ),
-                                  ],
+                              const Icon(Icons.error_outline, color: Colors.red, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Saldo tidak mencukupi',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontFamily: 'Gilroy Medium',
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
                           ),
                         ],
-                      ),
-                    ),
-                    SizedBox(
-                      height: height / 50,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Row(
-                        children: [
-                          Text(
-                            CustomStrings.selectcategory,
-                            style: TextStyle(
-                                color: notifire.getdarkscolor,
-                                fontSize: height / 50,
-                                fontFamily: 'Gilroy Bold'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      height: height / 50,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Container(
-                        height: height / 16,
-                        width: width,
-                        decoration: BoxDecoration(
-                          color: notifire.getprimerydarkcolor,
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(10),
-                          ),
-                          border: Border.all(
-                            color: Colors.grey.withOpacity(0.4),
-                          ),
-                        ),
-                        child: DropdownButton(
-                          dropdownColor: notifire.getprimerycolor,
-                          underline: const SizedBox(),
-                          style: TextStyle(color: notifire.getdarkscolor),
-                          value: dropdownvalue,
-                          icon: Row(
+                        if (isOverLimit) ...[
+                          const SizedBox(height: 8),
+                          Row(
                             children: [
-                              SizedBox(
-                                width: width / 1.5,
-                              ),
-                              Image.asset(
-                                "images/arrow-down.png",
-                                scale: 4,
-                                color: notifire.getdarkscolor,
+                              const Icon(Icons.info_outline, color: Colors.orange, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Maksimum transfer harian Rp 2.000.000',
+                                style: TextStyle(
+                                  color: Colors.orange.shade700,
+                                  fontFamily: 'Gilroy Medium',
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
-                          items: items.map((String items) {
-                            return DropdownMenuItem(
-                              value: items,
-                              child: Row(
-                                children: [
-                                  SizedBox(width: width / 50),
-                                  Text(
-                                    items,
-                                    style: TextStyle(fontSize: height / 60),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              dropdownvalue = newValue!;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: height / 50,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Row(
-                        children: [
-                          Text(
-                            CustomStrings.notes,
-                            style: TextStyle(
-                                color: notifire.getdarkscolor,
-                                fontSize: height / 50,
-                                fontFamily: 'Gilroy Bold'),
-                          ),
                         ],
-                      ),
+                      ],
                     ),
-                    SizedBox(
-                      height: height / 50,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Container(
-                        color: Colors.transparent,
-                        width: width,
-                        height: height / 17,
-                        child: TextField(
-                          controller: _notesController,
-                          autofocus: false,
-                          style: TextStyle(
-                            fontSize: height / 50,
-                            color: notifire.getdarkscolor,
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: notifire.getprimerydarkcolor,
-                            hintText: "Notes",
-                            hintStyle: TextStyle(
-                                color: Colors.grey, fontSize: height / 60),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.grey.withOpacity(0.4),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Quick Amounts
+                  SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _quickAmounts.length,
+                      itemBuilder: (context, index) {
+                        final qAmt = _quickAmounts[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text('Rp ${_currencyFormat.format(qAmt)}'),
+                            selected: amount == qAmt.toDouble(),
+                            onSelected: (selected) {
+                              if (selected) _updateAmount(qAmt);
+                            },
+                            labelStyle: TextStyle(
+                              color: amount == qAmt.toDouble() ? Colors.white : notifire.getdarkscolor,
+                              fontFamily: 'Gilroy Bold',
+                              fontSize: 13,
+                            ),
+                            selectedColor: notifire.getbluecolor,
+                            backgroundColor: notifire.getprimerydarkcolor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: amount == qAmt.toDouble() ? notifire.getbluecolor : Colors.grey.withOpacity(0.2),
                               ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.grey.withOpacity(0.4),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                        ),
+                        );
+                      },
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Notes Input
+                  Text(
+                    'Catatan (Opsional)',
+                    style: TextStyle(
+                      color: notifire.getdarkscolor,
+                      fontFamily: 'Gilroy Bold',
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _notesController,
+                    enabled: !isBalanceZero,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: notifire.getdarkscolor,
+                      fontFamily: 'Gilroy Medium',
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: notifire.getprimerydarkcolor,
+                      hintText: "Tambah pesan untuk penerima...",
+                      hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 14),
+                      contentPadding: const EdgeInsets.all(16),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: notifire.getbluecolor),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    SizedBox(
-                      height: height / 20,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: GestureDetector(
-                        onTap: () {
-                          _showMyDialog();
-                        },
-                        child: Container(
-                          height: height / 17,
-                          width: width,
-                          decoration: BoxDecoration(
-                            color: notifire.getbluecolor,
-                            borderRadius: const BorderRadius.all(
-                              Radius.circular(30),
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              CustomStrings.continues,
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontFamily: 'Gilroy Bold',
-                                  fontSize: height / 50),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+          
+          // Bottom Button
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+            decoration: BoxDecoration(
+              color: notifire.getprimerycolor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
                 ),
               ],
             ),
-          ],
-        ),
+            child: GestureDetector(
+              onTap: (isBalanceZero || isInsufficient || amount <= 0 || isOverLimit)
+                  ? null
+                  : () {
+                      _showMyDialog(amount, auth.userPhone);
+                    },
+              child: Container(
+                height: 56,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: (isBalanceZero || isInsufficient || amount <= 0 || isOverLimit)
+                      ? Colors.grey.shade300
+                      : notifire.getbluecolor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: (isBalanceZero || isInsufficient || amount <= 0 || isOverLimit)
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: notifire.getbluecolor.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                ),
+                child: const Center(
+                  child: Text(
+                    'Lanjutkan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Gilroy Bold',
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _showMyDialog() async {
+  Future<void> _showMyDialog(double amount, String senderPhone) async {
+    final formattedAmount = 'Rp ${_currencyFormat.format(amount)}';
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -673,19 +432,15 @@ class _TransferMoneyState extends State<TransferMoney> {
                 Radius.circular(20),
               ),
             ),
+            padding: const EdgeInsets.symmetric(vertical: 24),
             height: height / 1.7,
             child: Column(
               children: [
-                SizedBox(
-                  height: height / 40,
-                ),
                 Image.asset(
                   "images/totaltransfer.png",
                   height: height / 10,
                 ),
-                SizedBox(
-                  height: height / 40,
-                ),
+                const SizedBox(height: 16),
                 Text(
                   CustomStrings.totaltransfer,
                   style: TextStyle(
@@ -694,229 +449,74 @@ class _TransferMoneyState extends State<TransferMoney> {
                     fontSize: height / 50,
                   ),
                 ),
-                SizedBox(
-                  height: height / 100,
+                const SizedBox(height: 8),
+                Text(
+                  formattedAmount,
+                  style: TextStyle(
+                    color: notifire.getdarkscolor,
+                    fontFamily: 'Gilroy Bold',
+                    fontSize: height / 30,
+                  ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Rp 154.000,",
-                      style: TextStyle(
-                        color: notifire.getdarkscolor,
-                        fontFamily: 'Gilroy Bold',
-                        fontSize: height / 35,
-                      ),
-                    ),
-                    Text(
-                      "42",
-                      style: TextStyle(
-                        color: notifire.getdarkscolor,
-                        fontFamily: 'Gilroy Bold',
-                        fontSize: height / 50,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  height: height / 60,
-                ),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: width / 20,
-                    ),
-                    Text(
-                      CustomStrings.transferdetails,
-                      style: TextStyle(
-                        color: notifire.getdarkscolor,
-                        fontFamily: 'Gilroy Bold',
-                        fontSize: height / 50,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  height: height / 60,
-                ),
+                const SizedBox(height: 24),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: width / 20),
                   child: Row(
                     children: [
                       Text(
-                        CustomStrings.from,
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        "e-Wallet 3446 4655 5445",
+                        CustomStrings.transferdetails,
                         style: TextStyle(
                           color: notifire.getdarkscolor,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
+                          fontFamily: 'Gilroy Bold',
+                          fontSize: height / 50,
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(
-                  height: height / 80,
+                const SizedBox(height: 16),
+                _detailRow('Dari', 'Modipay ($senderPhone)'),
+                const SizedBox(height: 12),
+                _detailRow('Ke', '${widget.contactName} (${widget.contactPhone})'),
+                const SizedBox(height: 12),
+                _detailRow('Nominal', formattedAmount),
+                const SizedBox(height: 12),
+                _detailRow('Biaya Admin', 'Gratis', isFree: true),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: width / 20),
+                  child: const Divider(thickness: 0.6, color: Colors.grey),
                 ),
+                _detailRow('Total Bayar', formattedAmount, isBold: true),
+                const Spacer(),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: width / 20),
                   child: Row(
                     children: [
-                      Text(
-                        CustomStrings.to,
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: _dialogButton(notifire.gettabwhitecolor, 'Batal', notifire.getdarkscolor),
                         ),
                       ),
-                      const Spacer(),
-                      Text(
-                        "BCA 2468 3545 4534",
-                        style: TextStyle(
-                          color: notifire.getdarkscolor,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: height / 80,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width / 20),
-                  child: Row(
-                    children: [
-                      Text(
-                        CustomStrings.transfer,
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        "Rp 154.420",
-                        style: TextStyle(
-                          color: notifire.getdarkscolor,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: height / 80,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width / 20),
-                  child: Row(
-                    children: [
-                      Text(
-                        CustomStrings.adminfee,
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        height: height / 40,
-                        width: width / 10,
-                        decoration: BoxDecoration(
-                          color: notifire.getbluecolor,
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(5),
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            CustomStrings.free,
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: height / 60,
-                                fontFamily: 'Gilroy Medium'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width / 20),
-                  child: const Divider(
-                    thickness: 0.6,
-                    color: Colors.grey,
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width / 20),
-                  child: Row(
-                    children: [
-                      Text(
-                        CustomStrings.totaltransfer,
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        "Rp 154.420",
-                        style: TextStyle(
-                          color: notifire.getdarkscolor,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 60,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: height / 30,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width / 20),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                        child: buttons(notifire.gettabwhitecolor,
-                            CustomStrings.cancel, notifire.getdarkscolor),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TransferConfirm(
-                                receiverId: widget.contactId,
-                                amount: double.tryParse(_amountController.text) ?? 0,
-                                notes: _notesController.text,
-                                receiverName: widget.contactName,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TransferConfirm(
+                                  receiverId: widget.contactId,
+                                  amount: amount,
+                                  notes: _notesController.text,
+                                  receiverName: widget.contactName,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                        child: buttons(notifire.getbluecolor,
-                            CustomStrings.confirm, Colors.white),
+                            );
+                          },
+                          child: _dialogButton(notifire.getbluecolor, 'Konfirmasi', Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -929,21 +529,58 @@ class _TransferMoneyState extends State<TransferMoney> {
     );
   }
 
-  Widget buttons(clr, txt, clr2) {
+  Widget _detailRow(String label, String value, {bool isFree = false, bool isBold = false}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: width / 20),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.grey, fontFamily: 'Gilroy Medium', fontSize: 13),
+          ),
+          const Spacer(),
+          if (isFree)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: notifire.getbluecolor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'GRATIS',
+                style: TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Gilroy Bold'),
+              ),
+            )
+          else
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: notifire.getdarkscolor,
+                  fontFamily: isBold ? 'Gilroy Bold' : 'Gilroy Medium',
+                  fontSize: 13,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dialogButton(Color clr, String txt, Color txtClr) {
     return Container(
-      height: height / 20,
-      width: width / 3.5,
+      height: 48,
       decoration: BoxDecoration(
         color: clr,
-        borderRadius: const BorderRadius.all(
-          Radius.circular(30),
-        ),
+        borderRadius: BorderRadius.circular(24),
+        border: clr == notifire.gettabwhitecolor ? Border.all(color: Colors.grey.withOpacity(0.3)) : null,
       ),
       child: Center(
         child: Text(
           txt,
-          style: TextStyle(
-              color: clr2, fontSize: height / 60, fontFamily: 'Gilroy Bold'),
+          style: TextStyle(color: txtClr, fontSize: 14, fontFamily: 'Gilroy Bold'),
         ),
       ),
     );

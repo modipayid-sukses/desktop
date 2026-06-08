@@ -14,9 +14,17 @@ class SendMoney extends StatefulWidget {
   State<SendMoney> createState() => _SendMoneyState();
 }
 
-class _SendMoneyState extends State<SendMoney>
-    with SingleTickerProviderStateMixin {
+class _SendMoneyState extends State<SendMoney> {
   late ColorNotifire notifire;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  Key _refreshKey = UniqueKey();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   getdarkmodepreviousstate() async {
     final prefs = await SharedPreferences.getInstance();
@@ -28,18 +36,9 @@ class _SendMoneyState extends State<SendMoney>
     }
   }
 
-  TabController? controller;
-  List<Widget> get _tabs => [
-    SendAll(key: UniqueKey()),
-    SendAll(key: UniqueKey()),
-    SendAll(key: UniqueKey()),
-    SendAll(key: UniqueKey()),
-  ];
-
   @override
   void initState() {
     super.initState();
-    controller = TabController(length: 4, vsync: this);
   }
 
   void _showAddContactDialog() {
@@ -282,6 +281,7 @@ class _SendMoneyState extends State<SendMoney>
                                           name: foundUser?['name'] ?? '',
                                           phone: foundUser?['phone'] ?? '',
                                           category: 'favorite',
+                                          avatar: foundUser?['avatar']?.toString(),
                                         );
                                         if (res.containsKey('contact')) {
                                           Navigator.pop(ctx);
@@ -291,7 +291,9 @@ class _SendMoneyState extends State<SendMoney>
                                               behavior: SnackBarBehavior.floating,
                                             ),
                                           );
-                                          setState(() {}); // Trigger rebuild to reload list
+                                          setState(() {
+                                            _refreshKey = UniqueKey();
+                                          });
                                         } else {
                                           setSheetState(() {
                                             saving = false;
@@ -387,122 +389,71 @@ class _SendMoneyState extends State<SendMoney>
         ),
       ),
       backgroundColor: notifire.getprimerycolor,
-      body: SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  height: height,
-                  width: width,
-                  color: Colors.transparent,
-                  child: Image.asset(
-                    "images/background.png",
-                    fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          Container(
+            height: height,
+            width: width,
+            color: Colors.transparent,
+            child: Image.asset(
+              "images/background.png",
+              fit: BoxFit.cover,
+            ),
+          ),
+          Column(
+            children: [
+              const SizedBox(height: 20),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: width / 20),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: false,
+                  style: TextStyle(
+                    fontSize: height / 50,
+                    color: notifire.getdarkscolor,
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val.trim();
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: "Cari kontak..",
+                    filled: true,
+                    fillColor: notifire.getprimerydarkcolor,
+                    hintStyle: TextStyle(color: Colors.grey, fontSize: height / 60),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Image.asset(
+                        "images/search.png",
+                        color: notifire.getdarkgreycolor,
+                        height: 20,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: notifire.getbluecolor),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
-                Column(
-                  children: [
-                    SizedBox(
-                      height: height / 40,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Container(
-                        color: Colors.transparent,
-                        width: width,
-                        height: height / 15,
-                        child: TextField(
-                          autofocus: false,
-                          style: TextStyle(
-                            fontSize: height / 50,
-                            color: notifire.getdarkscolor,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: "Cari kontak..",
-                            filled: true,
-                            fillColor: notifire.getprimerydarkcolor,
-                            hintStyle: TextStyle(
-                                color: Colors.grey, fontSize: height / 60),
-                            prefixIcon: Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: width / 50,
-                                  vertical: height / 60),
-                              child: Image.asset(
-                                "images/search.png",
-                                color: notifire.getdarkgreycolor,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide:
-                                  BorderSide(color: notifire.getbluecolor),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                color: Color(0xffd3d3d3),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: height / 50,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: width / 20),
-                      child: Container(
-                        height: height / 1.2,
-                        color: Colors.transparent,
-                        child: Column(
-                          children: <Widget>[
-                            Container(
-                              height: 45,
-                              decoration: BoxDecoration(
-                                  color: notifire.gettabcolor,
-                                  borderRadius: BorderRadius.circular(10)),
-                              child: Padding(
-                                padding: EdgeInsets.all(height / 200),
-                                child: TabBar(
-                                  labelStyle: const TextStyle(
-                                      fontFamily: 'Gilroy Bold'),
-                                  indicator: BoxDecoration(
-                                      color: notifire.gettabwhitecolor,
-                                      borderRadius: BorderRadius.circular(10)),
-                                  indicatorColor: notifire.getbluecolor,
-                                  controller: controller,
-                                  labelColor: notifire.getdarkscolor,
-                                  unselectedLabelColor: Colors.grey,
-                                  indicatorSize: TabBarIndicatorSize.tab,
-                                  dividerColor: Colors.transparent,
-                                  tabs: const [
-                                    Tab(text: CustomStrings.all),
-                                    Tab(text: CustomStrings.favorite),
-                                    Tab(text: CustomStrings.bank),
-                                    Tab(text: CustomStrings.ewallet),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: TabBarView(
-                                controller: controller,
-                                children: _tabs,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: width / 20),
+                  child: SendAll(
+                    key: _refreshKey,
+                    searchQuery: _searchQuery,
+                  ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

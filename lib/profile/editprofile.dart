@@ -316,10 +316,24 @@ class _EditProfileState extends State<EditProfile> {
     });
 
     try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+
+      // Evict URL lama dari cache sebelum upload agar gambar baru langsung tampil
+      final oldAvatarUrl = ApiService.avatarUrl(auth.userAvatar);
+      if (oldAvatarUrl.isNotEmpty) {
+        await CachedNetworkImage.evictFromCache(oldAvatarUrl);
+      }
+
       final result = await ApiService.uploadAvatar(_selectedAvatar!);
       if (result['avatar'] != null) {
-        final auth = Provider.of<AuthProvider>(context, listen: false);
+        // Evict URL baru juga (jangan sampai ada cache lama dengan URL yang sama)
+        final newAvatarUrl = ApiService.avatarUrl(result['avatar']?.toString());
+        if (newAvatarUrl.isNotEmpty) {
+          await CachedNetworkImage.evictFromCache(newAvatarUrl);
+        }
         await auth.fetchProfile();
+        // Reset local file preview agar pakai gambar dari server
+        if (mounted) setState(() => _selectedAvatar = null);
         Fluttertoast.showToast(msg: 'Foto profil berhasil diperbarui');
       } else {
         Fluttertoast.showToast(msg: result['message'] ?? 'Gagal upload foto profil');
@@ -465,6 +479,7 @@ class _EditProfileState extends State<EditProfile> {
                                 : auth.userAvatar != null && auth.userAvatar!.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: ApiService.avatarUrl(auth.userAvatar),
+                                        cacheKey: auth.userAvatar,
                                         fit: BoxFit.cover,
                                         fadeInDuration: Duration.zero,
                                         errorWidget: (_, __, ___) =>

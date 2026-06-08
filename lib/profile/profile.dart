@@ -133,6 +133,7 @@ class _ProfileState extends State<Profile> {
                             child: auth.userAvatar != null && auth.userAvatar!.isNotEmpty
                                 ? CachedNetworkImage(
                                     imageUrl: ApiService.avatarUrl(auth.userAvatar),
+                                    cacheKey: auth.userAvatar,
                                     fit: BoxFit.cover,
                                     fadeInDuration: Duration.zero,
                                     errorWidget: (_, __, ___) =>

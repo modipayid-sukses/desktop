@@ -252,6 +252,8 @@ class ApiService {
           // ignore: avoid_print
           print('[API] $label body=$redacted');
         }
+        // ignore: avoid_print
+        print('[API] $label response=${response.body}');
         if (response.statusCode < 200 || response.statusCode >= 300) {
           // ignore: avoid_print
           print('[API] $label error=$decoded');
@@ -295,6 +297,7 @@ class ApiService {
       fallbackMessage: fallbackMessage,
       debugLabel: 'GET $url',
     );
+    if (decoded is List) return {'data': decoded};
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return Map<String, dynamic>.from(decoded);
     return <String, dynamic>{};
@@ -347,6 +350,7 @@ class ApiService {
       debugLabel: 'POST $url',
       debugBody: body,
     );
+    if (decoded is List) return {'data': decoded};
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return Map<String, dynamic>.from(decoded);
     return <String, dynamic>{};
@@ -368,6 +372,7 @@ class ApiService {
       debugLabel: 'PUT $url',
       debugBody: body,
     );
+    if (decoded is List) return {'data': decoded};
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return Map<String, dynamic>.from(decoded);
     return <String, dynamic>{};
@@ -661,12 +666,16 @@ class ApiService {
   // ==================== CONTACTS ====================
 
   static Future<List<dynamic>> getContacts({String? category, bool? favorite, String? search}) async {
-    String url = '$_baseUrl/contacts?';
-    if (category != null) url += 'category=$category&';
-    if (favorite == true) url += 'favorite=1&';
-    if (search != null) url += 'search=$search&';
+    final params = <String>[];
+    if (category != null) params.add('category=${Uri.encodeComponent(category)}');
+    if (favorite == true) params.add('favorite=1');
+    if (search != null) params.add('search=${Uri.encodeComponent(search)}');
+    
+    String url = '$_baseUrl/contacts';
+    if (params.isNotEmpty) url += '?${params.join('&')}';
+    
     final response = await _getJson(url, auth: true, fallbackMessage: 'Gagal memuat kontak.');
-    final data = response['data'] ?? response;
+    final data = response['data'] ?? response['contacts'] ?? response['items'] ?? response['results'] ?? response;
     return data is List ? data : <dynamic>[];
   }
 
@@ -675,6 +684,7 @@ class ApiService {
     String? phone,
     String? email,
     String? category,
+    String? avatar,
   }) async {
     return _postJson(
       '$_baseUrl/contacts',
@@ -684,6 +694,7 @@ class ApiService {
         if (phone != null && phone.isNotEmpty) 'phone': phone,
         if (email != null && email.isNotEmpty) 'email': email,
         if (category != null && category.isNotEmpty) 'category': category,
+        if (avatar != null && avatar.isNotEmpty) 'avatar': avatar,
       }),
       fallbackMessage: 'Gagal menambahkan kontak.',
     );
@@ -1504,7 +1515,7 @@ class ApiService {
     String url = '$_baseUrl/ppob/saved-customers';
     if (category != null) url += '?category=${Uri.encodeComponent(category)}';
     final response = await _getJson(url, auth: true, fallbackMessage: 'Gagal memuat daftar pelanggan.');
-    final data = response['data'] ?? response;
+    final data = response['data'] ?? response['customers'] ?? response['items'] ?? response;
     return data is List ? data : <dynamic>[];
   }
 
@@ -1559,7 +1570,7 @@ class ApiService {
 
   static Future<List<dynamic>> getComplaints() async {
     final response = await _getJson('$_baseUrl/complaints', auth: true, fallbackMessage: 'Gagal memuat pengaduan.');
-    final data = response['data'] ?? response;
+    final data = response['data'] ?? response['complaints'] ?? response['items'] ?? response;
     return data is List ? data : <dynamic>[];
   }
 

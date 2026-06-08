@@ -152,11 +152,12 @@ class PPOBCellularForm extends StatelessWidget {
                           ),
                           itemBuilder: (_, i) {
                             final p = Map<String, dynamic>.from(products[i]);
-                            final isPromo = isPromoProduct(p);
-                            final origPrice = originalPrice(p);
-                            final promPrice = promoPrice(p);
-                            final rewardCoins = extractRewardCoins(p);
-                            final providerLogoAsset = pulsaProviderLogoAsset(p);
+                            final isPromo = p['_is_promo_pre'] ?? isPromoProduct(p);
+                            final origPrice = p['_original_price_pre'] ?? originalPrice(p);
+                            final promPrice = p['_promo_price_pre'] ?? promoPrice(p);
+                            final rewardCoins = p['_reward_coins_pre'] ?? extractRewardCoins(p);
+                            final providerLogoAsset = p['_logo_asset_pre'] ?? pulsaProviderLogoAsset(p);
+                            final promoLabel = p['_promo_label_pre'] ?? promoRemainingLabel(p);
 
                             return Material(
                               color: Colors.white,
@@ -266,7 +267,7 @@ class PPOBCellularForm extends StatelessWidget {
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    promoRemainingLabel(p),
+                                                    promoLabel,
                                                     style: const TextStyle(
                                                       color: Color(0xFFEF6C00),
                                                       fontFamily: 'Gilroy Medium',
