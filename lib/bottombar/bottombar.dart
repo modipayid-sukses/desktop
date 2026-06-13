@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:modipay/login/login.dart';
+import 'package:modipay/login/login_router.dart';
 import 'package:modipay/home/home.dart';
 import 'package:modipay/home/topup/topup_channel_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
@@ -66,9 +66,11 @@ class _BottombarState extends State<Bottombar> {
           await _showDeviceMismatchDialog(context);
           if (!mounted) return;
         }
+        final loginScreen = await resolveLoginScreen();
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const Login()),
+          MaterialPageRoute(builder: (_) => loginScreen),
           (route) => false,
         );
       });

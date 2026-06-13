@@ -209,6 +209,11 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     return false;
   }
 
+  // Input merepresentasikan nomor HP (Pulsa, Data, E-Wallet, dll) sehingga
+  // bisa diisi dari kontak handphone pengguna.
+  bool get _isPhoneNumberInput =>
+      !_isPln && !_isTopupGameFiltered && !_isCategoryInquiry;
+
   // Halaman hub "Tagihan Internet": menampilkan grid provider (Indihome, Biznet, …)
   // alih-alih input + Cek Tagihan, karena tiap provider beda inquiry_sku.
   bool get _isInternetHub {
@@ -1926,22 +1931,35 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
   void _payBpjsBill() {
     if (_bpjsInquiryResult == null) return;
-    final amount = _asDouble(_bpjsInquiryResult!['selling_price']);
+    final data = _bpjsInquiryResult!;
+    // Backend kadang meneruskan response mentah Loket Bayar (selling_price belum
+    // dihitung / 0) — fallback ke total provider lalu tagihan+admin+denda.
+    double amount = _asDouble(data['selling_price']);
+    if (amount <= 0) amount = _asDouble(data['total']);
+    if (amount <= 0) {
+      amount = _asDouble(data['tagihan']) +
+          _asDouble(data['admin']) +
+          _asDouble(data['denda']);
+    }
     if (amount <= 0) {
       Fluttertoast.showToast(
           msg: 'Total tagihan tidak valid, silakan cek ulang');
       return;
     }
-    final buyerSkuCode =
-        (_bpjsInquiryResult!['buyer_sku_code'] ?? _bpjsInquiryResult!['inquiry_sku'] ?? '')
-            .toString();
-    final customerNo = (_bpjsInquiryResult!['customer_no'] ??
+    final buyerSkuCode = (data['buyer_sku_code'] ??
+            data['inquiry_sku'] ??
+            data['kodeProduk'] ??
+            '')
+        .toString();
+    final customerNo = (data['customer_no'] ??
+            data['noVA'] ??
+            data['no_va'] ??
             _customerIdController.text.trim())
         .toString();
     final productName =
-        (_bpjsInquiryResult!['product_name'] ?? widget.title).toString();
+        (data['product_name'] ?? widget.title).toString();
     final customerName =
-        (_bpjsInquiryResult!['customer_name'] ?? '-').toString();
+        (data['customer_name'] ?? data['nama'] ?? '-').toString();
 
     Navigator.push(
       context,
@@ -2315,6 +2333,24 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       final n = _asDouble(v);
       return n > 0 ? 'Rp ${currency.format(n.toInt())}' : 'Gratis!';
     }
+    // Backend kadang meneruskan response mentah Loket Bayar (key: tagihan/total/
+    // nama/noVA) atau gagal men-summarize sehingga nominal bernilai 0/null.
+    // Pilih kandidat pertama yang bernilai > 0 supaya tagihan tidak salah
+    // tampil "Gratis!".
+    double firstAmount(List<dynamic> candidates) {
+      for (final c in candidates) {
+        final n = _asDouble(c);
+        if (n > 0) return n;
+      }
+      return 0;
+    }
+    String firstText(List<dynamic> candidates) {
+      for (final c in candidates) {
+        final s = (c ?? '').toString().trim();
+        if (s.isNotEmpty) return s;
+      }
+      return '-';
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -2412,13 +2448,17 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                   const SizedBox(height: 10),
                   _billRowInline(
                     'No. Pelanggan',
-                    (data['customer_no'] ?? '-').toString(),
+                    firstText([
+                      data['customer_no'],
+                      data['noVA'],
+                      data['no_va'],
+                    ]),
                     textSecondary,
                     textPrimary,
                   ),
                   _billRowInline(
                     'Nama',
-                    (data['customer_name'] ?? '-').toString(),
+                    firstText([data['customer_name'], data['nama']]),
                     textSecondary,
                     textPrimary,
                   ),
@@ -2440,20 +2480,30 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                   const Divider(height: 18, color: Color(0xFFE5E9EE)),
                   _billRowInline(
                     'Tagihan',
-                    moneyOf(data['nominal'] ?? data['provider_nominal']),
+                    moneyOf(firstAmount([
+                      data['nominal'],
+                      data['provider_nominal'],
+                      data['tagihan'],
+                    ])),
                     textSecondary,
                     textPrimary,
                   ),
                   _billRowInline(
                     'Biaya Admin',
-                    moneyOf(data['admin'] ?? data['provider_admin']),
+                    moneyOf(firstAmount([
+                      data['admin'],
+                      data['provider_admin'],
+                    ])),
                     textSecondary,
                     textPrimary,
                   ),
                   const Divider(height: 18, color: Color(0xFFE5E9EE)),
                   _billRowInline(
                     'Total Bayar',
-                    moneyOf(data['selling_price'] ?? data['total']),
+                    moneyOf(firstAmount([
+                      data['selling_price'],
+                      data['total'],
+                    ])),
                     textSecondary,
                     textPrimary,
                     highlight: true,
@@ -4058,6 +4108,21 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                 ),
                               ),
                             ),
+                            if (_isPhoneNumberInput) ...[
+                              const SizedBox(width: 6),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: _pickNumberFromContact,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(2),
+                                  child: Icon(
+                                    Icons.contacts_rounded,
+                                    color: accent,
+                                    size: 34,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -4270,7 +4335,6 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                               isInject: _isInject,
                               onBrandSelected: _selectBrand,
                               onProductSelected: _onProductSelected,
-                              onContactPickerPressed: _pickNumberFromContact,
                               pulsaTabIndex: _pulsaTabIndex,
                               onPulsaTabChanged: (index) => setState(() => _pulsaTabIndex = index),
                               validator: _validateCustomerIdByBrand,

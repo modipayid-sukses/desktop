@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:modipay/login/login.dart';
+import 'package:flutter/services.dart';
+import 'package:modipay/login/forgot_password_screen.dart';
+import 'package:modipay/login/login_router.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:provider/provider.dart';
@@ -280,6 +282,10 @@ class _ProfileState extends State<Profile> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (auth.isMasterAgent && auth.referralCode != null && auth.referralCode!.isNotEmpty) ...[
+                _referralCodeCard(auth.referralCode!),
+                const SizedBox(height: 16),
+              ],
               _sectionCard(
                 title: 'Akun',
                 children: [
@@ -297,6 +303,16 @@ class _ProfileState extends State<Profile> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ChangePinScreen()),
+                    ),
+                  ),
+                  _menuTile(
+                    icon: Icons.lock_reset_outlined,
+                    title: 'Reset Password',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ForgotPasswordScreen(initialEmail: auth.userEmail),
+                      ),
                     ),
                   ),
                   _menuTile(
@@ -453,6 +469,66 @@ class _ProfileState extends State<Profile> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _referralCodeCard(String referralCode) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF3FA),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.card_giftcard_outlined, color: Color(0xFF20467A), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Kode Referral Saya',
+                  style: TextStyle(
+                    color: Color(0xFF18202A),
+                    fontFamily: 'Gilroy Bold',
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  referralCode,
+                  style: const TextStyle(
+                    color: Color(0xFF728095),
+                    fontFamily: 'Gilroy Medium',
+                    fontSize: 13,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: referralCode));
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Kode referral disalin')),
+              );
+            },
+            icon: const Icon(Icons.copy_outlined, color: Color(0xFF20467A), size: 20),
+          ),
+        ],
       ),
     );
   }
@@ -655,13 +731,14 @@ class _ProfileState extends State<Profile> {
                   onTap: () async {
                     final auth = Provider.of<AuthProvider>(context, listen: false);
                     await auth.logout();
-                    if (mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const Login()),
-                        (route) => false,
-                      );
-                    }
+                    if (!mounted) return;
+                    final loginScreen = await resolveLoginScreen();
+                    if (!mounted) return;
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => loginScreen),
+                      (route) => false,
+                    );
                   },
                   child: Container(
                     height: height / 18,

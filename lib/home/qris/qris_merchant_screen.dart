@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/tts_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
 
@@ -91,11 +92,14 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
         _isLoading = false;
       });
 
-      // Check for newly completed payments → go directly to receipt
+      // Check for newly completed payments → announce via TTS and go directly to receipt
       final newCompleted = _transactions.where(
         (t) => t['status'] == 'completed' && !oldCompletedIds.contains(t['id']),
       );
       if (newCompleted.isNotEmpty && oldCompletedIds.isNotEmpty) {
+        for (final tx in newCompleted) {
+          TtsService.instance.speak(_buildPaymentVoiceMessage(tx));
+        }
         _showReceiptScreen(newCompleted.first);
       }
 
@@ -124,6 +128,26 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
     else if (amount is double) a = amount;
     else if (amount is String) a = double.tryParse(amount) ?? 0;
     return 'Rp ${_currencyFormat.format(a.toInt())}';
+  }
+
+  // Announced amount adds a 0.3% admin fee when the transfer exceeds Rp 500.000.
+  String _buildPaymentVoiceMessage(Map<String, dynamic> tx) {
+    final payer = tx['payer_name'] ?? 'Pelanggan';
+
+    double amount = 0;
+    final rawAmount = tx['amount'];
+    if (rawAmount is int) amount = rawAmount.toDouble();
+    else if (rawAmount is double) amount = rawAmount;
+    else if (rawAmount is String) amount = double.tryParse(rawAmount) ?? 0;
+
+    double total = amount;
+    if (amount > 500000) {
+      total += amount * 0.003;
+    }
+    final totalRounded = total.round();
+
+    return 'Pembayaran dari $payer sebesar $totalRounded rupiah telah kamu terima. '
+        'Terima kasih sudah menggunakan modipay';
   }
 
   void _showCreatePayment() {

@@ -19,7 +19,15 @@ class Register extends StatefulWidget {
 
 class _RegisterState extends State<Register> {
   final _phoneController = TextEditingController();
+  final _referralCodeController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isPhoneValid = false;
+  bool _isReferralValid = false;
+  bool _isPasswordValid = false;
+  bool _isConfirmPasswordValid = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   bool _phoneAlreadyRegistered = false;
 
@@ -27,12 +35,40 @@ class _RegisterState extends State<Register> {
   void initState() {
     super.initState();
     _phoneController.addListener(_onPhoneChanged);
+    _referralCodeController.addListener(_onReferralCodeChanged);
+    _passwordController.addListener(_onPasswordChanged);
+    _confirmPasswordController.addListener(_onConfirmPasswordChanged);
   }
 
   @override
   void dispose() {
     _phoneController.dispose();
+    _referralCodeController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _onReferralCodeChanged() {
+    final valid = _referralCodeController.text.trim().isNotEmpty;
+    if (valid != _isReferralValid) {
+      setState(() => _isReferralValid = valid);
+    }
+  }
+
+  void _onPasswordChanged() {
+    setState(() {
+      _isPasswordValid = _passwordController.text.length >= 6;
+      _isConfirmPasswordValid = _confirmPasswordController.text.isNotEmpty &&
+          _confirmPasswordController.text == _passwordController.text;
+    });
+  }
+
+  void _onConfirmPasswordChanged() {
+    setState(() {
+      _isConfirmPasswordValid = _confirmPasswordController.text.isNotEmpty &&
+          _confirmPasswordController.text == _passwordController.text;
+    });
   }
 
   void _onPhoneChanged() {
@@ -141,96 +177,22 @@ class _RegisterState extends State<Register> {
     return 'User Baru';
   }
 
-  Future<String?> _showChannelPicker() {
-    return showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Kirim OTP lewat',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: grey900,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Pilih metode pengiriman kode OTP.',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: grey500,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _channelTile(
-              ctx: ctx,
-              icon: Icons.chat_rounded,
-              iconColor: const Color(0xff25D366),
-              title: 'WhatsApp',
-              subtitle: 'wa-generic',
-            ),
-            const SizedBox(height: 10),
-            _channelTile(
-              ctx: ctx,
-              icon: Icons.sms_rounded,
-              iconColor: const Color(0xffFF9800),
-              title: 'SMS',
-              subtitle: 'sms-generic',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _channelTile({
-    required BuildContext ctx,
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-  }) {
-    return Material(
-      color: primaryBlue50,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.pop(ctx, subtitle),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          child: Row(
-            children: [
-              Icon(icon, color: iconColor, size: 22),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: grey900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _continueRegister() async {
     final rawPhone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (rawPhone.isEmpty) {
       Fluttertoast.showToast(msg: 'Masukkan nomor HP');
+      return;
+    }
+    if (_referralCodeController.text.trim().isEmpty) {
+      Fluttertoast.showToast(msg: 'Masukkan kode referral master');
+      return;
+    }
+    if (_passwordController.text.length < 6) {
+      Fluttertoast.showToast(msg: 'Password minimal 6 karakter');
+      return;
+    }
+    if (_confirmPasswordController.text != _passwordController.text) {
+      Fluttertoast.showToast(msg: 'Konfirmasi password tidak sama');
       return;
     }
 
@@ -250,13 +212,15 @@ class _RegisterState extends State<Register> {
       return;
     }
 
-    final channel = await _showChannelPicker();
+    final otpRequired = await ApiService.isOtpRequired();
     if (!mounted) return;
-    if (channel == null) {
-      setState(() => _isLoading = false);
+
+    if (!otpRequired) {
+      await _registerAccount(_toInternationalPhone(rawPhone));
       return;
     }
 
+    const channel = 'wa-generic';
     final candidates = _phoneCandidates(rawPhone);
     String? activePhone;
     String? lastErrorMessage;
@@ -314,48 +278,59 @@ class _RegisterState extends State<Register> {
     );
 
     if (verified == true && mounted) {
-      setState(() => _isLoading = true);
-      try {
-        final registerResult = await ApiService.register(
-          name: _generatedNameFromPhone(activePhone),
-          phone: activePhone,
-        );
+      await _registerAccount(activePhone);
+    }
+  }
 
+  Future<void> _registerAccount(String phone) async {
+    setState(() => _isLoading = true);
+    try {
+      final registerResult = await ApiService.register(
+        name: _generatedNameFromPhone(phone),
+        phone: phone,
+        password: _passwordController.text,
+        passwordConfirmation: _confirmPasswordController.text,
+        referralCode: _referralCodeController.text.trim(),
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (registerResult.containsKey('token')) {
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final success = await auth.loginWithPasswordResult(registerResult);
         if (!mounted) return;
-        setState(() => _isLoading = false);
 
-        if (registerResult.containsKey('token')) {
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          final success = await auth.loginWithPasswordResult(registerResult);
-          if (!mounted) return;
-
-          if (success) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const SetupPinScreen()),
-              (route) => false,
-            );
-          } else {
-            Fluttertoast.showToast(msg: auth.error ?? 'Gagal menyiapkan akun');
-          }
-        } else {
-          Fluttertoast.showToast(
-            msg: registerResult['message'] ?? 'Gagal mendaftarkan akun',
+        if (success) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const SetupPinScreen()),
+            (route) => false,
           );
+        } else {
+          Fluttertoast.showToast(msg: auth.error ?? 'Gagal menyiapkan akun');
         }
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
+      } else {
         Fluttertoast.showToast(
-          msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal mendaftarkan akun'),
+          msg: registerResult['message'] ?? 'Gagal mendaftarkan akun',
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      Fluttertoast.showToast(
+        msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal mendaftarkan akun'),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEnabled = _isPhoneValid && !_isLoading;
+    final isEnabled = _isPhoneValid &&
+        _isReferralValid &&
+        _isPasswordValid &&
+        _isConfirmPasswordValid &&
+        !_isLoading;
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -394,7 +369,7 @@ class _RegisterState extends State<Register> {
                   ),
                   SizedBox(height: screenHeight * 0.015),
                   Text(
-                    'Masukkan nomor HP yang sudah terdaftar untuk verifikasi OTP.',
+                    'Masukkan nomor HP yang akan digunakan untuk akun kamu.',
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
@@ -467,6 +442,190 @@ class _RegisterState extends State<Register> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         'Nomor HP sudah terdaftar',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: error500,
+                        ),
+                      ),
+                    ),
+                  SizedBox(height: screenHeight * 0.03),
+                  Text(
+                    'Kode Referral',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: grey700,
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.014),
+                  Column(
+                    children: [
+                      TextField(
+                        controller: _referralCodeController,
+                        textCapitalization: TextCapitalization.characters,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: grey700,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: 'Masukkan kode referral master',
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: grey300,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 2,
+                        child: ColoredBox(
+                          color: _isReferralValid ? primaryBlue500 : grey200,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Wajib diisi dengan kode referral dari agen master Anda.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: grey500,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.03),
+                  Text(
+                    'Password',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: grey700,
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.014),
+                  Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: grey700,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'Minimal 6 karakter',
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: grey300,
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _obscurePassword = !_obscurePassword);
+                            },
+                            child: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: grey400,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 2,
+                        child: ColoredBox(
+                          color: _isPasswordValid ? primaryBlue500 : grey200,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: screenHeight * 0.03),
+                  Text(
+                    'Konfirmasi Password',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: grey700,
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.014),
+                  Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _confirmPasswordController,
+                              obscureText: _obscureConfirmPassword,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: grey700,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'Ulangi password',
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: grey300,
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                            },
+                            child: Icon(
+                              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: grey400,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 2,
+                        child: ColoredBox(
+                          color: _isConfirmPasswordValid ? primaryBlue500 : grey200,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_confirmPasswordController.text.isNotEmpty && !_isConfirmPasswordValid)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Konfirmasi password tidak sama',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,

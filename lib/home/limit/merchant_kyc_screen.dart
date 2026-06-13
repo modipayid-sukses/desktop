@@ -170,7 +170,16 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
     );
 
     if (source == null) return;
-    final picked = await picker.pickImage(source: source, imageQuality: 80);
+    // Batasi dimensi & kualitas agar ukuran file kecil (~300-600KB). Foto KYC
+    // resolusi penuh bisa 2-5MB sehingga menabrak limit upload server
+    // (aturan max:5120 di backend / client_max_body_size di nginx) dan gagal
+    // terkirim. 1600px masih jelas terbaca untuk KTP & selfie.
+    final picked = await picker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
     if (picked == null) return;
 
     setState(() {

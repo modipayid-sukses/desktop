@@ -174,6 +174,7 @@ class ApiService {
     if (statusCode == 403) return 'Anda tidak memiliki akses untuk aksi ini.';
     if (statusCode == 404) return 'Data tidak ditemukan.';
     if (statusCode == 422) return 'Data tidak valid. Periksa kembali input Anda.';
+    if (statusCode == 429) return 'Terlalu banyak percobaan. Silakan tunggu sebentar lalu coba lagi.';
     if (statusCode >= 500) return 'Server sedang bermasalah. Coba lagi nanti.';
     return 'Terjadi kesalahan. Silakan coba lagi.';
   }
@@ -414,6 +415,41 @@ class ApiService {
 
   // ==================== AUTH ====================
 
+  /// Konfigurasi aplikasi dari setting panel (mis. `is_otp_required`).
+  /// Dipanggil sebelum login, tidak butuh auth.
+  static Future<Map<String, dynamic>> getAppConfig() async {
+    return _getJson(
+      '$_baseUrl/app-config',
+      fallbackMessage: 'Gagal memuat konfigurasi aplikasi.',
+    );
+  }
+
+  /// Cek setting `is_otp_required` dari `/api/app-config`.
+  /// Default ke `true` (flow OTP) bila config gagal dimuat.
+  static Future<bool> isOtpRequired() async {
+    try {
+      final config = await getAppConfig();
+      final data = config['data'];
+      final raw = config['is_otp_required'] ??
+          (data is Map ? data['is_otp_required'] : null);
+      return _parseConfigBool(raw, defaultValue: true);
+    } catch (_) {
+      return true;
+    }
+  }
+
+  static bool _parseConfigBool(dynamic value, {required bool defaultValue}) {
+    if (value == null) return defaultValue;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final lower = value.toLowerCase();
+      if (lower == 'true' || lower == '1') return true;
+      if (lower == 'false' || lower == '0') return false;
+    }
+    return defaultValue;
+  }
+
   static Future<Map<String, dynamic>> sendOtp(String phone, {String channel = 'wa-generic', String type = 'register'}) async {
     return _postJson(
       '$_baseUrl/send-otp',
@@ -471,6 +507,7 @@ class ApiService {
     String? password,
     String? passwordConfirmation,
     String? email,
+    String? referralCode,
   }) async {
     return _postJson(
       '$_baseUrl/register',
@@ -481,6 +518,7 @@ class ApiService {
         if (passwordConfirmation != null && passwordConfirmation.isNotEmpty)
           'password_confirmation': passwordConfirmation,
         if (email != null) 'email': email,
+        if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
       })),
       fallbackMessage: 'Gagal mendaftar akun.',
     );
@@ -571,6 +609,46 @@ class ApiService {
         'pin_confirmation': pin,
       }),
       fallbackMessage: 'Gagal mengubah PIN.',
+    );
+  }
+
+  // ==================== FORGOT PASSWORD ====================
+
+  /// Step 1: Mulai proses reset password berdasarkan `email`.
+  /// Metode verifikasi ditentukan backend sesuai setting `is_otp_required`:
+  ///  - true  -> OTP dikirim ke WhatsApp, `verification_method` = 'otp'.
+  ///  - false -> tanpa OTP, `verification_method` = 'pin'.
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    return _postJson(
+      '$_baseUrl/forgot-password',
+      body: jsonEncode({'email': email}),
+      fallbackMessage: 'Gagal memproses permintaan reset password.',
+    );
+  }
+
+  /// Step 2: Reset password dengan kode verifikasi (OTP atau PIN sesuai
+  /// `verificationMethod` dari [forgotPassword]) + password baru.
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+    required String passwordConfirmation,
+    required String verificationMethod,
+  }) async {
+    final body = <String, dynamic>{
+      'email': email,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+    };
+    if (verificationMethod == 'pin') {
+      body['pin'] = code;
+    } else {
+      body['otp'] = code;
+    }
+    return _postJson(
+      '$_baseUrl/reset-password',
+      body: jsonEncode(body),
+      fallbackMessage: 'Gagal mereset password.',
     );
   }
 
@@ -1137,8 +1215,11 @@ class ApiService {
   }) async {
     final uri = Uri.parse('$_baseUrl/profile/kyc');
     final request = http.MultipartRequest('POST', uri);
-    request.headers['Authorization'] = 'Bearer $_token';
-    request.headers['Accept'] = 'application/json';
+    // Pakai _headers() agar X-Device-Id ikut terkirim (wajib sejak backend
+    // meng-enforce single-device login). Content-Type dihapus supaya multipart
+    // bisa menetapkan boundary-nya sendiri.
+    request.headers.addAll(_headers(auth: true));
+    request.headers.remove('Content-Type');
     request.files.add(await http.MultipartFile.fromPath('kyc_ktp', ktpFile.path));
     request.files.add(await http.MultipartFile.fromPath('kyc_selfie', selfieFile.path));
     return _sendMultipart(request, fallbackMessage: 'Gagal mengunggah data KYC.');
@@ -1600,36 +1681,52 @@ class ApiService {
     );
   }
 
-  static Future<Map<String, dynamic>> topupAgen({required int agenId, required double amount}) async {
-    return _postJson(
-      '$_baseUrl/hierarchy/topup-agen',
-      auth: true,
-      body: jsonEncode({'agen_id': agenId, 'amount': amount}),
-      fallbackMessage: 'Gagal melakukan top up agen.',
-    );
-  }
-
-  static Future<Map<String, dynamic>> addAgen({int? userId, String? name, String? phone}) async {
+  /// Buat akun agen baru di bawah master yang sedang login.
+  static Future<Map<String, dynamic>> addAgen({
+    required String name,
+    required String phone,
+    required String password,
+    String? email,
+    String? referralCode,
+  }) async {
     return _postJson(
       '$_baseUrl/hierarchy/agens',
       auth: true,
       body: jsonEncode({
-        if (userId != null) 'user_id': userId,
-        if (name != null && name.isNotEmpty) 'name': name,
-        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        'name': name,
+        'phone': phone,
+        'password': password,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
       }),
       fallbackMessage: 'Gagal menambah agen.',
     );
   }
 
-  /// Cari user berdasarkan nomor HP untuk keperluan tambah agen.
-  static Future<Map<String, dynamic>> searchUserForAgen(String query) async {
-    final encoded = Uri.encodeComponent(query);
-    return _getJson(
-      '$_baseUrl/contacts/search-user?phone=$encoded',
+  /// Tautkan akun existing (pernah daftar mandiri) ke hierarki master yang
+  /// sedang login berdasarkan No. HP, tanpa membuat akun baru.
+  static Future<Map<String, dynamic>> addExistingAgen({required String phone}) async {
+    return _postJson(
+      '$_baseUrl/hierarchy/agens/link',
       auth: true,
-      fallbackMessage: 'Pengguna tidak ditemukan.',
+      body: jsonEncode({'phone': phone}),
+      fallbackMessage: 'Gagal menambahkan agen.',
     );
+  }
+
+  /// Hapus agen dari hierarki user master.
+  static Future<Map<String, dynamic>> deleteAgen(int agenId) async {
+    final decoded = await _sendRequest(
+      () => http.delete(
+        Uri.parse('$_baseUrl/hierarchy/agens/$agenId'),
+        headers: _headers(auth: true),
+      ),
+      fallbackMessage: 'Gagal menghapus agen.',
+      debugLabel: 'DELETE $_baseUrl/hierarchy/agens/$agenId',
+    );
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    return <String, dynamic>{};
   }
 }
 

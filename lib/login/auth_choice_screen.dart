@@ -1,11 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/utils/color.dart';
-import 'package:modipay/login/login.dart';
+import 'package:modipay/login/login_router.dart';
 import 'package:modipay/login/register.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class AuthChoiceScreen extends StatelessWidget {
+class AuthChoiceScreen extends StatefulWidget {
   const AuthChoiceScreen({super.key});
+
+  @override
+  State<AuthChoiceScreen> createState() => _AuthChoiceScreenState();
+}
+
+class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
+  bool _isCheckingConfig = false;
+
+  /// Cek setting `is_otp_required` dari panel admin lalu arahkan ke flow
+  /// login yang sesuai:
+  /// - true  -> Login() : cek nomor -> verifikasi OTP -> PIN (tanpa password)
+  /// - false -> LoginWithPassword() : nomor + password (tanpa OTP)
+  Future<void> _handleMasukTap() async {
+    if (_isCheckingConfig) return;
+    setState(() => _isCheckingConfig = true);
+
+    final loginScreen = await resolveLoginScreen();
+
+    if (!mounted) return;
+    setState(() => _isCheckingConfig = false);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => loginScreen),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,20 +104,26 @@ class AuthChoiceScreen extends StatelessWidget {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const Login()),
-                      ),
+                      onTap: _isCheckingConfig ? null : _handleMasukTap,
                       borderRadius: BorderRadius.circular(12),
                       child: Center(
-                        child: Text(
-                          'Masuk',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: _isCheckingConfig
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Text(
+                                'Masuk',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ),

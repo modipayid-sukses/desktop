@@ -137,82 +137,50 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
     );
   }
 
-  Future<void> _topupAgentDialog(Map<String, dynamic> agent) async {
-    final amountController = TextEditingController();
-    final notifire = Provider.of<ColorNotifire>(context, listen: false);
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-
-    showDialog(
+  Future<void> _deleteAgentDialog(Map<String, dynamic> agent) async {
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Kirim Saldo ke ${agent['name']}',
-            style: const TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
+          title: const Text(
+            'Hapus Agen',
+            style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Saldo Anda saat ini: ${_currencyFormat.format(double.tryParse(auth.userBalance.toString()) ?? 0)}',
-                style: const TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Nominal Saldo',
-                  labelStyle: const TextStyle(fontFamily: 'Gilroy Medium'),
-                  prefixText: 'Rp ',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
+          content: Text(
+            'Apakah Anda yakin ingin menghapus "${agent['name'] ?? 'agen ini'}" dari daftar agen Anda? Tindakan ini tidak dapat dibatalkan.',
+            style: const TextStyle(fontFamily: 'Gilroy Medium', fontSize: 13, color: Colors.grey),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Batal', style: TextStyle(fontFamily: 'Gilroy Bold')),
             ),
             ElevatedButton(
-              onPressed: () async {
-                final amountVal = double.tryParse(amountController.text) ?? 0.0;
-                if (amountVal < 1000) {
-                  Fluttertoast.showToast(msg: 'Nominal minimal Rp 1.000');
-                  return;
-                }
-                Navigator.pop(ctx);
-
-                setState(() => _isLoading = true);
-                try {
-                  final res = await ApiService.topupAgen(
-                    agenId: agent['id'],
-                    amount: amountVal,
-                  );
-                  Fluttertoast.showToast(msg: res['message'] ?? 'Top up Agen berhasil');
-                  _fetchAgents();
-                  if (mounted) {
-                    await Provider.of<AuthProvider>(context, listen: false).fetchProfile();
-                  }
-                } catch (e) {
-                  Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
-                } finally {
-                  if (mounted) setState(() => _isLoading = false);
-                }
-              },
+              onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: notifire.getbluecolor,
+                backgroundColor: Colors.red,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Kirim', style: TextStyle(fontFamily: 'Gilroy Bold', color: Colors.white)),
+              child: const Text('Hapus', style: TextStyle(fontFamily: 'Gilroy Bold', color: Colors.white)),
             ),
           ],
         );
       },
     );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final res = await ApiService.deleteAgen(agent['id']);
+      Fluttertoast.showToast(msg: res['message'] ?? 'Agen berhasil dihapus');
+      await _fetchAgents();
+    } catch (e) {
+      Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -444,24 +412,33 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
                                       ],
                                     ),
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () => _topupAgentDialog(agent),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: accent,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    ),
-                                    child: const Text(
-                                      'Kirim Saldo',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Gilroy Bold',
-                                        fontSize: 12,
+                                  PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_vert, color: subtitleColor, size: 20),
+                                    padding: EdgeInsets.zero,
+                                    splashRadius: 20,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    onSelected: (value) {
+                                      if (value == 'delete') _deleteAgentDialog(agent);
+                                    },
+                                    itemBuilder: (_) => [
+                                      const PopupMenuItem<String>(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Hapus Agen',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                                fontFamily: 'Gilroy Bold',
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),

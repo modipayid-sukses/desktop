@@ -8,6 +8,17 @@ import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
 import '../../utils/string.dart';
 
+const List<Color> _avatarColors = [
+  Color(0xFF1E88E5), // blue
+  Color(0xFF43A047), // green
+  Color(0xFFFF9800), // orange
+  Color(0xFFE53935), // red
+  Color(0xFF8E24AA), // purple
+  Color(0xFF00ACC1), // cyan
+  Color(0xFFFF7043), // deep orange
+  Color(0xFF5C6BC0), // indigo
+];
+
 class SendAll extends StatefulWidget {
   final String? category;
   final String searchQuery;
@@ -62,12 +73,21 @@ class _SendAllState extends State<SendAll> {
     }
   }
 
-  List avatarImages = [
-    "images/man4.png",
-    "images/man5.png",
-    "images/man6.png",
-    "images/man7.png",
-  ];
+  Widget _buildInitialAvatar(String name, int index) {
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '?';
+    return Container(
+      color: _avatarColors[index % _avatarColors.length],
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: Colors.white,
+          fontFamily: 'Gilroy Bold',
+          fontSize: height / 40,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,12 +101,12 @@ class _SendAllState extends State<SendAll> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.contact_support_outlined, size: 48, color: Colors.grey.shade300),
+                      Icon(Icons.contact_support_outlined, size: 48, color: const Color(0xFF3567A9).withOpacity(0.3)),
                       const SizedBox(height: 12),
-                      Text(
+                      const Text(
                         'Belum ada kontak',
                         style: TextStyle(
-                          color: notifire.getdarkgreycolor,
+                          color: Color(0xFF3567A9),
                           fontFamily: 'Gilroy Medium',
                         ),
                       ),
@@ -97,6 +117,28 @@ class _SendAllState extends State<SendAll> {
                   child: Column(
                     children: [
                       SizedBox(height: height / 50),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF43A047).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.star_rounded, color: Color(0xFF43A047), size: 18),
+                          ),
+                          SizedBox(width: width / 40),
+                          const Text(
+                            'Kontak Favorit',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontFamily: 'Gilroy Bold',
+                              color: Color(0xFF182974),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: height / 60),
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -144,22 +186,17 @@ class _SendAllState extends State<SendAll> {
                                           child: () {
                                             final avatarPath = contact['avatar']?.toString();
                                             final avatarUrl = ApiService.avatarUrl(avatarPath);
+                                            final name = contact['name']?.toString() ?? '';
                                             if (avatarUrl.isNotEmpty) {
                                               return CachedNetworkImage(
                                                 imageUrl: avatarUrl,
                                                 cacheKey: avatarPath,
                                                 fit: BoxFit.cover,
                                                 fadeInDuration: Duration.zero,
-                                                errorWidget: (_, __, ___) => Image.asset(
-                                                  avatarImages[index % avatarImages.length],
-                                                  fit: BoxFit.cover,
-                                                ),
+                                                errorWidget: (_, __, ___) => _buildInitialAvatar(name, index),
                                               );
                                             }
-                                            return Image.asset(
-                                              avatarImages[index % avatarImages.length],
-                                              fit: BoxFit.cover,
-                                            );
+                                            return _buildInitialAvatar(name, index);
                                           }(),
                                         ),
                                       ),
@@ -169,9 +206,9 @@ class _SendAllState extends State<SendAll> {
                                         children: [
                                           Text(
                                             contact['name'] ?? '',
-                                            style: TextStyle(
-                                                fontSize: height / 45,
-                                                color: notifire.getdarkscolor,
+                                            style: const TextStyle(
+                                                fontSize: 16,
+                                                color: Color(0xFF182974),
                                                 fontFamily: 'Gilroy Bold'),
                                           ),
                                           SizedBox(height: height / 200),
@@ -179,9 +216,9 @@ class _SendAllState extends State<SendAll> {
                                             children: [
                                               Text(
                                                 contact['phone'] ?? '',
-                                                style: TextStyle(
-                                                    fontSize: height / 55,
-                                                    color: Colors.grey,
+                                                style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Color(0xFF3567A9),
                                                     fontFamily: 'Gilroy Medium'),
                                               ),
                                               if (contact['is_modipay_user'] == true) ...[
@@ -189,14 +226,14 @@ class _SendAllState extends State<SendAll> {
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                   decoration: BoxDecoration(
-                                                    color: Colors.blue.shade50,
+                                                    color: const Color(0xFF43A047),
                                                     borderRadius: BorderRadius.circular(4),
                                                   ),
-                                                  child: Text(
+                                                  child: const Text(
                                                     'Modipay',
                                                     style: TextStyle(
-                                                      fontSize: height / 70,
-                                                      color: Colors.blue.shade700,
+                                                      fontSize: 10,
+                                                      color: Colors.white,
                                                       fontFamily: 'Gilroy Bold',
                                                     ),
                                                   ),
@@ -207,14 +244,14 @@ class _SendAllState extends State<SendAll> {
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                   decoration: BoxDecoration(
-                                                    color: Colors.grey.shade100,
+                                                    color: const Color(0xFFFF9800),
                                                     borderRadius: BorderRadius.circular(4),
                                                   ),
-                                                  child: Text(
+                                                  child: const Text(
                                                     'Non-Modipay',
                                                     style: TextStyle(
-                                                      fontSize: height / 70,
-                                                      color: Colors.grey,
+                                                      fontSize: 10,
+                                                      color: Colors.white,
                                                       fontFamily: 'Gilroy Bold',
                                                     ),
                                                   ),
@@ -237,7 +274,7 @@ class _SendAllState extends State<SendAll> {
                                           height: height / 35,
                                           color: contact['is_favorite'] == true
                                               ? null
-                                              : notifire.getdarkscolor,
+                                              : const Color(0xFF182974),
                                         ),
                                       ),
                                       SizedBox(width: width / 20),
@@ -247,7 +284,7 @@ class _SendAllState extends State<SendAll> {
                               ),
                               Divider(
                                 thickness: 1,
-                                color: Colors.grey.withOpacity(0.4),
+                                color: const Color(0xFF3567A9).withOpacity(0.15),
                               ),
                             ],
                           );

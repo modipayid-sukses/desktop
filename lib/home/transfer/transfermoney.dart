@@ -57,20 +57,21 @@ class _TransferMoneyState extends State<TransferMoney> {
     final amountText = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final amount = double.tryParse(amountText) ?? 0;
     final isInsufficient = amount > balanceValue;
-    final isOverLimit = amount > 2000000;
+    final dailyLimit = auth.dailyTransferLimit;
+    final isOverLimit = amount > dailyLimit;
 
     return Scaffold(
-      backgroundColor: notifire.getprimerycolor,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        backgroundColor: notifire.getprimerycolor,
+        iconTheme: const IconThemeData(color: Color(0xFF182974)),
+        backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: Text(
+        title: const Text(
           'Transfer',
           style: TextStyle(
             fontFamily: 'Gilroy Bold',
-            color: notifire.getdarkscolor,
+            color: Color(0xFF182974),
             fontSize: 18,
           ),
         ),
@@ -88,9 +89,16 @@ class _TransferMoneyState extends State<TransferMoney> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: notifire.getprimerydarkcolor,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                      border: Border.all(color: const Color(0xFF3567A9).withOpacity(0.15)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF3567A9).withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -119,8 +127,8 @@ class _TransferMoneyState extends State<TransferMoney> {
                             children: [
                               Text(
                                 widget.contactName,
-                                style: TextStyle(
-                                  color: notifire.getdarkscolor,
+                                style: const TextStyle(
+                                  color: Color(0xFF182974),
                                   fontFamily: 'Gilroy Bold',
                                   fontSize: 16,
                                 ),
@@ -129,7 +137,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                               Text(
                                 widget.contactPhone,
                                 style: const TextStyle(
-                                  color: Colors.grey,
+                                  color: Color(0xFF3567A9),
                                   fontFamily: 'Gilroy Medium',
                                   fontSize: 14,
                                 ),
@@ -147,10 +155,10 @@ class _TransferMoneyState extends State<TransferMoney> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      const Text(
                         'Nominal Transfer',
                         style: TextStyle(
-                          color: notifire.getdarkscolor,
+                          color: Color(0xFF182974),
                           fontFamily: 'Gilroy Bold',
                           fontSize: 16,
                         ),
@@ -179,22 +187,29 @@ class _TransferMoneyState extends State<TransferMoney> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     decoration: BoxDecoration(
-                      color: notifire.getprimerydarkcolor,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isInsufficient ? Colors.red : (amount > 0 ? notifire.getbluecolor : Colors.grey.withOpacity(0.2)),
+                        color: isInsufficient ? Colors.red : (amount > 0 ? notifire.getbluecolor : const Color(0xFF3567A9).withOpacity(0.2)),
                         width: 1.5,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF3567A9).withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
+                            const Text(
                               "Rp",
                               style: TextStyle(
-                                color: notifire.getdarkscolor,
+                                color: Color(0xFF182974),
                                 fontSize: 24,
                                 fontFamily: 'Gilroy Bold',
                               ),
@@ -205,7 +220,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                                 controller: _amountController,
                                 enabled: !isBalanceZero,
                                 style: TextStyle(
-                                  color: isInsufficient ? Colors.red : notifire.getdarkscolor,
+                                  color: isInsufficient ? Colors.red : const Color(0xFF182974),
                                   fontSize: 32,
                                   fontFamily: 'Gilroy Bold',
                                 ),
@@ -218,7 +233,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                                   isDense: true,
                                   hintStyle: TextStyle(
                                     fontSize: 32,
-                                    color: Colors.grey.withOpacity(0.3),
+                                    color: const Color(0xFF3567A9).withOpacity(0.3),
                                     fontFamily: 'Gilroy Bold',
                                   ),
                                 ),
@@ -240,10 +255,10 @@ class _TransferMoneyState extends State<TransferMoney> {
                         ),
                         if (isInsufficient) ...[
                           const SizedBox(height: 8),
-                          Row(
+                          const Row(
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 14),
-                              const SizedBox(width: 4),
+                              Icon(Icons.error_outline, color: Colors.red, size: 14),
+                              SizedBox(width: 4),
                               Text(
                                 'Saldo tidak mencukupi',
                                 style: TextStyle(
@@ -262,7 +277,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                               const Icon(Icons.info_outline, color: Colors.orange, size: 14),
                               const SizedBox(width: 4),
                               Text(
-                                'Maksimum transfer harian Rp 2.000.000',
+                                'Maksimum transfer harian Rp ${_currencyFormat.format(dailyLimit)}',
                                 style: TextStyle(
                                   color: Colors.orange.shade700,
                                   fontFamily: 'Gilroy Medium',
@@ -295,16 +310,16 @@ class _TransferMoneyState extends State<TransferMoney> {
                               if (selected) _updateAmount(qAmt);
                             },
                             labelStyle: TextStyle(
-                              color: amount == qAmt.toDouble() ? Colors.white : notifire.getdarkscolor,
+                              color: amount == qAmt.toDouble() ? Colors.white : const Color(0xFF3567A9),
                               fontFamily: 'Gilroy Bold',
                               fontSize: 13,
                             ),
                             selectedColor: notifire.getbluecolor,
-                            backgroundColor: notifire.getprimerydarkcolor,
+                            backgroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
-                                color: amount == qAmt.toDouble() ? notifire.getbluecolor : Colors.grey.withOpacity(0.2),
+                                color: amount == qAmt.toDouble() ? notifire.getbluecolor : const Color(0xFF3567A9).withOpacity(0.2),
                               ),
                             ),
                           ),
@@ -316,10 +331,10 @@ class _TransferMoneyState extends State<TransferMoney> {
                   const SizedBox(height: 32),
                   
                   // Notes Input
-                  Text(
+                  const Text(
                     'Catatan (Opsional)',
                     style: TextStyle(
-                      color: notifire.getdarkscolor,
+                      color: Color(0xFF182974),
                       fontFamily: 'Gilroy Bold',
                       fontSize: 16,
                     ),
@@ -328,23 +343,23 @@ class _TransferMoneyState extends State<TransferMoney> {
                   TextField(
                     controller: _notesController,
                     enabled: !isBalanceZero,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 15,
-                      color: notifire.getdarkscolor,
+                      color: Color(0xFF182974),
                       fontFamily: 'Gilroy Medium',
                     ),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: notifire.getprimerydarkcolor,
+                      fillColor: Colors.white,
                       hintText: "Tambah pesan untuk penerima...",
-                      hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 14),
+                      hintStyle: TextStyle(color: const Color(0xFF3567A9).withOpacity(0.4), fontSize: 14),
                       contentPadding: const EdgeInsets.all(16),
                       border: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                        borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.2)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                        borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.2)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -363,10 +378,10 @@ class _TransferMoneyState extends State<TransferMoney> {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
             decoration: BoxDecoration(
-              color: notifire.getprimerycolor,
+              color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: const Color(0xFF3567A9).withOpacity(0.06),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -383,7 +398,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: (isBalanceZero || isInsufficient || amount <= 0 || isOverLimit)
-                      ? Colors.grey.shade300
+                      ? const Color(0xFF3567A9).withOpacity(0.2)
                       : notifire.getbluecolor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: (isBalanceZero || isInsufficient || amount <= 0 || isOverLimit)
@@ -426,9 +441,9 @@ class _TransferMoneyState extends State<TransferMoney> {
             ),
           ),
           child: Container(
-            decoration: BoxDecoration(
-              color: notifire.gettabwhitecolor,
-              borderRadius: const BorderRadius.all(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(
                 Radius.circular(20),
               ),
             ),
@@ -444,7 +459,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                 Text(
                   CustomStrings.totaltransfer,
                   style: TextStyle(
-                    color: notifire.getdarkgreycolor,
+                    color: const Color(0xFF3567A9),
                     fontFamily: 'Gilroy Bold',
                     fontSize: height / 50,
                   ),
@@ -453,7 +468,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                 Text(
                   formattedAmount,
                   style: TextStyle(
-                    color: notifire.getdarkscolor,
+                    color: const Color(0xFF182974),
                     fontFamily: 'Gilroy Bold',
                     fontSize: height / 30,
                   ),
@@ -466,7 +481,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                       Text(
                         CustomStrings.transferdetails,
                         style: TextStyle(
-                          color: notifire.getdarkscolor,
+                          color: const Color(0xFF182974),
                           fontFamily: 'Gilroy Bold',
                           fontSize: height / 50,
                         ),
@@ -484,7 +499,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                 _detailRow('Biaya Admin', 'Gratis', isFree: true),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: width / 20),
-                  child: const Divider(thickness: 0.6, color: Colors.grey),
+                  child: const Divider(thickness: 0.6, color: Color(0xFF3567A9)),
                 ),
                 _detailRow('Total Bayar', formattedAmount, isBold: true),
                 const Spacer(),
@@ -495,7 +510,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () => Navigator.pop(context),
-                          child: _dialogButton(notifire.gettabwhitecolor, 'Batal', notifire.getdarkscolor),
+                          child: _dialogButton(Colors.white, 'Batal', const Color(0xFF182974)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -536,7 +551,7 @@ class _TransferMoneyState extends State<TransferMoney> {
         children: [
           Text(
             label,
-            style: const TextStyle(color: Colors.grey, fontFamily: 'Gilroy Medium', fontSize: 13),
+            style: const TextStyle(color: Color(0xFF3567A9), fontFamily: 'Gilroy Medium', fontSize: 13),
           ),
           const Spacer(),
           if (isFree)
@@ -558,7 +573,7 @@ class _TransferMoneyState extends State<TransferMoney> {
                 textAlign: TextAlign.end,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: notifire.getdarkscolor,
+                  color: const Color(0xFF182974),
                   fontFamily: isBold ? 'Gilroy Bold' : 'Gilroy Medium',
                   fontSize: 13,
                 ),
@@ -575,7 +590,7 @@ class _TransferMoneyState extends State<TransferMoney> {
       decoration: BoxDecoration(
         color: clr,
         borderRadius: BorderRadius.circular(24),
-        border: clr == notifire.gettabwhitecolor ? Border.all(color: Colors.grey.withOpacity(0.3)) : null,
+        border: clr == Colors.white ? Border.all(color: const Color(0xFF3567A9).withOpacity(0.3)) : null,
       ),
       child: Center(
         child: Text(

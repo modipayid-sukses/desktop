@@ -45,9 +45,21 @@ class AuthProvider extends ChangeNotifier {
   bool get qrisMerchantActive => _user?['qris_merchant_active'] == true || _user?['qris_merchant_active'] == 1;
   bool get kreditVerified => _user?['kredit_verified'] == true || _user?['kredit_verified'] == 1;
   double get kreditLimit => double.tryParse(_user?['kredit_limit']?.toString() ?? '0') ?? 0;
-  /// Hierarchy level dari backend: 'master', 'agent', atau null jika biasa.
+  /// Batas transfer P2P harian dari setting backend (`daily_transfer_limit`),
+  /// default Rp 2.000.000 bila belum tersedia di profil.
+  double get dailyTransferLimit => double.tryParse(_user?['daily_transfer_limit']?.toString() ?? '') ?? 2000000;
+  /// Fitur transfer ke rekening bank hanya aktif bila admin sudah mengaktifkan
+  /// `transfer_verified` di akun user (default false / harus pengajuan).
+  bool get transferVerified => _user?['transfer_verified'] == true || _user?['transfer_verified'] == 1;
+  /// Hierarchy level dari backend (kolom enum): 'supermaster', 'master',
+  /// 'agen', atau null jika user biasa.
   String? get hierarchyLevel => _user?['hierarchy_level']?.toString();
   bool get isMasterAgent => hierarchyLevel == 'master';
+  // Catatan: nilai backend adalah 'agen' (ejaan Indonesia), bukan 'agent'.
+  bool get isAgent => hierarchyLevel == 'agen';
+  /// Kode referral milik user yang sedang login, dibagikan ke agen baru
+  /// agar terhubung ke hierarki user ini saat mendaftar.
+  String? get referralCode => _user?['referral_code']?.toString();
 
   Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();

@@ -350,6 +350,9 @@ class _HomeState extends State<Home> {
   }
 
   void _showTransferOptions() {
+    // Transfer sesama pengguna (peer) tidak boleh untuk hierarchy_level 'agent'
+    // — transfer saldo antar agent hanya boleh master → agent (via Kelola Agen).
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -384,57 +387,78 @@ class _HomeState extends State<Home> {
                 ),
               ),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3F2FD),
-                    borderRadius: BorderRadius.circular(12),
+              // Transfer ke rekening bank hanya untuk akun yang sudah
+              // diaktifkan admin (transfer_verified). Selaras dengan guard
+              // server-side di BankTransferController.
+              if (auth.transferVerified)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.account_balance_rounded, color: Color(0xFF1E88E5)),
                   ),
-                  child: const Icon(Icons.account_balance_rounded, color: Color(0xFF1E88E5)),
-                ),
-                title: const Text(
-                  'Transfer ke Rekening Bank',
-                  style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
-                ),
-                subtitle: const Text(
-                  'Kirim saldo ke berbagai rekening bank di Indonesia',
-                  style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
-                ),
-                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                onTap: () {
-                  Navigator.pop(context);
-                  _navigateAndRefresh(const BankTransferScreen());
-                },
-              ),
-              const Divider(height: 24, thickness: 1, color: Color(0xFFF3F4F6)),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(12),
+                  title: const Text(
+                    'Transfer ke Rekening Bank',
+                    style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
                   ),
-                  child: const Icon(Icons.people_alt_rounded, color: Color(0xFF43A047)),
+                  subtitle: const Text(
+                    'Kirim saldo ke berbagai rekening bank di Indonesia',
+                    style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateAndRefresh(const BankTransferScreen());
+                  },
                 ),
-                title: const Text(
-                  'Transfer Sesama Modipay',
-                  style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
+              // Transfer sesama pengguna (peer) disembunyikan untuk agen.
+              if (auth.transferVerified && !auth.isAgent)
+                const Divider(height: 24, thickness: 1, color: Color(0xFFF3F4F6)),
+              if (!auth.isAgent)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.people_alt_rounded, color: Color(0xFF43A047)),
+                  ),
+                  title: const Text(
+                    'Transfer Sesama Modipay',
+                    style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
+                  ),
+                  subtitle: const Text(
+                    'Kirim saldo instan ke sesama pengguna Modipay',
+                    style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateAndRefresh(const SendMoney());
+                  },
                 ),
-                subtitle: const Text(
-                  'Kirim saldo instan ke sesama pengguna Modipay',
-                  style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
+              // Tidak ada metode transfer yang tersedia untuk akun ini.
+              if (!auth.transferVerified && auth.isAgent)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Belum ada metode transfer yang aktif untuk akun Anda. '
+                    'Silakan hubungi admin untuk mengaktifkan.',
+                    style: TextStyle(
+                      fontFamily: 'Gilroy Medium',
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                onTap: () {
-                  Navigator.pop(context);
-                  _navigateAndRefresh(const SendMoney());
-                },
-              ),
               const SizedBox(height: 12),
             ],
           ),
@@ -1533,7 +1557,10 @@ class _HomeState extends State<Home> {
       if (brandLower.contains('pdam')) {
         _navigateAndRefresh(const PdamScreen());
       } else {
-        _navigateAndRefresh(PPOBPostpaidScreen(brand: item['brand'], title: item['name']));
+        _navigateAndRefresh(PPOBPostpaidScreen(
+          brand: (item['brand'] ?? item['category'] ?? '').toString(),
+          title: (item['name'] ?? '').toString(),
+        ));
       }
     } else if (routeType == 'emoney_brand') {
       final cat = (item['category'] as String?)?.trim();

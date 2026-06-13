@@ -13,7 +13,6 @@ class PPOBCellularForm extends StatelessWidget {
   final bool isInject;
   final Function(String) onBrandSelected;
   final Function(Map<String, dynamic>) onProductSelected;
-  final VoidCallback onContactPickerPressed;
   final int pulsaTabIndex;
   final Function(int) onPulsaTabChanged;
   final String? Function(String) validator;
@@ -46,7 +45,6 @@ class PPOBCellularForm extends StatelessWidget {
     required this.isInject,
     required this.onBrandSelected,
     required this.onProductSelected,
-    required this.onContactPickerPressed,
     required this.pulsaTabIndex,
     required this.onPulsaTabChanged,
     required this.validator,

@@ -46,6 +46,27 @@ class BpjsInquiryResultScreen extends StatelessWidget {
     return double.tryParse(value.toString()) ?? 0;
   }
 
+  /// Pilih kandidat skalar pertama yang bernilai > 0. Backend kadang
+  /// meneruskan response mentah Loket Bayar (mis. `tagihan`/`total` flat) atau
+  /// gagal men-summarize sehingga `nominal` bernilai 0/null — sehingga `??`
+  /// saja tidak cukup (nilai 0 bukan null). Nilai bertipe List diabaikan.
+  static double _firstAmount(List<dynamic> candidates) {
+    for (final c in candidates) {
+      if (c is List) continue;
+      final n = _toDouble(c);
+      if (n > 0) return n;
+    }
+    return 0;
+  }
+
+  static String _firstText(List<dynamic> candidates) {
+    for (final c in candidates) {
+      final s = (c ?? '').toString().trim();
+      if (s.isNotEmpty) return s;
+    }
+    return '';
+  }
+
   String _money(dynamic v) {
     if (v == null) return 'Rp 0';
     final n = _toDouble(v);
@@ -175,7 +196,13 @@ class BpjsInquiryResultScreen extends StatelessWidget {
                     _Card(
                       title: 'Ringkasan Pembayaran',
                       children: [
-                        _row('Total Tagihan', _money(data['nominal'] ?? data['tagihan'])),
+                        _row(
+                          'Total Tagihan',
+                          _money(_firstAmount([
+                            data['nominal'],
+                            data['tagihan'],
+                          ])),
+                        ),
                         if (_toDouble(data['denda']) > 0)
                           _row('Total Denda', _money(data['denda'])),
                         _row('Biaya Admin', _money(data['admin'])),
@@ -185,7 +212,10 @@ class BpjsInquiryResultScreen extends StatelessWidget {
                         ),
                         _row(
                           'Total Bayar',
-                          _money(data['total'] ?? data['selling_price']),
+                          _money(_firstAmount([
+                            data['total'],
+                            data['selling_price'],
+                          ])),
                           highlight: true,
                         ),
                       ],
@@ -235,16 +265,25 @@ class BpjsInquiryResultScreen extends StatelessWidget {
                       height: 48,
                       child: ElevatedButton(
                         onPressed: () {
-                          final total = _toDouble(
-                              data['total'] ?? data['selling_price']);
+                          double total = _firstAmount([
+                            data['total'],
+                            data['selling_price'],
+                          ]);
+                          if (total <= 0) {
+                            total = _toDouble(data['tagihan']) +
+                                _toDouble(data['admin']) +
+                                _toDouble(data['denda']);
+                          }
                           if (total <= 0) {
                             Fluttertoast.showToast(
                               msg: 'Total tagihan tidak valid',
                             );
                             return;
                           }
-                          final refId =
-                              (data['ref_id'] ?? '').toString().trim();
+                          final refId = _firstText([
+                            data['ref_id'],
+                            data['refID'],
+                          ]);
                           if (refId.isEmpty) {
                             Fluttertoast.showToast(
                               msg:
@@ -252,8 +291,10 @@ class BpjsInquiryResultScreen extends StatelessWidget {
                             );
                             return;
                           }
-                          final kodeProduk =
-                              (data['kode_produk'] ?? '').toString().trim();
+                          final kodeProduk = _firstText([
+                            data['kode_produk'],
+                            data['kodeProduk'],
+                          ]);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -261,6 +302,7 @@ class BpjsInquiryResultScreen extends StatelessWidget {
                                 kodeProduk: kodeProduk,
                                 customerNo: (data['idpel'] ??
                                         data['customer_no'] ??
+                                        data['noVA'] ??
                                         customerId)
                                     .toString(),
                                 customerName: (data['nama'] ??
@@ -282,7 +324,7 @@ class BpjsInquiryResultScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          'Bayar ${_money(data['total'] ?? data['selling_price'])}',
+                          'Bayar ${_money(_firstAmount([data['total'], data['selling_price']]))}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontFamily: 'Gilroy Bold',

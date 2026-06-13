@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
 import 'package:modipay/home/transfer/sendall.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
 import '../../utils/string.dart';
+import 'transfermoney.dart';
+
+const List<Color> _avatarColors = [
+  Color(0xFF1E88E5), // blue
+  Color(0xFF43A047), // green
+  Color(0xFFFF9800), // orange
+  Color(0xFFE53935), // red
+  Color(0xFF8E24AA), // purple
+  Color(0xFF00ACC1), // cyan
+  Color(0xFFFF7043), // deep orange
+  Color(0xFF5C6BC0), // indigo
+];
 
 class SendMoney extends StatefulWidget {
   const SendMoney({Key? key}) : super(key: key);
@@ -17,8 +31,10 @@ class SendMoney extends StatefulWidget {
 class _SendMoneyState extends State<SendMoney> {
   late ColorNotifire notifire;
   final _searchController = TextEditingController();
+  final FlutterNativeContactPicker _contactPicker = FlutterNativeContactPicker();
   String _searchQuery = '';
   Key _refreshKey = UniqueKey();
+  List<Map<String, dynamic>> _agents = [];
 
   @override
   void dispose() {
@@ -39,6 +55,31 @@ class _SendMoneyState extends State<SendMoney> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAgents());
+  }
+
+  Future<void> _loadAgents() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isMasterAgent) return;
+    try {
+      final response = await ApiService.getAgens();
+      final data = response['data'];
+      if (mounted && data is List) {
+        setState(() {
+          _agents = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        });
+      }
+    } catch (_) {}
+  }
+
+  String _normalizeMsisdn(String raw) {
+    var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('62')) {
+      digits = '0${digits.substring(2)}';
+    } else if (digits.startsWith('8')) {
+      digits = '0$digits';
+    }
+    return digits;
   }
 
   void _showAddContactDialog() {
@@ -57,9 +98,9 @@ class _SendMoneyState extends State<SendMoney> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Container(
-              decoration: BoxDecoration(
-                color: notifire.getprimerycolor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               padding: EdgeInsets.fromLTRB(
                 20, 
@@ -76,7 +117,7 @@ class _SendMoneyState extends State<SendMoney> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: const Color(0xFF3567A9).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -87,7 +128,7 @@ class _SendMoneyState extends State<SendMoney> {
                     style: TextStyle(
                       fontFamily: 'Gilroy Bold',
                       fontSize: 18,
-                      color: Color(0xFF1F1F1F),
+                      color: Color(0xFF182974),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -97,7 +138,7 @@ class _SendMoneyState extends State<SendMoney> {
                       style: TextStyle(
                         fontFamily: 'Gilroy Medium',
                         fontSize: 13,
-                        color: Colors.grey,
+                        color: Color(0xFF3567A9),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -105,23 +146,47 @@ class _SendMoneyState extends State<SendMoney> {
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
                       autofocus: true,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'Gilroy Medium',
                         fontSize: 15,
-                        color: notifire.getdarkscolor,
+                        color: Color(0xFF182974),
                       ),
                       decoration: InputDecoration(
                         hintText: 'Contoh: 0812xxxxxxxx',
-                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        hintStyle: TextStyle(color: const Color(0xFF3567A9).withOpacity(0.4)),
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        suffixIcon: IconButton(
+                          icon: Icon(Icons.contacts_rounded, color: notifire.getbluecolor),
+                          tooltip: 'Pilih dari kontak HP',
+                          onPressed: () async {
+                            try {
+                              final contact = await _contactPicker.selectPhoneNumber();
+                              final selected = contact?.selectedPhoneNumber?.trim() ?? '';
+                              final fromList = (contact?.phoneNumbers != null &&
+                                      contact!.phoneNumbers!.isNotEmpty)
+                                  ? contact.phoneNumbers!.first.trim()
+                                  : '';
+                              final raw = selected.isNotEmpty ? selected : fromList;
+                              final normalized = _normalizeMsisdn(raw);
+                              if (normalized.isEmpty) {
+                                setSheetState(() => errorMessage = 'Nomor dari kontak tidak valid');
+                                return;
+                              }
+                              phoneController.text = normalized;
+                              setSheetState(() => errorMessage = null);
+                            } catch (_) {
+                              setSheetState(() => errorMessage = 'Gagal mengambil kontak');
+                            }
+                          },
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
+                          borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.3)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
+                          borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.3)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -229,10 +294,10 @@ class _SendMoneyState extends State<SendMoney> {
                           const SizedBox(height: 4),
                           Text(
                             foundUser?['phone'] ?? '',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontFamily: 'Gilroy Medium',
                               fontSize: 13,
-                              color: Colors.grey.shade600,
+                              color: Color(0xFF3567A9),
                             ),
                           ),
                         ],
@@ -253,7 +318,7 @@ class _SendMoneyState extends State<SendMoney> {
                                 });
                               },
                               style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: Colors.grey.shade300),
+                                side: const BorderSide(color: Color(0xFF3567A9)),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               child: const Text(
@@ -261,7 +326,7 @@ class _SendMoneyState extends State<SendMoney> {
                                 style: TextStyle(
                                   fontFamily: 'Gilroy Bold',
                                   fontSize: 15,
-                                  color: Colors.grey,
+                                  color: Color(0xFF3567A9),
                                 ),
                               ),
                             ),
@@ -344,51 +409,9 @@ class _SendMoneyState extends State<SendMoney> {
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
+    final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'Kirim uang',
-          style: TextStyle(
-            fontSize: 20,
-            fontFamily: 'Gilroy Bold',
-            color: notifire.getdarkscolor,
-          ),
-        ),
-        actions: [
-          GestureDetector(
-            onTap: _showAddContactDialog,
-            child: Container(
-              height: 40,
-              width: 40,
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.withOpacity(0.4)),
-              ),
-              child: Icon(Icons.add, color: notifire.getdarkscolor),
-            ),
-          ),
-        ],
-        backgroundColor: notifire.getprimerycolor,
-        leading: GestureDetector(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Container(
-            height: 40,
-            width: 40,
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.withOpacity(0.4)),
-            ),
-            child: Icon(Icons.arrow_back, color: notifire.getdarkscolor),
-          ),
-        ),
-      ),
-      backgroundColor: notifire.getprimerycolor,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           Container(
@@ -402,46 +425,188 @@ class _SendMoneyState extends State<SendMoney> {
           ),
           Column(
             children: [
-              const SizedBox(height: 20),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: false,
-                  style: TextStyle(
-                    fontSize: height / 50,
-                    color: notifire.getdarkscolor,
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF182974), Color(0xFF3567A9)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val.trim();
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Cari kontak..",
-                    filled: true,
-                    fillColor: notifire.getprimerydarkcolor,
-                    hintStyle: TextStyle(color: Colors.grey, fontSize: height / 60),
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Image.asset(
-                        "images/search.png",
-                        color: notifire.getdarkgreycolor,
-                        height: 20,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: notifire.getbluecolor),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(28),
+                    bottomRight: Radius.circular(28),
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(width / 20, 8, width / 20, 24),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                ),
+                                child: const Icon(Icons.arrow_back, color: Colors.white),
+                              ),
+                            ),
+                            const Expanded(
+                              child: Text(
+                                'Kirim uang',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontFamily: 'Gilroy Bold',
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _showAddContactDialog,
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                ),
+                                child: const Icon(Icons.add, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: height / 45),
+                        TextField(
+                          controller: _searchController,
+                          autofocus: false,
+                          style: TextStyle(
+                            fontSize: height / 50,
+                            color: const Color(0xFF182974),
+                          ),
+                          onChanged: (val) {
+                            setState(() {
+                              _searchQuery = val.trim();
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Cari kontak..",
+                            filled: true,
+                            fillColor: Colors.white,
+                            hintStyle: TextStyle(color: const Color(0xFF3567A9).withOpacity(0.5), fontSize: height / 60),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Image.asset(
+                                "images/search.png",
+                                color: const Color(0xFF3567A9),
+                                height: 20,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Color(0xFF182974), width: 1.5),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
+              if (auth.isMasterAgent && _agents.isNotEmpty) ...[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: width / 20),
+                  child: Text(
+                    'Agen Saya',
+                    style: TextStyle(
+                      fontSize: height / 55,
+                      fontFamily: 'Gilroy Bold',
+                      color: const Color(0xFF182974),
+                    ),
+                  ),
+                ),
+                SizedBox(height: height / 100),
+                SizedBox(
+                  height: 90,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: width / 20),
+                    itemCount: _agents.length,
+                    itemBuilder: (context, index) {
+                      final agent = _agents[index];
+                      final agentId = agent['id'] is int
+                          ? agent['id'] as int
+                          : int.tryParse(agent['id'].toString()) ?? 0;
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TransferMoney(
+                                contactId: agentId,
+                                contactName: agent['name']?.toString() ?? '',
+                                contactPhone: agent['phone']?.toString() ?? '',
+                                contactCategory: 'agent',
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 72,
+                          margin: const EdgeInsets.only(right: 12),
+                          child: Column(
+                            children: [
+                              CircleAvatar(
+                                radius: 26,
+                                backgroundColor: _avatarColors[index % _avatarColors.length],
+                                child: Text(
+                                  agent['name']?.toString().isNotEmpty == true
+                                      ? agent['name'].toString()[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontFamily: 'Gilroy Bold',
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                agent['name']?.toString() ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: height / 75,
+                                  fontFamily: 'Gilroy Medium',
+                                  color: const Color(0xFF182974),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: height / 60),
+              ],
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: width / 20),
