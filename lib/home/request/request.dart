@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -529,14 +531,14 @@ class _RequestState extends State<Request> {
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         backgroundColor: notifire.getprimerycolor,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Penarikan',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontSize: height / 40,
             fontFamily: 'Gilroy Bold',
           ),
-        ),
+        ))
       ),
       body: Container(
         width: width,
@@ -958,14 +960,14 @@ class _WithdrawalAmountScreenState extends State<WithdrawalAmountScreen> {
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Nominal Penarikan',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 44,
           ),
-        ),
+        ))
       ),
       body: SafeArea(
         child: Padding(
@@ -1196,14 +1198,14 @@ class _WithdrawalVerificationScreenState extends State<WithdrawalVerificationScr
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Verifikasi Penarikan',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 44,
           ),
-        ),
+        ))
       ),
       body: SafeArea(
         child: Padding(

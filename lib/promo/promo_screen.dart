@@ -1,9 +1,35 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:modipay/home/ppob/ppob_product_screen.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/color.dart';
+import 'package:modipay/utils/responsive.dart';
+import 'package:modipay/utils/string.dart';
+import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/home/home.dart';
+import 'package:modipay/home/seealltransaction.dart';
+import 'package:modipay/home/topup/topup_channel_screen.dart';
+import 'package:modipay/profile/profile.dart' as profile_page;
+import 'package:modipay/profile/helpsupport.dart';
+import 'package:modipay/home/notifications.dart';
+import 'package:modipay/login/login_router.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+import 'package:modipay/home/ppob/ppob_menu_route.dart';
+import 'package:modipay/home/ppob/bpjs_screen.dart';
+import 'package:modipay/home/ppob/pdam_screen.dart';
+import 'package:modipay/home/ppob/ppob_postpaid_screen.dart';
+import 'package:modipay/home/ppob/ppob_emoney_brand_screen.dart';
+import 'package:modipay/home/ppob/ppob_topup_game_list_screen.dart';
+import 'package:modipay/home/ppob/ppob_all_services_screen.dart';
+import 'package:modipay/home/ppob/nfc_toll_scan_screen.dart';
+import 'package:modipay/home/transfer/bank_transfer_screen.dart';
+import 'package:modipay/home/qris/qris_scan_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +55,7 @@ class _PromoScreenState extends State<PromoScreen> {
     super.initState();
     _loadDarkMode();
     _loadPromos();
+    _loadMenuConfig();
   }
 
   Future<void> _loadDarkMode() async {
@@ -120,6 +147,9 @@ class _PromoScreenState extends State<PromoScreen> {
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
+    if (isDesktop(context)) {
+      return _buildDesktopLayout(context);
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: Stack(
@@ -406,6 +436,794 @@ class _PromoScreenState extends State<PromoScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _pembelianItems = [];
+  List<Map<String, dynamic>> _pembayaranItems = [];
+  bool _prepaidExpanded = false;
+  bool _postpaidExpanded = false;
+  double height = 0;
+  double width = 0;
+
+  static const Map<String, IconData> _iconMap = {
+    'phone_android': Icons.phone_android,
+    'signal_cellular_alt': Icons.signal_cellular_alt,
+    'electric_bolt': Icons.electric_bolt,
+    'account_balance_wallet': Icons.account_balance_wallet,
+    'sim_card': Icons.sim_card,
+    'sports_esports': Icons.sports_esports,
+    'electrical_services': Icons.electrical_services,
+    'health_and_safety': Icons.health_and_safety,
+    'wifi': Icons.wifi,
+    'grid_view_rounded': Icons.grid_view_rounded,
+    'tv': Icons.tv,
+    'credit_card': Icons.credit_card,
+    'receipt_long': Icons.receipt_long,
+    'message': Icons.message,
+    'card_giftcard': Icons.card_giftcard,
+    'flash_on': Icons.flash_on,
+    'payments': Icons.payments,
+    'water_drop': Icons.water_drop,
+    'local_gas_station': Icons.local_gas_station,
+    'swap_horiz': Icons.swap_horiz,
+    'phone_in_talk': Icons.phone_in_talk,
+    'language': Icons.language,
+    'account_balance': Icons.account_balance,
+    'two_wheeler': Icons.two_wheeler,
+    'directions_car': Icons.directions_car,
+    'local_fire_department': Icons.local_fire_department,
+    'diamond': Icons.diamond,
+  };
+
+  Future<void> _loadMenuConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('cache_ppob_menu_v2');
+    if (cached != null) {
+      try {
+        _applyMenuData(jsonDecode(cached) as Map<String, dynamic>);
+      } catch (_) {}
+    }
+
+    try {
+      final data = await ApiService.getPpobMenu();
+      _applyMenuData(data);
+      prefs.setString('cache_ppob_menu_v2', jsonEncode(data));
+    } catch (_) {}
+  }
+
+  void _applyMenuData(Map<String, dynamic> data) {
+    List<Map<String, dynamic>> parseGroup(List items, String defaultCmd) {
+      return items.map((c) {
+        final m = Map<String, dynamic>.from(c);
+        final normalized = normalizePpobMenuItem(m, defaultCmd: defaultCmd);
+        normalized['icon'] = _iconMap[m['icon']] ?? Icons.apps;
+        final rawUrl = m['icon_url'] as String?;
+        normalized['iconUrl'] = (rawUrl != null && rawUrl.startsWith('/'))
+            ? '${ApiService.baseUrl.replaceFirst('/api', '')}$rawUrl'
+            : rawUrl;
+        return normalized;
+      }).toList();
+    }
+
+    if (mounted) {
+      setState(() {
+        _pembelianItems  = parseGroup(data['pembelian']  as List? ?? [], 'prepaid');
+        _pembayaranItems = parseGroup(data['pembayaran'] as List? ?? [], 'pasca');
+      });
+    }
+  }
+
+  void _navigateAndRefresh(Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen)).then((_) => _loadPromos());
+  }
+
+  void _openTransaction(Widget screen, {BuildContext? customContext}) {
+    final ctx = customContext ?? context;
+    if (!isDesktop(ctx)) {
+      _navigateAndRefresh(screen);
+      return;
+    }
+
+    final isAlreadyInPopup = customContext != null && Theme.of(customContext).appBarTheme.elevation == 0.007;
+    if (isAlreadyInPopup) {
+      Navigator.push(customContext, MaterialPageRoute(builder: (_) => screen));
+      return;
+    }
+
+    final screenSize = MediaQuery.of(context).size;
+    final modalWidth = 460.0;
+    final modalHeight = (screenSize.height * 0.88).clamp(560.0, 840.0);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.45),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(dialogContext).pop(),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(Icons.close_rounded, size: 20, color: desktopTextPrimary),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: modalWidth,
+                height: modalHeight,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: MediaQuery(
+                    data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                          elevation: 0.007,
+                        ),
+                      ),
+                      child: Navigator(
+                        onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((_) => _loadPromos());
+  }
+
+  Future<void> _confirmDesktopLogout(AuthProvider auth) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Keluar'),
+        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await auth.logout();
+    if (!mounted) return;
+    final loginScreen = await resolveLoginScreen();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => loginScreen), (route) => false);
+  }
+
+  void _showDesktopReferralDialog(AuthProvider auth) {
+    final code = auth.referralCode;
+    if (code == null || code.isEmpty) {
+      Fluttertoast.showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kode Referral Anda'),
+        content: Text(code, style: const TextStyle(fontFamily: 'Gilroy Bold', fontSize: 20)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              Navigator.pop(ctx);
+              Fluttertoast.showToast(msg: 'Kode referral disalin');
+            },
+            child: const Text('Salin'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToItem(Map<String, dynamic> item, {BuildContext? customContext}) {
+    // BPJS selalu pakai layar khusus (daftar produk dari admin panel).
+    final brandLowerForBpjs = (item['brand'] ?? '').toString().toLowerCase();
+    final categoryLowerForBpjs = (item['category'] ?? '').toString().toLowerCase();
+    final nameLowerForBpjs = (item['name'] ?? '').toString().toLowerCase();
+    if (brandLowerForBpjs.contains('bpjs') ||
+        categoryLowerForBpjs.contains('bpjs') ||
+        nameLowerForBpjs.contains('bpjs')) {
+      _openTransaction(const BpjsScreen(), customContext: customContext);
+      return;
+    }
+
+    // PDAM selalu pakai layar khusus (daftar kota dari admin panel),
+    // tidak peduli route_type / screen_type yang dikirim backend.
+    final brandLowerForPdam = (item['brand'] ?? '').toString().toLowerCase();
+    final categoryLowerForPdam = (item['category'] ?? '').toString().toLowerCase();
+    final nameLowerForPdam = (item['name'] ?? '').toString().toLowerCase();
+    if (brandLowerForPdam.contains('pdam') ||
+        categoryLowerForPdam.contains('pdam') ||
+        nameLowerForPdam.contains('pdam')) {
+      _openTransaction(const PdamScreen(), customContext: customContext);
+      return;
+    }
+
+    final routeType = resolvePpobRouteType(item);
+    if (routeType == 'all_services') {
+      _openTransaction(const PPOBAllServicesScreen(), customContext: customContext);
+    } else if (routeType == 'nfc_toll') {
+      _openTransaction(const NfcTollScanScreen(), customContext: customContext);
+    } else if (routeType == 'bank_transfer') {
+      _openTransaction(const BankTransferScreen(), customContext: customContext);
+    } else if (routeType == 'qris_payment') {
+      _openTransaction(const QrisScanScreen(), customContext: customContext);
+    } else if (routeType == 'topup_game_list') {
+      final hardcodedGames = <Map<String, dynamic>>[
+        {
+          'name': 'Free Fire',
+          'category': 'TopUp Game',
+          'brand': 'FREE FIRE',
+          'cmd': 'prepaid',
+          'inquirySku': '',
+          'gameCode': 'freefire',
+          'isPromo': false,
+        },
+        {
+          'name': 'Mobile Legend',
+          'category': 'TopUp Game',
+          'brand': 'MOBILE LEGEND',
+          'cmd': 'prepaid',
+          'inquirySku': 'MLU',
+          'gameCode': 'mobilelegend',
+          'isPromo': false,
+        },
+        {
+          'name': 'Honor of Kings',
+          'category': 'TopUp Game',
+          'brand': 'HOK',
+          'cmd': 'prepaid',
+          'inquirySku': '',
+          'gameCode': '',
+          'isPromo': false,
+        },
+        {
+          'name': 'Magic Chess',
+          'category': 'TopUp Game',
+          'brand': 'MAGIC CHESS',
+          'cmd': 'prepaid',
+          'inquirySku': '',
+          'gameCode': '',
+          'isPromo': false,
+        },
+        {
+          'name': 'Roblox',
+          'category': 'TopUp Game',
+          'brand': 'ROBLOX',
+          'cmd': 'prepaid',
+          'inquirySku': '',
+          'gameCode': '',
+          'isPromo': false,
+        },
+        {
+          'name': 'PUBG Mobile',
+          'category': 'TopUp Game',
+          'brand': 'PUBG MOBILE',
+          'cmd': 'prepaid',
+          'inquirySku': '',
+          'gameCode': '',
+          'isPromo': false,
+        },
+      ];
+      _openTransaction(PPOBTopUpGameListScreen(
+        items: hardcodedGames,
+        title: (item['name'] ?? 'TopUp Game').toString().replaceAll('\n', ' '),
+      ), customContext: customContext);
+    } else if (routeType == 'postpaid') {
+      final brandLower = (item['brand'] ?? '').toString().toLowerCase();
+      if (brandLower.contains('pdam')) {
+        _openTransaction(const PdamScreen(), customContext: customContext);
+      } else {
+        _openTransaction(PPOBPostpaidScreen(
+          brand: (item['brand'] ?? item['category'] ?? '').toString(),
+          title: (item['name'] ?? '').toString(),
+        ), customContext: customContext);
+      }
+    } else if (routeType == 'emoney_brand') {
+      final cat = (item['category'] as String?)?.trim();
+      final filter = (item['productTypeFilter'] ??
+              item['product_type_filter'] ??
+              item['product_type']) as String?;
+      _openTransaction(PPOBEmoneyBrandScreen(
+        category: (cat == null || cat.isEmpty) ? 'E-Wallet' : cat,
+        title: 'Pilih ${item['name'] ?? cat ?? 'E-Wallet'}',
+        productTypeFilter: filter,
+      ), customContext: customContext);
+    } else {
+      final category = (item['category'] as String?)?.trim() ?? '';
+      final cmd = (item['cmd'] as String?)?.trim() ?? 'prepaid';
+      _openTransaction(PPOBProductScreen(
+        category: category.isNotEmpty ? category : (item['name'] as String? ?? ''),
+        title: item['name'] as String? ?? '',
+        cmd: cmd,
+        inquiryType: item['inquiryType'] as String?,
+        initialBrand: item['initialBrand'] as String?,
+        productTypeFilter: item['product_type_filter'] as String?,
+        configInputLabel: item['input_label'] as String?,
+        configInputHint: item['input_hint'] as String?,
+        configInputKeyboard: item['input_keyboard'] as String?,
+        configInputMinLength: (item['input_min_length'] as num?)?.toInt(),
+        configInputMaxLength: (item['input_max_length'] as num?)?.toInt(),
+        configProductLayout: item['product_layout'] as String?,
+        configProductColumns: (item['product_columns'] as num?)?.toInt(),
+        configShowBrandTabs: item['show_brand_tabs'] as bool?,
+        configAutoDetectBrand: item['auto_detect_brand'] as bool?,
+        configInquirySku: item['inquiry_sku'] as String?,
+        configInquiryProvider: item['inquiry_provider'] as String?,
+      ), customContext: customContext);
+    }
+  }
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+    height = MediaQuery.of(context).size.height;
+    width = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDesktopSidebar(auth),
+          Expanded(
+            child: Column(
+              children: [
+                _buildDesktopTopbar(auth),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(28),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 1280),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.local_fire_department_rounded, color: Color(0xFFE53935), size: 28),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Promo Spesial',
+                                  style: GoogleFonts.hankenGrotesk(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 22,
+                                    color: desktopTextPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Temukan harga promo produk terbaik kami',
+                              style: GoogleFonts.hankenGrotesk(
+                                fontSize: 13,
+                                color: desktopTextSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            // Category chips row
+                            SizedBox(
+                              height: 38,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _categories.length,
+                                itemBuilder: (context, index) {
+                                  final cat = _categories[index];
+                                  final isSelected = cat == _selectedCategory;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: GestureDetector(
+                                      onTap: () => setState(() => _selectedCategory = cat),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? const Color(0xFF182974) : Colors.white,
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Text(
+                                          cat,
+                                          style: GoogleFonts.hankenGrotesk(
+                                            color: isSelected ? Colors.white : const Color(0xFF182974),
+                                            fontSize: 12,
+                                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            // Products list
+                            _isLoading
+                                ? Shimmer.fromColors(
+                                    baseColor: Colors.grey.shade300,
+                                    highlightColor: Colors.grey.shade100,
+                                    child: Column(
+                                      children: List.generate(4, (_) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 14),
+                                        child: Container(
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                        ),
+                                      )),
+                                    ),
+                                  )
+                                : _filteredProducts.isEmpty
+                                    ? Center(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const SizedBox(height: 60),
+                                            Icon(Icons.local_offer_outlined, size: 64, color: Colors.grey.shade300),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              'Belum ada promo',
+                                              style: GoogleFonts.hankenGrotesk(
+                                                color: Colors.grey.shade400,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    : GridView.builder(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                          maxCrossAxisExtent: 400,
+                                          mainAxisExtent: 96,
+                                          crossAxisSpacing: 16,
+                                          mainAxisSpacing: 16,
+                                        ),
+                                        itemCount: _filteredProducts.length,
+                                        itemBuilder: (context, index) => _buildPromoItem(_filteredProducts[index]),
+                                      ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidebar(AuthProvider auth) {
+    return Container(
+      width: 260,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [desktopNavyStart, desktopNavyEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MODITEKH2H',
+                  style: GoogleFonts.hankenGrotesk(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'PPOB Solution',
+                  style: GoogleFonts.hankenGrotesk(
+                    color: Colors.white.withOpacity(0.6),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _desktopSidebarItem(
+                    icon: Icons.home_rounded,
+                    label: 'Beranda',
+                    active: false,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: 'Saldo',
+                    onTap: () => _openTransaction(const TopupChannelScreen()),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.sim_card_outlined,
+                    label: 'Prepaid',
+                    expandable: true,
+                    expanded: _prepaidExpanded,
+                    onTap: () => setState(() => _prepaidExpanded = !_prepaidExpanded),
+                  ),
+                  if (_prepaidExpanded) _desktopSidebarSubItems(_pembelianItems),
+                  _desktopSidebarItem(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Postpaid',
+                    expandable: true,
+                    expanded: _postpaidExpanded,
+                    onTap: () => setState(() => _postpaidExpanded = !_postpaidExpanded),
+                  ),
+                  if (_postpaidExpanded) _desktopSidebarSubItems(_pembayaranItems),
+                  _desktopSidebarItem(
+                    icon: Icons.local_offer_outlined,
+                    label: 'Promo',
+                    active: true,
+                    onTap: () {},
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.history_rounded,
+                    label: 'Riwayat Transaksi',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const Seealltransaction(),
+                        ),
+                      );
+                    },
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.headset_mic_outlined,
+                    label: 'Bantuan / CS',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HelpSupport('Bantuan / CS'),
+                        ),
+                      );
+                    },
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.notifications_none_rounded,
+                    label: 'Notifikasi',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const Notificationindex(CustomStrings.notification),
+                        ),
+                      );
+                    },
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.person_outline_rounded,
+                    label: 'Akun Saya',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const profile_page.Profile(),
+                        ),
+                      );
+                    },
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Pengaturan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const profile_page.Profile(),
+                        ),
+                      );
+                    },
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.logout_rounded,
+                    label: 'Keluar',
+                    onTap: () => _confirmDesktopLogout(auth),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Ajak Teman, Dapat Komisi!', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 12.5)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Dapatkan komisi setiap transaksi dari teman yang kamu ajak.',
+                    style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.7), fontSize: 10.5),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _showDesktopReferralDialog(auth),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: desktopAccentBlue,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text('Ajukan Sekarang', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopSidebarItem({
+    required IconData icon,
+    required String label,
+    bool active = false,
+    bool expandable = false,
+    bool expanded = false,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: active ? desktopPrimaryBtn : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(
+            children: [
+              Icon(icon, size: 19, color: active ? Colors.white : Colors.white.withOpacity(0.6)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.hankenGrotesk(
+                    color: active ? Colors.white : Colors.white.withOpacity(0.6),
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              if (expandable)
+                Icon(
+                  expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                  size: 16,
+                  color: Colors.white.withOpacity(0.6),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _desktopSidebarSubItems(List<Map<String, dynamic>> items) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 36, top: 4, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: items.map((item) {
+          final label = item['name'] as String? ?? '';
+          return InkWell(
+            onTap: () => _navigateToItem(item),
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: Text(
+                label,
+                style: GoogleFonts.hankenGrotesk(
+                  color: Colors.white.withOpacity(0.6),
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDesktopTopbar(AuthProvider auth) {
+    return Container(
+      height: 72,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Row(
+        children: [
+          const Spacer(),
+          Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: const Color(0xFF182974).withOpacity(0.1),
+                  child: Text(
+                    auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF182974)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(auth.userName, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 13, color: desktopTextPrimary)),
+                    Text(auth.userLevel, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10, color: desktopTextSecondary)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -7,8 +7,11 @@ import 'package:modipay/login/setup_pin_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/color.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
+import 'desktop_auth_panel.dart';
 
 class LoginWithPassword extends StatefulWidget {
   const LoginWithPassword({super.key});
@@ -25,6 +28,7 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
   bool _isPhoneValid = false;
   bool _isPasswordValid = false;
   bool _obscurePassword = true;
+  bool _rememberMe = true;
 
   @override
   void initState() {
@@ -36,18 +40,25 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
   void _onPhoneChanged() {
     final text = _phoneController.text;
     
-    // Auto-delete leading 0
-    if (text.startsWith('0') && text.length > 1) {
-      _phoneController.text = text.substring(1);
-      _phoneController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _phoneController.text.length),
-      );
-    }
-    
-    final digits = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    final valid = digits.length >= 7;
-    if (valid != _isPhoneValid) {
-      setState(() => _isPhoneValid = valid);
+    if (!isDesktop(context)) {
+      // Auto-delete leading 0
+      if (text.startsWith('0') && text.length > 1) {
+        _phoneController.text = text.substring(1);
+        _phoneController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _phoneController.text.length),
+        );
+      }
+      
+      final digits = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final valid = digits.length >= 7;
+      if (valid != _isPhoneValid) {
+        setState(() => _isPhoneValid = valid);
+      }
+    } else {
+      final valid = text.trim().length >= 3;
+      if (valid != _isPhoneValid) {
+        setState(() => _isPhoneValid = valid);
+      }
     }
   }
 
@@ -66,11 +77,11 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
   }
 
   Future<void> _loginWithPassword() async {
-    final rawPhone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final input = _phoneController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (rawPhone.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan nomor HP');
+    if (input.isEmpty) {
+      Fluttertoast.showToast(msg: isDesktop(context) ? 'Masukkan username atau email' : 'Masukkan nomor HP');
       return;
     }
     if (password.isEmpty) {
@@ -78,16 +89,22 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
       return;
     }
 
-    final phoneCandidates = _phoneCandidates(rawPhone);
+    final isPhone = RegExp(r'^\+?[0-9]+$').hasMatch(input);
 
     setState(() => _isLoading = true);
     try {
       Map<String, dynamic> result = {};
-      for (final candidate in phoneCandidates) {
-        result = await ApiService.login(candidate, password);
-        if (_isLoginSuccess(result)) {
-          break;
+      if (isPhone) {
+        final rawPhone = input.replaceAll(RegExp(r'[^0-9]'), '');
+        final phoneCandidates = _phoneCandidates(rawPhone);
+        for (final candidate in phoneCandidates) {
+          result = await ApiService.login(candidate, password);
+          if (_isLoginSuccess(result)) {
+            break;
+          }
         }
+      } else {
+        result = await ApiService.login(input, password);
       }
 
       if (!mounted) return;
@@ -153,6 +170,13 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
   @override
   Widget build(BuildContext context) {
     final isEnabled = _isPhoneValid && _isPasswordValid && !_isLoading;
+    if (isDesktop(context)) {
+      return _buildDesktopLayout(context, isEnabled);
+    }
+    return _buildMobileLayout(context, isEnabled);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, bool isEnabled) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -473,4 +497,166 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
       ),
     );
   }
+
+  // ── Desktop layout (split-panel, gaya login.jpeg) ─────────────────────────
+
+  Widget _buildDesktopLayout(BuildContext context, bool isEnabled) {
+    return DesktopAuthShell(child: _buildDesktopForm(isEnabled));
+  }
+
+  Widget _buildDesktopForm(bool isEnabled) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text.rich(
+          const TextSpan(text: 'Selamat Datang Kembali \u{1F44B}'),
+          style: GoogleFonts.hankenGrotesk(fontSize: 32, fontWeight: FontWeight.w700, color: desktopTextPrimary, letterSpacing: -0.64),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Masuk untuk melanjutkan ke dashboard Anda',
+          style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary),
+        ),
+        const SizedBox(height: 32),
+        Text('Username / Email', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+        const SizedBox(height: 8),
+        desktopBorderedField(
+          icon: Icons.person_outline,
+          controller: _phoneController,
+          hint: 'Masukkan username atau email',
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 20),
+        Text('Password', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+        const SizedBox(height: 8),
+        desktopBorderedField(
+          icon: Icons.lock_outline,
+          controller: _passwordController,
+          hint: 'Masukkan password',
+          obscureText: _obscurePassword,
+          suffix: GestureDetector(
+            onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+            child: Icon(
+              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              color: desktopTextSecondary.withOpacity(0.6),
+              size: 20,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            GestureDetector(
+              onTap: () => setState(() => _rememberMe = !_rememberMe),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: Checkbox(
+                      value: _rememberMe,
+                      onChanged: (v) => setState(() => _rememberMe = v ?? true),
+                      activeColor: desktopPrimaryBtn,
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Ingat saya', style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary)),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+              ),
+              child: Text(
+                'Lupa password?',
+                style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopAccentBlue),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: isEnabled ? _loginWithPassword : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: desktopPrimaryBtn,
+              disabledBackgroundColor: desktopPrimaryBtn.withOpacity(0.4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                  )
+                : Text('Masuk', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(child: Divider(color: desktopBorder)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text('atau masuk dengan', style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary)),
+            ),
+            Expanded(child: Divider(color: desktopBorder)),
+          ],
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton(
+            onPressed: () => Fluttertoast.showToast(msg: 'Login dengan Google belum tersedia'),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: desktopBorder),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.network(
+                  'https://lh3.googleusercontent.com/aida-public/AB6AXuAx5kM8PlCAcjMKVOQUhYDlCvefVsXd5U6uBaGJzPN3BwkpWRIQSkNlAoTzUPAnN05bdpPdFdh09nb1Cnj7mzA8Wxfv1YU64BNHXLp6kAtQd2o1ye75hiN2lSrizf0ttgyYOH8l8_pNmGoVSwYJWVFYnMgVAb4VVSm-LrylOPzd8e1lOC3ViY600nun-9F8OFAS7ghm51U3vBE2OcG6AEyHQxBtVqzNkVI76Q6U1R1AmyfjCpW2_lNfO0SAzFo9SkdNS9eHwFDR4_t_',
+                  width: 20,
+                  height: 20,
+                ),
+                const SizedBox(width: 12),
+                Text('Masuk dengan Google', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Center(
+          child: GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Register())),
+            child: Text.rich(
+              TextSpan(
+                text: 'Belum punya akun? ',
+                style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary),
+                children: [
+                  TextSpan(
+                    text: 'Daftar Sekarang',
+                    style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 }

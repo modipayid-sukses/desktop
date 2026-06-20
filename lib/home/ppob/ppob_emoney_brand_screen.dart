@@ -1,4 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -199,14 +201,14 @@ class _PPOBEmoneyBrandScreenState extends State<PPOBEmoneyBrandScreen> {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         iconTheme: IconThemeData(color: textPrimary),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           widget.title ?? 'Pilih ${widget.category}',
           style: TextStyle(
             color: textPrimary,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
-        ),
+        ))
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/media.dart';
@@ -98,14 +100,14 @@ class _ChangePasswordState extends State<ChangePassword> {
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.createnewpassword,
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 40,
           ),
-        ),
+        ))
       ),
       backgroundColor: notifire.getprimerycolor,
       body: SingleChildScrollView(

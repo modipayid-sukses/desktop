@@ -5,8 +5,11 @@ import 'package:modipay/login/setup_pin_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/color.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
+import 'desktop_auth_panel.dart';
 
 class LoginWithPin extends StatefulWidget {
   const LoginWithPin({super.key, required this.phoneCandidates});
@@ -292,6 +295,13 @@ class _LoginWithPinState extends State<LoginWithPin> {
 
   @override
   Widget build(BuildContext context) {
+    if (isDesktop(context)) {
+      return DesktopAuthShell(child: _buildDesktopForm());
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -447,6 +457,121 @@ class _LoginWithPinState extends State<LoginWithPin> {
           ),
         ),
       ),
+    );
+  }
+
+  // ── Desktop layout (split-panel, gaya login.jpeg) ─────────────────────────
+
+  Widget _buildDesktopForm() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GestureDetector(
+            onTap: () => Navigator.maybePop(context),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.arrow_back, size: 16, color: desktopTextSecondary),
+                const SizedBox(width: 4),
+                Text('Kembali', style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: desktopPrimaryBtn.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.lock_outline_rounded, color: desktopPrimaryBtn, size: 32),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Masukkan PIN',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.hankenGrotesk(fontSize: 24, fontWeight: FontWeight.w700, color: desktopTextPrimary, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Masukkan 4 digit PIN untuk melanjutkan login',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary, height: 1.4),
+        ),
+        const SizedBox(height: 28),
+        if (!_isLoading) ...[
+          GestureDetector(
+            onTap: _focusPin,
+            behavior: HitTestBehavior.opaque,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < 4; i++) ...[
+                      if (i > 0) const SizedBox(width: 12),
+                      _pinBox(index: i),
+                    ],
+                  ],
+                ),
+                Opacity(
+                  opacity: 0,
+                  child: SizedBox(
+                    height: 64,
+                    width: 280,
+                    child: TextField(
+                      focusNode: _pinFocusNode,
+                      controller: _pinController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                      ],
+                      decoration: const InputDecoration(border: InputBorder.none, counterText: ''),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (!_isPinValid)
+            Text(
+              'PIN harus 4 digit',
+              style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary, fontStyle: FontStyle.italic),
+            ),
+          if (_hasPinError)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _pinErrorMessage,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopErrorRed),
+              ),
+            ),
+        ],
+        if (_isLoading)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2)),
+              const SizedBox(width: 10),
+              Text('Memverifikasi PIN...', style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary)),
+            ],
+          ),
+        const SizedBox(height: 24),
+        Text(
+          'PIN salah? Hubungi bantuan untuk reset PIN.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopAccentBlue),
+        ),
+      ],
     );
   }
 }

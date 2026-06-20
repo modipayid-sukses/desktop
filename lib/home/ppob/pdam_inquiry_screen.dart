@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
@@ -77,14 +79,14 @@ class PdamInquiryResultScreen extends StatelessWidget {
           statusBarColor: Colors.transparent,
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Detail Tagihan',
           style: TextStyle(
             color: Colors.white,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
-        ),
+        ))
       ),
       body: SafeArea(
         child: Column(
@@ -532,14 +534,14 @@ class _PdamPayPinScreenState extends State<_PdamPayPinScreen> {
           statusBarColor: Colors.transparent,
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Konfirmasi Pembayaran',
           style: TextStyle(
             color: Colors.white,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
-        ),
+        ))
       ),
       body: SafeArea(
         child: Column(

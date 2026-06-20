@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:intl/intl.dart';
 import 'package:modipay/home/transfer/transferconfirm.dart';
 import 'package:modipay/providers/auth_provider.dart';
@@ -67,14 +69,14 @@ class _TransferMoneyState extends State<TransferMoney> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Transfer',
           style: TextStyle(
             fontFamily: 'Gilroy Bold',
             color: Color(0xFF182974),
             fontSize: 18,
           ),
-        ),
+        ))
       ),
       body: Column(
         children: [

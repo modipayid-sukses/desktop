@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -98,14 +100,14 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Buat Pengaduan',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 40,
           ),
-        ),
+        ))
       ),
       backgroundColor: notifire.getprimerycolor,
       body: SingleChildScrollView(

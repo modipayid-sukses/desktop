@@ -1,4 +1,6 @@
 import 'package:accordion/accordion.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:accordion/controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:modipay/utils/string.dart';
@@ -31,14 +33,14 @@ class _HelpSupportState extends State<HelpSupport> {
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           widget.title,
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 40,
           ),
-        ),
+        ))
       ),
       backgroundColor: notifire.getprimerycolor,
       body: SingleChildScrollView(

@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'dart:ui' as ui;
 import 'dart:io' show Platform;
 
@@ -232,19 +234,19 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        leading: GestureDetector(
+        leading: DesktopLeadingWrapper(child: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: const Icon(Icons.arrow_back_ios_new_rounded,
               color: Color(0xFF212121), size: 20),
-        ),
-        title: Text(
+        )),
+        title: DesktopTitleWrapper(child: Text(
           'Detail Transaksi',
           style: TextStyle(
             color: const Color(0xFF212121),
             fontFamily: 'Gilroy Bold',
             fontSize: height / 45,
           ),
-        ),
+        )),
         centerTitle: true,
         actions: [
           IconButton(

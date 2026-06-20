@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:modipay/login/login_router.dart';
@@ -77,15 +78,17 @@ class _BottombarState extends State<Bottombar> {
       return const SizedBox.shrink();
     }
 
+    final showBottomNav = !isDesktop(context);
+
     return PopScope(
       canPop: false,
       child: Scaffold(
         backgroundColor: notifire.getprimerycolor,
         body: PageStorage(bucket: bucket, child: currentScreen),
         resizeToAvoidBottomInset: false,
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        floatingActionButton: _buildTopupFab(),
-        bottomNavigationBar: _buildBottomNav(context),
+        floatingActionButtonLocation: showBottomNav ? FloatingActionButtonLocation.centerDocked : null,
+        floatingActionButton: showBottomNav ? _buildTopupFab() : null,
+        bottomNavigationBar: showBottomNav ? _buildBottomNav(context) : null,
       ),
     );
   }

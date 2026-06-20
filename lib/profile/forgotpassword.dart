@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:modipay/utils/media.dart';
 import 'package:modipay/utils/string.dart';
@@ -41,13 +43,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.forgotpasswords,
           style: TextStyle(
               fontSize: height / 40,
               color: notifire.getdarkscolor,
               fontFamily: 'Gilroy Bold'),
-        ),
+        )),
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         backgroundColor: notifire.getprimerycolor,

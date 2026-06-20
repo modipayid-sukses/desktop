@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' as io;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+import 'package:modipay/promo/promo_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:modipay/home/notifications.dart';
 import 'package:modipay/home/ppob/ppob_all_services_screen.dart';
@@ -23,8 +26,10 @@ import 'package:modipay/home/seealltransaction.dart';
 import 'package:modipay/home/transaction_detail.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
+import 'package:modipay/utils/color.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:modipay/utils/string.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -38,6 +43,9 @@ import 'topup/topup_channel_screen.dart';
 import 'qris/qris_merchant_screen.dart';
 import 'qris/qris_merchant_register_screen.dart';
 import 'qris/qris_scan_screen.dart';
+import '../login/login_router.dart';
+import '../profile/helpsupport.dart';
+import '../profile/profile.dart' as profile_page;
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -349,6 +357,86 @@ class _HomeState extends State<Home> {
     ).then((_) => _onRefresh());
   }
 
+  /// Entry point untuk semua alur TRANSAKSI (beli pulsa/listrik/dll, isi
+  /// saldo, transfer, scan QRIS). Di desktop, layar transaksi dibuka sebagai
+  /// popup/modal mengambang di atas dashboard — bukan pindah halaman penuh
+  /// — sesuai desain "Vivid Enterprise". Layar mobile yang sama dipakai
+  /// 100% tanpa modifikasi, hanya dibungkus MediaQuery berukuran ponsel agar
+  /// proporsi layout (yang dihitung dari screenWidth/screenHeight) tetap benar.
+  void _openTransaction(Widget screen, {BuildContext? customContext}) {
+    final ctx = customContext ?? context;
+    if (!isDesktop(ctx)) {
+      _navigateAndRefresh(screen);
+      return;
+    }
+
+    final isAlreadyInPopup = customContext != null && Theme.of(customContext).appBarTheme.elevation == 0.007;
+    if (isAlreadyInPopup) {
+      Navigator.push(customContext, MaterialPageRoute(builder: (_) => screen));
+      return;
+    }
+
+    final screenSize = MediaQuery.of(context).size;
+    final modalWidth = 460.0;
+    final modalHeight = (screenSize.height * 0.88).clamp(560.0, 840.0);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.45),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(dialogContext).pop(),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(Icons.close_rounded, size: 20, color: desktopTextPrimary),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: modalWidth,
+                height: modalHeight,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: MediaQuery(
+                    data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                          elevation: 0.007,
+                        ),
+                      ),
+                      // Navigator bersarang: agar layar lanjutan yang di-push dari
+                      // dalam alur transaksi (mis. konfirmasi, struk) tetap berada
+                      // di dalam kotak popup ini, bukan keluar jadi halaman penuh.
+                      child: Navigator(
+                        onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((_) => _onRefresh());
+  }
+
   void _showTransferOptions() {
     // Transfer sesama pengguna (peer) tidak boleh untuk hierarchy_level 'agent'
     // — transfer saldo antar agent hanya boleh master → agent (via Kelola Agen).
@@ -413,7 +501,7 @@ class _HomeState extends State<Home> {
                   trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                   onTap: () {
                     Navigator.pop(context);
-                    _navigateAndRefresh(const BankTransferScreen());
+                    _openTransaction(const BankTransferScreen());
                   },
                 ),
               // Transfer sesama pengguna (peer) disembunyikan untuk agen.
@@ -442,7 +530,7 @@ class _HomeState extends State<Home> {
                   trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                   onTap: () {
                     Navigator.pop(context);
-                    _navigateAndRefresh(const SendMoney());
+                    _openTransaction(const SendMoney());
                   },
                 ),
               // Tidak ada metode transfer yang tersedia untuk akun ini.
@@ -566,6 +654,8 @@ class _HomeState extends State<Home> {
     "images/netflix.png"
   ];
   bool selection = true;
+  bool _prepaidExpanded = false;
+  bool _postpaidExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -573,6 +663,9 @@ class _HomeState extends State<Home> {
     width = MediaQuery.of(context).size.width;
     notifire = Provider.of<ColorNotifire>(context, listen: true);
     final auth = Provider.of<AuthProvider>(context);
+    if (isDesktop(context)) {
+      return _buildDesktopHome(context, auth);
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF182974),
       body: Stack(
@@ -954,7 +1047,7 @@ class _HomeState extends State<Home> {
                       MaterialPageRoute(builder: (_) => _PpobOverflowScreen(
                         sectionTitle: 'Pembelian',
                         items: _pembelianDisplayItems,
-                        onItemTap: _navigateToItem,
+                        onItemTap: (item, localContext) => _navigateToItem(item, customContext: localContext),
                         hasPromo: _hasPromoForItem,
                         colorOffset: 0,
                       )),
@@ -1035,7 +1128,7 @@ class _HomeState extends State<Home> {
                       MaterialPageRoute(builder: (_) => _PpobOverflowScreen(
                         sectionTitle: 'Pembayaran',
                         items: _pembayaranDisplayItems,
-                        onItemTap: _navigateToItem,
+                        onItemTap: (item, localContext) => _navigateToItem(item, customContext: localContext),
                         hasPromo: _hasPromoForItem,
                         colorOffset: 2,
                       )),
@@ -1448,7 +1541,7 @@ class _HomeState extends State<Home> {
     return false;
   }
 
-  void _navigateToItem(Map<String, dynamic> item) {
+  void _navigateToItem(Map<String, dynamic> item, {BuildContext? customContext}) {
     // BPJS selalu pakai layar khusus (daftar produk dari admin panel).
     final brandLowerForBpjs = (item['brand'] ?? '').toString().toLowerCase();
     final categoryLowerForBpjs = (item['category'] ?? '').toString().toLowerCase();
@@ -1456,7 +1549,7 @@ class _HomeState extends State<Home> {
     if (brandLowerForBpjs.contains('bpjs') ||
         categoryLowerForBpjs.contains('bpjs') ||
         nameLowerForBpjs.contains('bpjs')) {
-      _navigateAndRefresh(const BpjsScreen());
+      _openTransaction(const BpjsScreen(), customContext: customContext);
       return;
     }
 
@@ -1468,19 +1561,19 @@ class _HomeState extends State<Home> {
     if (brandLowerForPdam.contains('pdam') ||
         categoryLowerForPdam.contains('pdam') ||
         nameLowerForPdam.contains('pdam')) {
-      _navigateAndRefresh(const PdamScreen());
+      _openTransaction(const PdamScreen(), customContext: customContext);
       return;
     }
 
     final routeType = resolvePpobRouteType(item);
     if (routeType == 'all_services') {
-      _navigateAndRefresh(const PPOBAllServicesScreen());
+      _openTransaction(const PPOBAllServicesScreen(), customContext: customContext);
     } else if (routeType == 'nfc_toll') {
-      _navigateAndRefresh(const NfcTollScanScreen());
+      _openTransaction(const NfcTollScanScreen(), customContext: customContext);
     } else if (routeType == 'bank_transfer') {
-      _navigateAndRefresh(const BankTransferScreen());
+      _openTransaction(const BankTransferScreen(), customContext: customContext);
     } else if (routeType == 'qris_payment') {
-      _navigateAndRefresh(const QrisScanScreen());
+      _openTransaction(const QrisScanScreen(), customContext: customContext);
     } else if (routeType == 'topup_game_list') {
       // Daftar provider game yang dijamin tampil (tidak bergantung pada
       // konfigurasi menu admin). Kategori/brand di-set untuk filter produk
@@ -1547,35 +1640,35 @@ class _HomeState extends State<Home> {
           'isPromo': _hasPromoForGame('PUBG MOBILE'),
         },
       ];
-      _navigateAndRefresh(PPOBTopUpGameListScreen(
+      _openTransaction(PPOBTopUpGameListScreen(
         items: hardcodedGames,
         title: (item['name'] ?? 'TopUp Game').toString().replaceAll('\n', ' '),
-      ));
+      ), customContext: customContext);
     } else if (routeType == 'postpaid') {
       // PDAM menggunakan screen khusus dengan pilihan kota
       final brandLower = (item['brand'] ?? '').toString().toLowerCase();
       if (brandLower.contains('pdam')) {
-        _navigateAndRefresh(const PdamScreen());
+        _openTransaction(const PdamScreen(), customContext: customContext);
       } else {
-        _navigateAndRefresh(PPOBPostpaidScreen(
+        _openTransaction(PPOBPostpaidScreen(
           brand: (item['brand'] ?? item['category'] ?? '').toString(),
           title: (item['name'] ?? '').toString(),
-        ));
+        ), customContext: customContext);
       }
     } else if (routeType == 'emoney_brand') {
       final cat = (item['category'] as String?)?.trim();
       final filter = (item['productTypeFilter'] ??
               item['product_type_filter'] ??
               item['product_type']) as String?;
-      _navigateAndRefresh(PPOBEmoneyBrandScreen(
+      _openTransaction(PPOBEmoneyBrandScreen(
         category: (cat == null || cat.isEmpty) ? 'E-Wallet' : cat,
         title: 'Pilih ${item['name'] ?? cat ?? 'E-Wallet'}',
         productTypeFilter: filter,
-      ));
+      ), customContext: customContext);
     } else {
       final category = (item['category'] as String?)?.trim() ?? '';
       final cmd = (item['cmd'] as String?)?.trim() ?? 'prepaid';
-      _navigateAndRefresh(PPOBProductScreen(
+      _openTransaction(PPOBProductScreen(
         category: category.isNotEmpty ? category : (item['name'] as String? ?? ''),
         title: item['name'] as String? ?? '',
         cmd: cmd,
@@ -1594,7 +1687,7 @@ class _HomeState extends State<Home> {
         configAutoDetectBrand: item['auto_detect_brand'] as bool?,
         configInquirySku: item['inquiry_sku'] as String?,
         configInquiryProvider: item['inquiry_provider'] as String?,
-      ));
+      ), customContext: customContext);
     }
   }
 
@@ -1666,6 +1759,983 @@ class _HomeState extends State<Home> {
                 onTap: () => _navigateToItem(item),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Desktop layout (sidebar + topbar, gaya dashboard.jpeg) ───────────────
+
+  Widget _buildDesktopHome(BuildContext context, AuthProvider auth) {
+    final recentActivity = List<Map<String, dynamic>>.from(_activityItems)
+      ..sort((a, b) => parseDateTime(b['created_at']).compareTo(parseDateTime(a['created_at'])));
+    final recent = recentActivity.take(5).toList();
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDesktopSidebar(auth),
+          Expanded(
+            child: Column(
+              children: [
+                _buildDesktopTopbar(auth),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(flex: 5, child: _buildDesktopBalanceCard(auth)),
+                              const SizedBox(width: 20),
+                              Expanded(flex: 4, child: _buildDesktopStatusCard()),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildDesktopServiceCard(
+                                title: 'Prepaid',
+                                subtitle: 'Isi ulang instan, kapan saja dan di mana saja',
+                                items: _pembelianDisplayItems,
+                                colorOffset: 0,
+                                sectionTitleForOverflow: 'Pembelian',
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: _buildDesktopServiceCard(
+                                title: 'Postpaid',
+                                subtitle: 'Bayar tagihan bulanan dengan mudah',
+                                items: _pembayaranDisplayItems,
+                                colorOffset: 2,
+                                sectionTitleForOverflow: 'Pembayaran',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 7, child: _buildDesktopTransactionTable(recent)),
+                            const SizedBox(width: 20),
+                            Expanded(flex: 3, child: _buildDesktopHelpCard()),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopSidebarItem({
+    required IconData icon,
+    required String label,
+    bool active = false,
+    bool expandable = false,
+    bool expanded = false,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: active ? desktopPrimaryBtn : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(
+            children: [
+              Icon(icon, size: 19, color: active ? Colors.white : Colors.white.withOpacity(0.6)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.hankenGrotesk(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13.5,
+                    color: active ? Colors.white : Colors.white.withOpacity(0.6),
+                  ),
+                ),
+              ),
+              if (expandable)
+                Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded, size: 18, color: Colors.white.withOpacity(0.6)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _desktopSidebarSubItems(List<Map<String, dynamic>> items) {
+    if (items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 44, bottom: 6),
+        child: Text('Belum ada layanan', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.white.withOpacity(0.6))),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(left: 44, right: 8, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: items.take(6).map((item) {
+          return InkWell(
+            onTap: () => _navigateToItem(item),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(
+                item['name'] as String? ?? '',
+                style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 12.5, color: Colors.white.withOpacity(0.6)),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidebar(AuthProvider auth) {
+    return Container(
+      width: 260,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [desktopNavyStart, desktopNavyEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MODITEKH2H',
+                  style: GoogleFonts.hankenGrotesk(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'PPOB Solution',
+                  style: GoogleFonts.hankenGrotesk(
+                    color: Colors.white.withOpacity(0.6),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _desktopSidebarItem(icon: Icons.home_rounded, label: 'Beranda', active: true, onTap: () {}),
+                  _desktopSidebarItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: 'Saldo',
+                    onTap: () => _openTransaction(const TopupChannelScreen()),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.sim_card_outlined,
+                    label: 'Prepaid',
+                    expandable: true,
+                    expanded: _prepaidExpanded,
+                    onTap: () => setState(() => _prepaidExpanded = !_prepaidExpanded),
+                  ),
+                  if (_prepaidExpanded) _desktopSidebarSubItems(_pembelianDisplayItems),
+                  _desktopSidebarItem(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Postpaid',
+                    expandable: true,
+                    expanded: _postpaidExpanded,
+                    onTap: () => setState(() => _postpaidExpanded = !_postpaidExpanded),
+                  ),
+                  if (_postpaidExpanded) _desktopSidebarSubItems(_pembayaranDisplayItems),
+                  _desktopSidebarItem(
+                    icon: Icons.local_offer_outlined,
+                    label: 'Promo',
+                    onTap: () => _navigateAndRefresh(const PromoScreen()),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.history_rounded,
+                    label: 'Riwayat Transaksi',
+                    onTap: () => _navigateAndRefresh(const Seealltransaction()),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.headset_mic_outlined,
+                    label: 'Bantuan / CS',
+                    onTap: () => _navigateAndRefresh(const HelpSupport('Bantuan / CS')),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.notifications_none_rounded,
+                    label: 'Notifikasi',
+                    onTap: () => _navigateAndRefresh(const Notificationindex(CustomStrings.notification)),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.person_outline_rounded,
+                    label: 'Akun Saya',
+                    onTap: () => _navigateAndRefresh(const profile_page.Profile()),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Pengaturan',
+                    onTap: () => _navigateAndRefresh(const profile_page.Profile()),
+                  ),
+                  _desktopSidebarItem(
+                    icon: Icons.logout_rounded,
+                    label: 'Keluar',
+                    onTap: () => _confirmDesktopLogout(auth),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Ajak Teman, Dapat Komisi!', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 12.5)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Dapatkan komisi setiap transaksi dari teman yang kamu ajak.',
+                    style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.7), fontSize: 10.5),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _showDesktopReferralDialog(auth),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: desktopAccentBlue,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text('Ajukan Sekarang', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTopbar(AuthProvider auth) {
+    return Container(
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: desktopBorder))),
+      child: Row(
+        children: [
+          Text('Beranda', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 18, color: desktopTextPrimary)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(color: desktopAccentBlue.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.headset_mic_outlined, size: 16, color: desktopAccentBlue),
+                const SizedBox(width: 6),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('CS Online', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextPrimary)),
+                    Text('08:00 - 22:00', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 9, color: desktopTextSecondary)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          GestureDetector(
+            onTap: () => _navigateAndRefresh(const Notificationindex(CustomStrings.notification)),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(color: desktopSurfacePage, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.notifications_none_rounded, color: desktopTextSecondary),
+                ),
+                if (_unreadNotificationCount > 0)
+                  Positioned(
+                    top: -2,
+                    right: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(color: Color(0xffFF3B30), shape: BoxShape.circle),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        '$_unreadNotificationCount',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 9,),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          GestureDetector(
+            onTap: () => _navigateAndRefresh(const profile_page.Profile()),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: desktopAccentBlue.withOpacity(0.15),
+                  child: Text(
+                    auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                    style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(auth.userName, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 13, color: desktopTextPrimary)),
+                    Text(auth.userLevel.toUpperCase(), style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10, color: desktopTextSecondary)),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.keyboard_arrow_down_rounded, color: desktopTextSecondary, size: 18),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopBalanceCard(AuthProvider auth) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [desktopBalanceGradStart, desktopBalanceGradEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Saldo Anda', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          selection ? _formatBalance(auth.userBalance) : 'Rp ••••••',
+                          style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 26),
+                        ),
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => setState(() => selection = !selection),
+                          child: Icon(
+                            selection ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            color: Colors.white70,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 24),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _openTransaction(const TopupChannelScreen()),
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Isi Saldo'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: desktopBalanceGradEnd,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () => _showTransferOptions(),
+                icon: const Icon(Icons.send_rounded, size: 16, color: Colors.white),
+                label: const Text('Transfer Saldo', style: TextStyle(color: Colors.white)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white54),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopStatusCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('MODITEKH2H', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 13, color: desktopAccentBlue)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text('Transaksi sedang lancar', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 15, color: desktopTextPrimary)),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 16),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sistem berjalan normal dan semua layanan dapat digunakan dengan baik.',
+                      style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 12, color: desktopTextSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => _navigateAndRefresh(const HelpSupport('Status Layanan')),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: desktopBorder),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      child: Text('Lihat Status Layanan', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12, color: desktopAccentBlue)),
+                    ),
+                    const SizedBox(width: 16),
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(color: desktopAccentBlue, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(color: desktopTextSecondary.withOpacity(0.3), shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(color: desktopTextSecondary.withOpacity(0.3), shape: BoxShape.circle),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuBQdt6tQHKUwtPmQh5PrrpEx7tR5yH8v3FeH3rvgSRa4pFFaWLiyJB6eu8xIN253pbAwDYVInuj_U8GFqV9RrOME-Q9cXjqws82x4lDbE1TIKCXkquIulmvMzuEXTxgi__RBo0wC4R078i_ryLiU32dB8fHS7oF6CGNYrBlNlAq3wY8Gj8_gIz2fo_dzN7uAo9DGlolnPvuxs6qUxjcjL4ZPAFjHeauvI2MKfTAo6UHdAKxqqiRNZfIyN15bwMia3zVEbiT3YrmlZKC',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopServiceCard({
+    required String title,
+    required String subtitle,
+    required List<Map<String, dynamic>> items,
+    required int colorOffset,
+    required String sectionTitleForOverflow,
+  }) {
+    final iconColors = [
+      const Color(0xFF1E88E5), const Color(0xFF43A047), const Color(0xFFFF9800), const Color(0xFFE53935),
+      const Color(0xFF8E24AA), const Color(0xFF00ACC1), const Color(0xFFFF7043), const Color(0xFF5C6BC0),
+    ];
+    final shown = items.take(5).toList();
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 15, color: desktopTextPrimary)),
+                    Text(subtitle, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 11, color: desktopTextSecondary)),
+                  ],
+                ),
+              ),
+              if (items.length > 5)
+                GestureDetector(
+                  onTap: () => _openTransaction(
+                    _PpobOverflowScreen(
+                      sectionTitle: sectionTitleForOverflow,
+                      items: items,
+                      onItemTap: (item, localContext) => _navigateToItem(item, customContext: localContext),
+                      hasPromo: _hasPromoForItem,
+                      colorOffset: colorOffset,
+                    ),
+                  ),
+                  child: Text('Lihat Semua', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12, color: desktopAccentBlue)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (shown.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text('Belum ada layanan', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 12, color: desktopTextSecondary)),
+            )
+          else
+            Wrap(
+              spacing: 12,
+              runSpacing: 16,
+              children: List.generate(shown.length, (i) {
+                final item = shown[i];
+                final color = item['color'] != null
+                    ? Color(int.parse((item['color'] as String).replaceFirst('#', '0xFF')))
+                    : iconColors[(i + colorOffset) % iconColors.length];
+                return SizedBox(
+                  width: 76,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _navigateToItem(item),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
+                          child: item['iconUrl'] != null
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: (item['iconUrl'] as String).toLowerCase().endsWith('.svg')
+                                      ? SvgPicture.network(
+                                          item['iconUrl'] as String,
+                                          fit: BoxFit.contain,
+                                          placeholderBuilder: (_) => Icon(item['icon'] as IconData, color: color, size: 24),
+                                        )
+                                      : CachedNetworkImage(
+                                          imageUrl: item['iconUrl'] as String,
+                                          fit: BoxFit.contain,
+                                          errorWidget: (_, __, ___) => Icon(item['icon'] as IconData, color: color, size: 24),
+                                        ),
+                                )
+                              : Icon(item['icon'] as IconData, color: color, size: 24),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          item['name'] as String? ?? '',
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 11, color: desktopTextSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _pickFirstNonEmpty(List<dynamic> values) {
+    for (final v in values) {
+      final s = v?.toString().trim() ?? '';
+      if (s.isNotEmpty) return s;
+    }
+    return '-';
+  }
+
+  Widget _buildDesktopTransactionTable(List<Map<String, dynamic>> items) {
+    final df = DateFormat('d MMM yyyy HH:mm', 'id_ID');
+    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    Color statusBg(String status) {
+      switch (status) {
+        case 'pending':
+          return desktopWarningAmber.withOpacity(0.12);
+        case 'failed':
+          return desktopErrorRed.withOpacity(0.1);
+        case 'expired':
+          return desktopSurfacePage;
+        default:
+          return desktopSuccessBg;
+      }
+    }
+
+    Color statusFg(String status) {
+      switch (status) {
+        case 'pending':
+          return desktopWarningAmber;
+        case 'failed':
+          return desktopErrorRed;
+        case 'expired':
+          return desktopTextSecondary;
+        default:
+          return desktopSuccessFg;
+      }
+    }
+
+    String statusLabel(Map<String, dynamic> item) {
+      final custom = (item['status_label'] ?? '').toString();
+      if (custom.isNotEmpty) return custom;
+      return 'Berhasil';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Riwayat Transaksi Terakhir', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 15, color: desktopTextPrimary)),
+              ),
+              GestureDetector(
+                onTap: () => _navigateAndRefresh(const Seealltransaction()),
+                child: Text('Lihat Semua', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12, color: desktopAccentBlue)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: Text('Belum ada transaksi', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, color: desktopTextSecondary))),
+            )
+          else ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(flex: 3, child: Text('Tanggal', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextSecondary))),
+                  Expanded(flex: 4, child: Text('Produk', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextSecondary))),
+                  Expanded(flex: 3, child: Text('Nomor Tujuan', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextSecondary))),
+                  Expanded(flex: 2, child: Text('Status', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextSecondary))),
+                  Expanded(flex: 2, child: Text('Nominal', textAlign: TextAlign.right, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextSecondary))),
+                  const SizedBox(width: 20),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: desktopBorder),
+            ...items.map((item) {
+              final name = (item['name'] ?? item['product_name'] ?? '-').toString();
+              final target = _pickFirstNonEmpty([item['customer_no'], item['customer_id'], item['target'], item['order_id']]);
+              final amount = effectiveTransactionTotal(item);
+              final status = statusLabel(item);
+              final statusKey = item['is_pending'] == true
+                  ? 'pending'
+                  : item['is_expired'] == true
+                      ? 'expired'
+                      : (item['status'] ?? 'completed').toString();
+              return InkWell(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionDetail(data: item))),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          df.format(parseDateTime(item['created_at'])),
+                          style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 12, color: desktopTextSecondary),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(color: desktopAccentBlue.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                              child: const Icon(Icons.receipt_long, size: 14, color: desktopAccentBlue),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 12, color: desktopTextPrimary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(target, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 12, color: desktopTextSecondary)),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: statusBg(statusKey), borderRadius: BorderRadius.circular(8)),
+                            child: Text(status, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 10.5, color: statusFg(statusKey))),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          currency.format(amount),
+                          textAlign: TextAlign.right,
+                          style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12, color: desktopTextPrimary),
+                        ),
+                      ),
+                      const SizedBox(width: 20, child: Icon(Icons.chevron_right_rounded, size: 18, color: desktopBorder)),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopHelpChannelRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Color? subtitleColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(color: desktopAccentBlue.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 16, color: desktopAccentBlue),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12.5, color: desktopTextPrimary)),
+                Text(subtitle, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10.5, color: subtitleColor ?? desktopTextSecondary)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openWhatsapp() async {
+    final uri = Uri.parse('whatsapp://send?phone=6285777160669');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      await launchUrl(Uri.parse('https://wa.me/6285777160669'), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Widget _buildDesktopHelpCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Butuh Bantuan?', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 15, color: desktopTextPrimary)),
+          const SizedBox(height: 4),
+          Text(
+            'Tim CS kami siap membantu kebutuhan transaksi Anda.',
+            style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 11, color: desktopTextSecondary),
+          ),
+          const SizedBox(height: 16),
+          _desktopHelpChannelRow(
+            icon: Icons.chat_bubble_outline_rounded,
+            title: 'Live Chat',
+            subtitle: 'CS Online',
+            subtitleColor: const Color(0xFF22C55E),
+            onTap: () => _navigateAndRefresh(const HelpSupport('Bantuan / CS')),
+          ),
+          const SizedBox(height: 12),
+          _desktopHelpChannelRow(
+            icon: Icons.message_outlined,
+            title: 'WhatsApp',
+            subtitle: '08:00 - 22:00',
+            onTap: _openWhatsapp,
+          ),
+          const SizedBox(height: 12),
+          _desktopHelpChannelRow(
+            icon: Icons.email_outlined,
+            title: 'Email',
+            subtitle: 'support@moditekh2h.com',
+            onTap: () => launchUrl(Uri.parse('mailto:support@moditekh2h.com')),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _navigateAndRefresh(const HelpSupport('Bantuan / CS')),
+              icon: const Icon(Icons.headset_mic_rounded, size: 18),
+              label: const Text('Hubungi CS'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: desktopPrimaryBtn,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDesktopLogout(AuthProvider auth) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Keluar'),
+        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await auth.logout();
+    if (!mounted) return;
+    final loginScreen = await resolveLoginScreen();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => loginScreen), (route) => false);
+  }
+
+  void _showDesktopReferralDialog(AuthProvider auth) {
+    final code = auth.referralCode;
+    if (code == null || code.isEmpty) {
+      Fluttertoast.showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kode Referral Anda'),
+        content: Text(code, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 20)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              Navigator.pop(ctx);
+              Fluttertoast.showToast(msg: 'Kode referral disalin');
+            },
+            child: const Text('Salin'),
           ),
         ],
       ),
@@ -1847,21 +2917,15 @@ class _PressableMenuButtonState extends State<_PressableMenuButton> {
     }
 
     if (url.toLowerCase().endsWith('.svg')) {
-      return StreamBuilder<FileResponse>(
-        stream: DefaultCacheManager().getFileStream(url, withProgress: false),
-        builder: (context, snapshot) {
-          if (snapshot.data is FileInfo) {
-            return _buildButton(SvgPicture.file(
-              io.File((snapshot.data as FileInfo).file.path),
-              width: 28,
-              height: 28,
-              fit: BoxFit.contain,
-            ));
-          }
-          if (snapshot.hasError) return _buildButton(fallback);
-          return _buildButtonShimmer();
-        },
-      );
+      // SvgPicture.network dipakai di semua platform (termasuk web, di mana
+      // dart:io.File tidak tersedia) agar tidak perlu cabang kode per-platform.
+      return _buildButton(SvgPicture.network(
+        url,
+        width: 28,
+        height: 28,
+        fit: BoxFit.contain,
+        placeholderBuilder: (_) => fallback,
+      ));
     }
 
     return CachedNetworkImage(
@@ -1880,7 +2944,7 @@ class _PressableMenuButtonState extends State<_PressableMenuButton> {
 class _PpobOverflowScreen extends StatelessWidget {
   final String sectionTitle;
   final List<Map<String, dynamic>> items;
-  final void Function(Map<String, dynamic>) onItemTap;
+  final void Function(Map<String, dynamic>, BuildContext) onItemTap;
   final bool Function(Map<String, dynamic>) hasPromo;
   final int colorOffset;
 
@@ -1908,14 +2972,14 @@ class _PpobOverflowScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: notifire.getbackcolor,
         elevation: 0,
-        leading: IconButton(
+        leading: DesktopLeadingWrapper(child: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: notifire.getdarkscolor, size: 20),
           onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
+        )),
+        title: DesktopTitleWrapper(child: Text(
           'Semua $sectionTitle',
           style: TextStyle(fontFamily: 'Gilroy Bold', color: notifire.getdarkscolor, fontSize: height / 46),
-        ),
+        )),
       ),
       body: GridView.builder(
         padding: EdgeInsets.symmetric(horizontal: width / 20, vertical: width / 20),
@@ -1940,7 +3004,7 @@ class _PpobOverflowScreen extends StatelessWidget {
             textColor: notifire.getdarkscolor,
             textSize: height / 68,
             showPromoBadge: hasPromo(item),
-            onTap: () => onItemTap(item),
+            onTap: () => onItemTap(item, context),
           );
         },
       ),

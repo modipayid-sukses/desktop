@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'dart:convert';
 import 'dart:ui';
 
@@ -301,14 +303,14 @@ class _ConfirmPaymentState extends State<ConfirmPayment> {
             centerTitle: true,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Text(
+            title: DesktopTitleWrapper(child: Text(
               'Konfirmasi Pembayaran',
               style: TextStyle(
                 fontFamily: 'Gilroy Bold',
                 fontSize: height / 42,
                 color: textPrimary,
               ),
-            ),
+            ))
           ),
           body: needPin
               ? Stack(

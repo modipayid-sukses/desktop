@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,13 +37,13 @@ class _LanguageState extends State<Language> {
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.language,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        ))
       ),
       backgroundColor: notifire.getprimerycolor,
       body: SingleChildScrollView(

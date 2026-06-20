@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -301,10 +303,10 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Verifikasi Merchant',
           style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Gilroy Bold', fontSize: 18),
-        ),
+        )),
         centerTitle: true,
       ),
       body: Column(

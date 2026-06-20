@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
@@ -111,10 +113,10 @@ class _TopCardState extends State<TopCard> {
             child: Icon(Icons.arrow_back, color: notifire.getdarkscolor),
           ),
         ),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.topupcard,
           style: TextStyle(color: notifire.getdarkscolor),
-        ),
+        )),
         centerTitle: true,
         actions: [
           Container(

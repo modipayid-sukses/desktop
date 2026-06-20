@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -1112,14 +1114,14 @@ class _PostpaidPinScreenState extends State<_PostpaidPinScreen> {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Konfirmasi Pembayaran',
           style: TextStyle(
             fontFamily: 'Gilroy Bold',
             fontSize: height / 40,
             color: Colors.white,
           ),
-        ),
+        ))
       ),
       body: needPin
           ? Center(

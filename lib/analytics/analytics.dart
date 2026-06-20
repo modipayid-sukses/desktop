@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/home/transaction_detail.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/transaction_helpers.dart';
@@ -130,13 +132,13 @@ class _AnalyticsState extends State<Analytics> {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Riwayat Transaksi',
           style: TextStyle(
               color: Colors.white,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        ))
       ),
       extendBodyBehindAppBar: true,
       backgroundColor: const Color(0xFFF9FAFB),

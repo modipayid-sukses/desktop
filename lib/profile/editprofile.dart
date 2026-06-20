@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -405,14 +407,14 @@ class _EditProfileState extends State<EditProfile> {
         iconTheme: IconThemeData(color: textColor),
         elevation: 0,
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Edit Profil',
           style: TextStyle(
             color: textColor,
             fontSize: 20,
             fontFamily: 'Gilroy Bold',
           ),
-        ),
+        ))
       ),
       backgroundColor: bgColor,
       body: SingleChildScrollView(

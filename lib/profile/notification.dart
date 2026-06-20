@@ -1,4 +1,6 @@
 import 'package:flutter/cupertino.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/material.dart';
 import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
@@ -40,13 +42,13 @@ class _NotificationsState extends State<Notifications> {
         elevation: 0,
         centerTitle: true,
         backgroundColor: notifire.getprimerycolor,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.notification,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontFamily: 'Gilroy Bold',
               fontSize: height / 40),
-        ),
+        ))
       ),
       backgroundColor: notifire.getprimerycolor,
       body: SingleChildScrollView(

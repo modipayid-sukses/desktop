@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:modipay/services/receipt_settings_service.dart';
 import 'package:modipay/services/wilayah_service.dart';
@@ -320,14 +322,14 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Pengaturan Struk',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 42,
           ),
-        ),
+        ))
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

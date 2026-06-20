@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -210,14 +212,14 @@ class _KycScreenState extends State<KycScreen> {
           onTap: () => Navigator.pop(context),
           child: Icon(Icons.arrow_back, color: notifire.getdarkscolor),
         ),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Verifikasi KYC',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 42,
           ),
-        ),
+        )),
         centerTitle: true,
       ),
       body: SingleChildScrollView(

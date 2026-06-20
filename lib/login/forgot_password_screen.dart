@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -255,14 +257,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           icon: const Icon(Icons.arrow_back, color: grey700),
           onPressed: _goBackOrPop,
         ),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Lupa Password',
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: grey900,
           ),
-        ),
+        )),
         centerTitle: true,
       ),
       body: Column(

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -212,19 +214,19 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        leading: GestureDetector(
+        leading: DesktopLeadingWrapper(child: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: const Padding(
             padding: EdgeInsets.all(12),
             child: Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
           ),
-        ),
+        )),
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Pembayaran QRIS',
           style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Gilroy Bold', fontSize: 18),
-        ),
+        )),
         centerTitle: true,
       ),
       body: _isLoading

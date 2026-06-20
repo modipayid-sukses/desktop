@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -77,14 +79,14 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
           onTap: () => Navigator.pop(context),
           child: Icon(Icons.arrow_back, color: notifire.getdarkscolor),
         ),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Level Keanggotaan',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontSize: height / 42,
             fontFamily: 'Gilroy Bold',
           ),
-        ),
+        )),
         centerTitle: true,
       ),
       body: _isLoading

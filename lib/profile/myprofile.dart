@@ -1,4 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/material.dart';
 import 'package:modipay/profile/editprofile.dart';
 import 'package:modipay/providers/auth_provider.dart';
@@ -46,13 +48,13 @@ class _MyProfileState extends State<MyProfile> {
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.myprofile,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        )),
         actions: [
           GestureDetector(
             onTap: () {

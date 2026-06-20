@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
@@ -131,14 +133,14 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
         iconTheme: IconThemeData(color: textColor),
         elevation: 0,
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Tambah Agen',
           style: TextStyle(
             color: textColor,
             fontSize: 20,
             fontFamily: 'Gilroy Bold',
           ),
-        ),
+        ))
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

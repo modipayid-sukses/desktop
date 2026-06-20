@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -3960,14 +3962,14 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           statusBarColor: Colors.transparent,
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           widget.title,
           style: const TextStyle(
             color: Colors.white,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
-        ),
+        ))
       ),
       body: Stack(
         children: [
@@ -5394,14 +5396,14 @@ class _PlnPostpaidInlinePinScreenState
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Konfirmasi Pembayaran',
           style: TextStyle(
             color: Colors.white,
             fontFamily: 'Gilroy Bold',
             fontSize: 17,
           ),
-        ),
+        ))
       ),
       body: SafeArea(
         child: Padding(

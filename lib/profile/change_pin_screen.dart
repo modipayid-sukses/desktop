@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/services.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/utils/colornotifire.dart';
@@ -159,7 +161,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
           },
           child: Icon(Icons.arrow_back_ios_new_rounded, color: notifire.getdarkscolor, size: 20),
         ),
-        title: Text('Ganti PIN', style: TextStyle(color: notifire.getdarkscolor, fontFamily: 'Gilroy Bold', fontSize: height / 45)),
+        title: DesktopTitleWrapper(child: Text('Ganti PIN', style: TextStyle(color: notifire.getdarkscolor, fontFamily: 'Gilroy Bold', fontSize: height / 45))),
         centerTitle: true,
       ),
       body: _isLoading

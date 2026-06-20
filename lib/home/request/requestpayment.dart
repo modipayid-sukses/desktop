@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/card/inoutpayment.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,13 +71,13 @@ class _RequestPaymentState extends State<RequestPayment> {
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         backgroundColor: notifire.getprimerycolor,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.requestpayment,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        )),
         actions: [
           Image.asset(
             "images/fillstar.png",

@@ -99,3 +99,30 @@ Color purpulColor = info50;
 Color darkpurpulColor = grey700;
 
 Color grey = grey200;
+
+// Desktop/web shell tokens — "Vivid Enterprise" design system
+// (c:\Users\yufit\Downloads\desktop_app_design_system).
+const Color desktopNavyStart = Color(0xff16215c);
+const Color desktopNavyEnd = Color(0xff1f3a8f);
+// Primary CTA button (bg-primary-container in the design system).
+const Color desktopPrimaryBtn = Color(0xff3457d5);
+// Hover/active state for the primary button (bg-primary).
+const Color desktopPrimaryBtnHover = Color(0xff0e3cbc);
+// Links / active sidebar text & icon (text-primary).
+const Color desktopAccentBlue = Color(0xff0e3cbc);
+// Highlight text on the navy hero panel (text-inverse-primary).
+const Color desktopNavyHighlight = Color(0xffb8c4ff);
+const Color desktopBalanceGradStart = Color(0xff2952e3);
+const Color desktopBalanceGradEnd = Color(0xff1c3fa0);
+const Color desktopSurfacePage = Color(0xfff3f5f9);
+const Color desktopSurfaceCard = Color(0xffffffff);
+const Color desktopSuccessBg = Color(0xffe7f8ee);
+const Color desktopSuccessFg = Color(0xff16a34a);
+const Color desktopErrorRed = Color(0xffef4444);
+const Color desktopWarningAmber = Color(0xfff59e0b);
+// Body text / headings (on-surface, on-surface-variant).
+const Color desktopTextPrimary = Color(0xff191c1f);
+const Color desktopTextSecondary = Color(0xff444654);
+// Input/card borders (outline-variant).
+const Color desktopBorder = Color(0xffc4c5d6);
+const Color desktopDividerSubtle = Color(0x4da9a9a9);

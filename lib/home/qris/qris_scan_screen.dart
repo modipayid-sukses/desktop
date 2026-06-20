@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -118,13 +120,13 @@ class _QrisScanScreenState extends State<QrisScanScreen> {
         elevation: 0,
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Scan QRIS',
           style: TextStyle(
             color: Colors.white,
             fontFamily: 'Gilroy Bold',
           ),
-        ),
+        )),
         actions: [
           IconButton(
             icon: const Icon(Icons.flash_on_outlined),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/home/scanpay/scan.dart';
 import 'package:modipay/utils/media.dart';
 import 'package:provider/provider.dart';
@@ -84,13 +86,13 @@ class _SeeallpaymentState extends State<Seeallpayment> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: notifire.getprimerycolor,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.allservices,
           style: TextStyle(
               fontFamily: "Gilroy Bold",
               color: notifire.getdarkscolor,
               fontSize: height / 40),
-        ),
+        )),
         actions: [
           Icon(
             Icons.more_horiz_outlined,

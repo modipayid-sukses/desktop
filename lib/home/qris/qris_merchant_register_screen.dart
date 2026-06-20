@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
@@ -165,14 +167,14 @@ class _QrisMerchantRegisterScreenState extends State<QrisMerchantRegisterScreen>
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Aktivasi QRIS Merchant',
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
-        ),
+        ))
       ),
       body: SafeArea(
         top: false,

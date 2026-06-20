@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/media.dart';
 import 'package:modipay/utils/string.dart';
@@ -109,14 +111,14 @@ class _NotificationindexState extends State<Notificationindex> {
         elevation: 0,
         backgroundColor: notifire.getprimerycolor,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.notification,
           style: TextStyle(
             color: notifire.getdarkscolor,
             fontFamily: 'Gilroy Bold',
             fontSize: height / 40,
           ),
-        ),
+        ))
       ),
       backgroundColor: notifire.getprimerycolor,
       body: Stack(

@@ -6,9 +6,12 @@ import 'package:modipay/login/setup_pin_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/color.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:sms_autofill/sms_autofill.dart';
+
+import 'desktop_auth_panel.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -331,6 +334,13 @@ class _RegisterState extends State<Register> {
         _isPasswordValid &&
         _isConfirmPasswordValid &&
         !_isLoading;
+    if (isDesktop(context)) {
+      return DesktopAuthShell(child: _buildDesktopForm(isEnabled));
+    }
+    return _buildMobileLayout(context, isEnabled);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, bool isEnabled) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -692,6 +702,121 @@ class _RegisterState extends State<Register> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Desktop layout (split-panel, gaya registration mockup) ────────────────
+
+  Widget _buildDesktopForm(bool isEnabled) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Daftar Akun Baru',
+          style: GoogleFonts.hankenGrotesk(fontSize: 28, fontWeight: FontWeight.w700, color: desktopTextPrimary, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Masukkan nomor HP yang akan digunakan untuk akun kamu.',
+          style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary),
+        ),
+        const SizedBox(height: 28),
+        Text('Nomor HP', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+        const SizedBox(height: 8),
+        desktopBorderedField(
+          icon: Icons.phone_outlined,
+          controller: _phoneController,
+          hint: 'Masukkan nomor HP',
+          keyboardType: TextInputType.phone,
+        ),
+        if (_phoneAlreadyRegistered) ...[
+          const SizedBox(height: 8),
+          Text('Nomor HP sudah terdaftar', style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w600, color: desktopErrorRed)),
+        ],
+        const SizedBox(height: 18),
+        Text('Kode Referral', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+        const SizedBox(height: 8),
+        desktopBorderedField(
+          icon: Icons.card_giftcard_outlined,
+          controller: _referralCodeController,
+          hint: 'Masukkan kode referral master',
+        ),
+        const SizedBox(height: 6),
+        Text('Wajib diisi dengan kode referral dari agen master Anda.',
+            style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary)),
+        const SizedBox(height: 18),
+        Text('Password', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+        const SizedBox(height: 8),
+        desktopBorderedField(
+          icon: Icons.lock_outline,
+          controller: _passwordController,
+          hint: 'Minimal 6 karakter',
+          obscureText: _obscurePassword,
+          suffix: GestureDetector(
+            onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+            child: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                color: desktopTextSecondary.withOpacity(0.6), size: 20),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text('Konfirmasi Password', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+        const SizedBox(height: 8),
+        desktopBorderedField(
+          icon: Icons.lock_outline,
+          controller: _confirmPasswordController,
+          hint: 'Ulangi password',
+          obscureText: _obscureConfirmPassword,
+          suffix: GestureDetector(
+            onTap: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+            child: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                color: desktopTextSecondary.withOpacity(0.6), size: 20),
+          ),
+        ),
+        if (_confirmPasswordController.text.isNotEmpty && !_isConfirmPasswordValid) ...[
+          const SizedBox(height: 8),
+          Text('Konfirmasi password tidak sama', style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w600, color: desktopErrorRed)),
+        ],
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: isEnabled ? _continueRegister : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: desktopPrimaryBtn,
+              disabledBackgroundColor: desktopPrimaryBtn.withOpacity(0.4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                  )
+                : Text('Daftar Sekarang', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Center(
+          child: GestureDetector(
+            onTap: () => Navigator.maybePop(context),
+            child: Text.rich(
+              TextSpan(
+                text: 'Sudah punya akun? ',
+                style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary),
+                children: [
+                  TextSpan(
+                    text: 'Masuk Sekarang',
+                    style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

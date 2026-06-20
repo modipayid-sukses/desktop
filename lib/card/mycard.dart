@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/card/createxcard.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:modipay/utils/media.dart';
@@ -46,13 +48,13 @@ class _MyCardState extends State<MyCard> {
             scale: 4,
           ),
         ),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.mycard,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        ))
       ),
       backgroundColor: notifire.getprimerycolor,
       body: SingleChildScrollView(

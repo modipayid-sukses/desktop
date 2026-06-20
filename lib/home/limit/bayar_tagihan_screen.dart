@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -258,14 +260,14 @@ class _BayarTagihanScreenState extends State<BayarTagihanScreen> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Bayar Tagihan',
           style: TextStyle(
             color: Color(0xFF1A1A1A),
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
-        ),
+        )),
         centerTitle: true,
       ),
       body: Column(
@@ -870,10 +872,10 @@ class _LimitQrisScreenState extends State<_LimitQrisScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1A1A1A)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Bayar Tagihan via QRIS',
           style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Gilroy Bold', fontSize: 18),
-        ),
+        )),
         centerTitle: true,
       ),
       body: _error != null

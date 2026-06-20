@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -472,14 +474,14 @@ class _QrisCustomerPaymentScreenState extends State<QrisCustomerPaymentScreen> {
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Pembayaran QRIS',
           style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
-        ),
-        leading: IconButton(
+        )),
+        leading: DesktopLeadingWrapper(child: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => Navigator.pop(context),
-        ),
+        )),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D47A1)))

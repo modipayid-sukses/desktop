@@ -4,7 +4,10 @@ import 'package:modipay/login/forgot_pin_screen.dart';
 import 'package:modipay/login/login_otp_screen.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/color.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'desktop_auth_panel.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -198,6 +201,13 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     final isEnabled = _isPhoneValid && !_isCheckingPhone;
+    if (isDesktop(context)) {
+      return DesktopAuthShell(child: _buildDesktopForm(isEnabled));
+    }
+    return _buildMobileLayout(context, isEnabled);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, bool isEnabled) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -427,6 +437,74 @@ class _LoginState extends State<Login> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Desktop layout (split-panel, gaya login.jpeg) ─────────────────────────
+
+  Widget _buildDesktopForm(bool isEnabled) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text.rich(
+          const TextSpan(text: 'Selamat Datang Kembali \u{1F44B}'),
+          style: GoogleFonts.hankenGrotesk(fontSize: 28, fontWeight: FontWeight.w700, color: desktopTextPrimary, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Masukkan nomor HP, lalu lanjutkan login dengan PIN kamu.',
+          style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary),
+        ),
+        const SizedBox(height: 32),
+        Text('Nomor HP', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+        const SizedBox(height: 8),
+        desktopBorderedField(
+          icon: Icons.person_outline,
+          controller: _phoneController,
+          hint: 'Masukkan nomor HP',
+          keyboardType: TextInputType.phone,
+        ),
+        if (_phoneNotFound) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Nomor HP tidak terdaftar',
+            style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w600, color: desktopErrorRed),
+          ),
+        ],
+        const SizedBox(height: 14),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPinScreen())),
+            child: Text(
+              'Lupa PIN?',
+              style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopAccentBlue),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: isEnabled ? _goToPinLogin : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: desktopPrimaryBtn,
+              disabledBackgroundColor: desktopPrimaryBtn.withOpacity(0.4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isCheckingPhone
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                  )
+                : Text('Lanjutkan', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+      ],
     );
   }
 }

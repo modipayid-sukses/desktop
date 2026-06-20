@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/login/auth_choice_screen.dart';
 import 'package:modipay/onbonding.dart';
@@ -23,7 +22,7 @@ class Splashscreen extends StatefulWidget {
 class _SplashscreenState extends State<Splashscreen> {
   late ColorNotifire notifire;
   static const String _onboardingSeenKey = 'onboarding_seen_v2';
-  static const Duration _minimumSplashDuration = Duration(milliseconds: 100);
+  static const Duration _minimumSplashDuration = Duration.zero;
 
   getdarkmodepreviousstate() async {
     final prefs = await SharedPreferences.getInstance();
@@ -148,16 +147,9 @@ class _SplashscreenState extends State<Splashscreen> {
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
-    return Scaffold(
-      backgroundColor: const Color(0xFF182974),
-      body: SizedBox.expand(
-        child: Center(
-          child: SvgPicture.asset(
-            'images/logo_modipay.svg',
-            width: 240,
-          ),
-        ),
-      ),
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: SizedBox.shrink(),
     );
   }
 }

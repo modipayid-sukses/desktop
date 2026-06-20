@@ -1,4 +1,6 @@
 import 'package:dotted_border/dotted_border.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/material.dart';
 import 'package:modipay/login/setyourpin.dart';
 import 'package:modipay/utils/button.dart';
@@ -25,13 +27,13 @@ class _ScanDoneState extends State<ScanDone> {
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         elevation: 0,
         backgroundColor: notifire.getprimerycolor,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.scandone,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontFamily: 'Gilroy Bold',
               fontSize: height / 40),
-        ),
+        )),
         centerTitle: true,
       ),
       backgroundColor: notifire.getprimerycolor,

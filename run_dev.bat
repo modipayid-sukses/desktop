@@ -61,6 +61,6 @@ echo [*] Tekan tombol 'r' di jendela ini untuk Hot Reload (Live Update).
 echo [*] Tekan tombol 'R' untuk Hot Restart.
 echo [*] Tekan tombol 'q' untuk berhenti.
 echo ---------------------------------------------------------
-call "%FLUTTER_BAT%" run -d emulator-5554 --dart-define=API_BASE_URL=http://localhost:8080/api
+call "%FLUTTER_BAT%" run -d emulator-5554 --dart-define=API_BASE_URL=https://dev.modipay.biz.id/api
 
 pause

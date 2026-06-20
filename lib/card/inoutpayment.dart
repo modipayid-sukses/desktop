@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/card/inoutrequested.dart';
 import 'package:modipay/utils/media.dart';
 import 'package:modipay/utils/string.dart';
@@ -50,13 +52,13 @@ class _InOutPaymentState extends State<InOutPayment>
         elevation: 0,
         backgroundColor: notifire.getprimerycolor,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.inoutpayment,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        )),
         actions: [
           Image.asset(
             "images/arrowleftright.png",

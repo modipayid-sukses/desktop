@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/verification/indetyfiyverifiy.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -65,13 +67,13 @@ class _SetupProfileState extends State<SetupProfile> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.setupprofile,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        )),
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
         actions: [

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
@@ -106,7 +108,7 @@ class _TopupChannelScreenState extends State<TopupChannelScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF182974),
       appBar: AppBar(
-        leading: GestureDetector(
+        leading: DesktopLeadingWrapper(child: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Container(
             margin: const EdgeInsets.all(8),
@@ -118,13 +120,13 @@ class _TopupChannelScreenState extends State<TopupChannelScreen> {
             ),
             child: const Icon(Icons.arrow_back, color: Colors.white),
           ),
-        ),
+        )),
         backgroundColor: const Color(0xFF182974),
         elevation: 0,
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Top Up Saldo',
           style: TextStyle(color: Colors.white, fontFamily: 'Gilroy Bold'),
-        ),
+        )),
         centerTitle: true,
       ),
       body: Stack(

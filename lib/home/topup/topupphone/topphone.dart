@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'package:modipay/home/topup/topupphone/topphoneamount.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:provider/provider.dart';
@@ -94,13 +96,13 @@ class _TopPhoneState extends State<TopPhone> {
         elevation: 0,
         iconTheme: IconThemeData(color: notifire.getdarkscolor),
         centerTitle: true,
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           CustomStrings.topphone,
           style: TextStyle(
               color: notifire.getdarkscolor,
               fontSize: height / 40,
               fontFamily: 'Gilroy Bold'),
-        ),
+        )),
         leading: GestureDetector(
           onTap: () {
             Navigator.pop(context);

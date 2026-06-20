@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +9,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/api_service.dart';
 import '../utils/color.dart';
+import '../utils/responsive.dart';
+import 'desktop_auth_panel.dart';
 import 'login_with_pin.dart';
 
 /// Halaman OTP saat login. User wajib verifikasi OTP yang dikirim ke
@@ -126,9 +130,16 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canVerify = _isOtpValid && !_busy && !_sending;
+    if (isDesktop(context)) {
+      return DesktopAuthShell(child: _buildDesktopForm(canVerify));
+    }
+    return _buildMobileLayout(context, canVerify);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, bool canVerify) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final canVerify = _isOtpValid && !_busy && !_sending;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -136,14 +147,14 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: grey700),
-        title: Text(
+        title: DesktopTitleWrapper(child: Text(
           'Verifikasi OTP',
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: grey900,
           ),
-        ),
+        )),
         centerTitle: true,
       ),
       body: Column(
@@ -341,5 +352,124 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
     final m = seconds ~/ 60;
     final s = seconds % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  // ── Desktop layout (split-panel, gaya login.jpeg) ─────────────────────────
+
+  Widget _buildDesktopForm(bool canVerify) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.maybePop(context),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.arrow_back, size: 16, color: desktopTextSecondary),
+              const SizedBox(width: 4),
+              Text('Kembali', style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Masukkan Kode OTP',
+          style: GoogleFonts.hankenGrotesk(fontSize: 28, fontWeight: FontWeight.w700, color: desktopTextPrimary, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Kami telah mengirim kode 6 digit ke WhatsApp +62${widget.phone}.',
+          style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary, height: 1.4),
+        ),
+        const SizedBox(height: 28),
+        TextField(
+          controller: _otpController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(6),
+          ],
+          textAlign: TextAlign.center,
+          autofocus: true,
+          style: GoogleFonts.hankenGrotesk(fontSize: 24, fontWeight: FontWeight.w700, color: desktopTextPrimary, letterSpacing: 8),
+          decoration: InputDecoration(
+            hintText: '······',
+            hintStyle: GoogleFonts.hankenGrotesk(fontSize: 24, fontWeight: FontWeight.w700, color: desktopBorder, letterSpacing: 8),
+            filled: true,
+            fillColor: desktopSurfacePage,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: desktopBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: desktopBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: desktopAccentBlue, width: 1.5)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _otpRemaining > 0 ? 'Kode berlaku ${_formatDuration(_otpRemaining)}' : 'Kode kedaluwarsa',
+              style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w500, color: _otpRemaining > 0 ? desktopTextSecondary : desktopErrorRed),
+            ),
+            GestureDetector(
+              onTap: (_busy || _sending || _otpRemaining > 0) ? null : () => _sendOtp(),
+              child: Text(
+                _sending ? 'Mengirim...' : 'Kirim ulang',
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: (_otpRemaining > 0 || _sending) ? desktopBorder : desktopAccentBlue,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: desktopErrorRed.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: desktopErrorRed.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: desktopErrorRed, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _errorMessage!,
+                    style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w500, color: desktopErrorRed),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: canVerify ? _verifyOtp : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: desktopPrimaryBtn,
+              disabledBackgroundColor: desktopPrimaryBtn.withOpacity(0.4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                  )
+                : Text('Verifikasi & Lanjutkan', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+      ],
+    );
   }
 }

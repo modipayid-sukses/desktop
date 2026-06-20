@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:modipay/widgets/desktop_title_wrapper.dart';
+
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -163,14 +165,14 @@ class _PrintReceiptPageState extends State<PrintReceiptPage> {
         backgroundColor: const Color(0xFF3F75B7),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        title: DesktopTitleWrapper(child: const Text(
           'Cetak Struk',
           style: TextStyle(
             color: Colors.white,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
-        ),
+        )),
         centerTitle: true,
         actions: [
           IconButton(
