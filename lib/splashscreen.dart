@@ -9,6 +9,7 @@ import 'package:modipay/login/setup_pin_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:modipay/services/root_detection_service.dart';
+import 'package:modipay/design/design.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,27 +43,18 @@ class _SplashscreenState extends State<Splashscreen> {
 
     final isCompromised = await RootDetectionService.isDeviceCompromised();
     if (isCompromised && mounted) {
-      showDialog(
+      await AppDialog.show(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) => AlertDialog(
-          title: const Text('Peringatan Keamanan'),
-          content: const Text(
+        tone: AppDialogTone.error,
+        title: 'Peringatan Keamanan',
+        description:
             'Device Anda terdeteksi dalam kondisi tidak aman '
             '(root/jailbreak atau mode developer aktif).\n\n'
             'Demi keamanan transaksi finansial, aplikasi tidak dapat digunakan di perangkat ini.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                SystemNavigator.pop();
-              },
-              child: const Text('Tutup Aplikasi'),
-            ),
-          ],
-        ),
+        primaryActionText: 'Tutup Aplikasi',
       );
+      SystemNavigator.pop();
     } else {
       // Device is safe, proceed normally
       _proceedWithNavigation();
@@ -80,26 +72,13 @@ class _SplashscreenState extends State<Splashscreen> {
     // different device, surface the reason before falling back to login.
     if (!auth.isLoggedIn && auth.kickedByOtherDevice && mounted) {
       auth.consumeKickedByOtherDevice();
-      await showDialog<void>(
+      await AppDialog.show(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Login dari Perangkat Lain',
-            style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 16),
-          ),
-          content: const Text(
-            'Akun ini sedang aktif di perangkat lain. Silakan login kembali jika ini bukan Anda.',
-            style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 13.5, height: 1.45),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Mengerti', style: TextStyle(fontFamily: 'Gilroy Bold')),
-            ),
-          ],
-        ),
+        tone: AppDialogTone.error,
+        title: 'Login dari Perangkat Lain',
+        description: 'Akun ini sedang aktif di perangkat lain. Silakan login kembali jika ini bukan Anda.',
+        primaryActionText: 'Mengerti',
       );
       if (!mounted) return;
     }

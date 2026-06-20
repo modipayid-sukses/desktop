@@ -10,6 +10,9 @@ set(BINARY_NAME "modipay")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# Suppress deprecation warnings from third-party plugins (e.g. Firebase C++ SDK)
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)

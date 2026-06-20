@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
+import '../../design/design.dart';
 import 'qris_customer_payment_screen.dart';
 
 class QrisScanScreen extends StatefulWidget {
@@ -70,38 +71,23 @@ class _QrisScanScreenState extends State<QrisScanScreen> {
     return code.startsWith('00') && code.length >= 40;
   }
 
-  void _onManualQRInput() {
+  Future<void> _onManualQRInput() async {
     final inputController = TextEditingController();
 
-    showDialog(
+    final confirmed = await AppDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Masukkan Kode QRIS'),
-        content: TextField(
-          controller: inputController,
-          decoration: const InputDecoration(
-            hintText: 'Paste kode QRIS di sini...',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: null,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (inputController.text.isNotEmpty) {
-                Navigator.pop(ctx);
-                _handleQRCode(inputController.text.trim());
-              }
-            },
-            child: const Text('Lanjutkan'),
-          ),
-        ],
+      title: 'Masukkan Kode QRIS',
+      body: AppTextField(
+        controller: inputController,
+        hint: 'Paste kode QRIS di sini...',
+        maxLines: 4,
       ),
+      secondaryActionText: 'Batal',
+      primaryActionText: 'Lanjutkan',
     );
+    if (confirmed == true && inputController.text.isNotEmpty) {
+      _handleQRCode(inputController.text.trim());
+    }
   }
 
   @override

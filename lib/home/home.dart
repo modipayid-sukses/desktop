@@ -35,6 +35,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:modipay/utils/transaction_helpers.dart';
+import 'package:modipay/design/design.dart';
 
 import 'transfer/bank_transfer_screen.dart';
 import 'transfer/sendmoney.dart';
@@ -441,40 +442,14 @@ class _HomeState extends State<Home> {
     // Transfer sesama pengguna (peer) tidak boleh untuk hierarchy_level 'agent'
     // — transfer saldo antar agent hanya boleh master → agent (via Kelola Agen).
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: Colors.transparent,
+      title: 'Pilih Metode Transfer',
       builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          child: Column(
+        return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Pilih Metode Transfer',
-                style: TextStyle(
-                  fontFamily: 'Gilroy Bold',
-                  fontSize: 18,
-                  color: Color(0xFF1F1F1F),
-                ),
-              ),
-              const SizedBox(height: 16),
               // Transfer ke rekening bank hanya untuk akun yang sudah
               // diaktifkan admin (transfer_verified). Selaras dengan guard
               // server-side di BankTransferController.
@@ -549,8 +524,7 @@ class _HomeState extends State<Home> {
                 ),
               const SizedBox(height: 12),
             ],
-          ),
-        );
+          );
       },
     );
   }
@@ -1957,7 +1931,7 @@ class _HomeState extends State<Home> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _desktopSidebarItem(icon: Icons.home_rounded, label: 'Beranda', active: true, onTap: () {}),
+                  _desktopSidebarItem(icon: Icons.home_rounded, label: 'Beranda', active: true, onTap: _onRefresh),
                   _desktopSidebarItem(
                     icon: Icons.account_balance_wallet_outlined,
                     label: 'Saldo',
@@ -2067,6 +2041,12 @@ class _HomeState extends State<Home> {
       child: Row(
         children: [
           Text('Beranda', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 18, color: desktopTextPrimary)),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: desktopTextSecondary, size: 20),
+            onPressed: _onRefresh,
+            tooltip: 'Refresh',
+          ),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2697,18 +2677,15 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> _confirmDesktopLogout(AuthProvider auth) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),
-        ],
-      ),
+      title: 'Keluar',
+      description: 'Apakah Anda yakin ingin keluar dari akun ini?',
+      confirmText: 'Keluar',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     await auth.logout();
     if (!mounted) return;
     final loginScreen = await resolveLoginScreen();
@@ -2716,30 +2693,32 @@ class _HomeState extends State<Home> {
     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => loginScreen), (route) => false);
   }
 
-  void _showDesktopReferralDialog(AuthProvider auth) {
+  Future<void> _showDesktopReferralDialog(AuthProvider auth) async {
     final code = auth.referralCode;
     if (code == null || code.isEmpty) {
       Fluttertoast.showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
       return;
     }
-    showDialog(
+    final copy = await AppDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Kode Referral Anda'),
-        content: Text(code, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 20)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-          TextButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: code));
-              Navigator.pop(ctx);
-              Fluttertoast.showToast(msg: 'Kode referral disalin');
-            },
-            child: const Text('Salin'),
-          ),
-        ],
+      title: 'Kode Referral Anda',
+      body: Container(
+        width: double.infinity,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: primaryBlue50,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Text(code, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 20)),
       ),
+      secondaryActionText: 'Tutup',
+      primaryActionText: 'Salin',
     );
+    if (copy == true) {
+      await Clipboard.setData(ClipboardData(text: code));
+      Fluttertoast.showToast(msg: 'Kode referral disalin');
+    }
   }
 
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/providers/auth_provider.dart';
+import 'package:modipay/design/design.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -225,90 +226,16 @@ class _SetupPinScreenState extends State<SetupPinScreen>
   }
 
   Future<void> _showSuccessDialog() async {
-    return showDialog<void>(
+    await AppDialog.success(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(32.0)),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: notifire.gettabwhitecolor,
-              borderRadius: const BorderRadius.all(Radius.circular(20)),
-            ),
-            padding: EdgeInsets.symmetric(
-              horizontal: width / 15,
-              vertical: height / 30,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: height / 8,
-                  height: height / 8,
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.check_circle_rounded,
-                    color: Colors.green,
-                    size: height / 12,
-                  ),
-                ),
-                SizedBox(height: height / 40),
-                Text(
-                  'PIN Berhasil Dibuat!',
-                  style: TextStyle(
-                    fontFamily: 'Gilroy Bold',
-                    fontSize: height / 35,
-                    color: notifire.getdarkscolor,
-                  ),
-                ),
-                SizedBox(height: height / 80),
-                Text(
-                  'PIN transaksi kamu sudah aktif.\nGunakan PIN ini untuk setiap transaksi.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Gilroy Medium',
-                    fontSize: height / 55,
-                    color: notifire.getdarkgreycolor,
-                  ),
-                ),
-                SizedBox(height: height / 25),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const Bottombar()),
-                      (route) => false,
-                    );
-                  },
-                  child: Container(
-                    height: height / 16,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: notifire.getbluecolor,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Mulai Gunakan Modipay',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Gilroy Bold',
-                          fontSize: height / 48,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      title: 'PIN Berhasil Dibuat!',
+      description: 'PIN transaksi kamu sudah aktif.\nGunakan PIN ini untuk setiap transaksi.',
+      actionText: 'Mulai Gunakan Modipay',
+    );
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const Bottombar()),
+      (route) => false,
     );
   }
 

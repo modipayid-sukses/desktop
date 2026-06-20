@@ -15,9 +15,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../services/biometric_service.dart';
 import '../../utils/colornotifire.dart';
+import '../../utils/color.dart';
 import '../../utils/media.dart';
 import '../../widgets/transaction_receipt.dart';
 import 'components/saved_customers_bottom_sheet.dart';
+import '../../design/design.dart';
 
 class PPOBPostpaidScreen extends StatefulWidget {
   final String brand;
@@ -389,8 +391,8 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
       padding: EdgeInsets.all(width / 25),
       decoration: BoxDecoration(
         color: notifire.getprimerycolor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.15)),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: notifire.getIsDark ? grey600 : grey200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,8 +436,8 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                 padding: EdgeInsets.all(width / 35),
                 decoration: BoxDecoration(
                   color: notifire.gettabwhitecolor,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.12)),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: notifire.getIsDark ? grey600 : grey200),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,14 +471,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: width / 20),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(width / 25),
-        decoration: BoxDecoration(
-          color: notifire.gettabwhitecolor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.18)),
-        ),
+      child: AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -505,8 +500,8 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                 padding: EdgeInsets.all(width / 35),
                 decoration: BoxDecoration(
                   color: notifire.getprimerycolor.withOpacity(0.04),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.12)),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: notifire.getIsDark ? grey600 : grey200),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,20 +520,9 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                             ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: isPaid ? Colors.green.withOpacity(0.14) : Colors.orange.withOpacity(0.14),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            isPaid ? 'Dibayar' : 'Dicek',
-                            style: TextStyle(
-                              color: isPaid ? Colors.green : Colors.orange,
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: 11,
-                            ),
-                          ),
+                        AppBadge(
+                          label: isPaid ? 'Dibayar' : 'Dicek',
+                          tone: isPaid ? AppBadgeTone.success : AppBadgeTone.warning,
                         ),
                       ],
                     ),
@@ -652,14 +636,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
 
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(width / 24),
-                  decoration: BoxDecoration(
-                    color: notifire.gettabwhitecolor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.14)),
-                  ),
+                child: AppCard(
                   child: Row(
                     children: [
                       Container(
@@ -667,11 +644,11 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                         height: height / 18,
                         decoration: BoxDecoration(
                           color: notifire.getbluecolor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         child: Icon(_getInputIcon(), color: notifire.getbluecolor, size: height / 34),
                       ),
-                      SizedBox(width: width / 30),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -707,8 +684,8 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     color: notifire.gettabwhitecolor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.14)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: notifire.getIsDark ? grey600 : grey200),
                   ),
                   child: TextField(
                     controller: _customerIdController,
@@ -826,38 +803,11 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
             if (_inquiryResult == null)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: height / 15,
-                  child: ElevatedButton(
-                  onPressed: (_isInquiring || _isLoading)
-                        ? null
-                        : _doInquiry,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: notifire.getbluecolor,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: _isInquiring
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            'Cek Tagihan',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: height / 50,
-                            ),
-                          ),
-                  ),
+                child: AppButton.primary(
+                  expand: true,
+                  loading: _isInquiring,
+                  label: 'Cek Tagihan',
+                  onPressed: (_isInquiring || _isLoading) ? null : _doInquiry,
                 ),
               ),
 
@@ -866,24 +816,14 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
               SizedBox(height: height / 50),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(width / 20),
-                  decoration: BoxDecoration(
-                    color: notifire.gettabwhitecolor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: notifire.getbluecolor.withOpacity(0.18),
-                      width: 1,
-                    ),
-                  ),
+                child: AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Icon(Icons.receipt_long, color: notifire.getbluecolor, size: height / 30),
-                          SizedBox(width: width / 40),
+                          const SizedBox(width: AppSpacing.sm),
                           Text(
                             'Detail Tagihan',
                             style: TextStyle(
@@ -894,7 +834,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                           ),
                         ],
                       ),
-                      Divider(color: notifire.getdarkgreycolor.withOpacity(0.2), height: height / 30),
+                      Divider(color: notifire.getIsDark ? grey600 : grey200, height: AppSpacing.xxl),
                       _billRow('Nama Pelanggan', (_inquiryResult!['customer_name'] ?? '-').toString()),
                       _billRow('No. Pelanggan', (_inquiryResult!['customer_no'] ?? '-').toString()),
                       _billRow('Produk', (_inquiryResult!['product_name'] ?? '-').toString()),
@@ -907,31 +847,14 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: height / 30),
+              const SizedBox(height: AppSpacing.xxl),
               // Bayar button
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: height / 15,
-                  child: ElevatedButton(
-                    onPressed: _payBill,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: Text(
-                      'Bayar Sekarang',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Gilroy Bold',
-                        fontSize: height / 50,
-                      ),
-                    ),
-                  ),
+                child: AppButton.success(
+                  expand: true,
+                  label: 'Bayar Sekarang',
+                  onPressed: _payBill,
                 ),
               ),
             ],

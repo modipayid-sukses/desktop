@@ -10,6 +10,7 @@ import '../../utils/media.dart';
 import 'bayar_tagihan_screen.dart';
 import 'merchant_kyc_screen.dart';
 import '../../utils/transaction_helpers.dart';
+import '../../design/design.dart';
 
 class LimitScreen extends StatefulWidget {
   const LimitScreen({Key? key}) : super(key: key);
@@ -534,34 +535,20 @@ class _LimitScreenState extends State<LimitScreen> {
   }
 
   void _showFiturInfo(BuildContext context, Color blueColor) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          decoration: const BoxDecoration(
-            color: Color(0xFFF5F7FA),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 24),
-              const Text('FITUR UTAMA MODIPAY', style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Gilroy Bold', fontSize: 18, letterSpacing: 0.5)),
-              const SizedBox(height: 24),
-              _fiturItem(icon: Icons.autorenew_rounded, title: 'Rolling Limit', desc: 'Gunakan limit hingga batas maksimal, bayar, dan pakai lagi.', color: blueColor),
-              _fiturItem(icon: Icons.bolt_rounded, title: 'Instant Repayment', desc: 'Bayar tagihan, limit langsung kembali secara instan.', color: blueColor),
-              _fiturItem(icon: Icons.qr_code_2_rounded, title: 'QRIS Otomatis', desc: 'Pembayaran mudah dengan QRIS statis, terverifikasi otomatis.', color: blueColor),
-              _fiturItem(icon: Icons.ac_unit_rounded, title: 'Auto Freeze', desc: 'Akun akan diblokir otomatis jika tagihan melewati jatuh tempo.', color: blueColor),
-              _fiturItem(icon: Icons.lock_rounded, title: 'Deposit Lock', desc: 'Deposit aman dan terkunci sebagai jaminan.', color: blueColor),
-              _fiturItem(icon: Icons.monitor_heart_rounded, title: 'Monitoring Real-time', desc: 'Pantau limit, tagihan, dan transaksi secara real-time.', color: blueColor),
-            ],
-          ),
-        );
-      },
+      title: 'Fitur Utama Modipay',
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _fiturItem(icon: Icons.autorenew_rounded, title: 'Rolling Limit', desc: 'Gunakan limit hingga batas maksimal, bayar, dan pakai lagi.', color: blueColor),
+          _fiturItem(icon: Icons.bolt_rounded, title: 'Instant Repayment', desc: 'Bayar tagihan, limit langsung kembali secara instan.', color: blueColor),
+          _fiturItem(icon: Icons.qr_code_2_rounded, title: 'QRIS Otomatis', desc: 'Pembayaran mudah dengan QRIS statis, terverifikasi otomatis.', color: blueColor),
+          _fiturItem(icon: Icons.ac_unit_rounded, title: 'Auto Freeze', desc: 'Akun akan diblokir otomatis jika tagihan melewati jatuh tempo.', color: blueColor),
+          _fiturItem(icon: Icons.lock_rounded, title: 'Deposit Lock', desc: 'Deposit aman dan terkunci sebagai jaminan.', color: blueColor),
+          _fiturItem(icon: Icons.monitor_heart_rounded, title: 'Monitoring Real-time', desc: 'Pantau limit, tagihan, dan transaksi secara real-time.', color: blueColor),
+        ],
+      ),
     );
   }
 

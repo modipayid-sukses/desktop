@@ -8,6 +8,7 @@ import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/color.dart';
 import 'package:modipay/utils/responsive.dart';
+import 'package:modipay/design/design.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -197,18 +198,11 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
             child: Center(
               child: GestureDetector(
                 onTap: () {
-                  showDialog(
+                  AppDialog.show(
                     context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Bantuan'),
-                      content: const Text('Jika ada pertanyaan, hubungi layanan pelanggan kami di support@Modipay.id'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Tutup'),
-                        ),
-                      ],
-                    ),
+                    title: 'Bantuan',
+                    description: 'Jika ada pertanyaan, hubungi layanan pelanggan kami di support@Modipay.id',
+                    primaryActionText: 'Tutup',
                   );
                 },
                 child: Container(

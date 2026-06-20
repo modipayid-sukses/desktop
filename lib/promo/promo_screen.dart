@@ -18,6 +18,7 @@ import 'package:modipay/home/topup/topup_channel_screen.dart';
 import 'package:modipay/profile/profile.dart' as profile_page;
 import 'package:modipay/profile/helpsupport.dart';
 import 'package:modipay/home/notifications.dart';
+import 'package:modipay/design/design.dart';
 import 'package:modipay/login/login_router.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 import 'package:modipay/home/ppob/ppob_menu_route.dart';
@@ -591,18 +592,15 @@ class _PromoScreenState extends State<PromoScreen> {
   }
 
   Future<void> _confirmDesktopLogout(AuthProvider auth) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),
-        ],
-      ),
+      title: 'Keluar',
+      description: 'Apakah Anda yakin ingin keluar dari akun ini?',
+      confirmText: 'Keluar',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     await auth.logout();
     if (!mounted) return;
     final loginScreen = await resolveLoginScreen();
@@ -610,30 +608,32 @@ class _PromoScreenState extends State<PromoScreen> {
     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => loginScreen), (route) => false);
   }
 
-  void _showDesktopReferralDialog(AuthProvider auth) {
+  Future<void> _showDesktopReferralDialog(AuthProvider auth) async {
     final code = auth.referralCode;
     if (code == null || code.isEmpty) {
       Fluttertoast.showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
       return;
     }
-    showDialog(
+    final copy = await AppDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Kode Referral Anda'),
-        content: Text(code, style: const TextStyle(fontFamily: 'Gilroy Bold', fontSize: 20)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-          TextButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: code));
-              Navigator.pop(ctx);
-              Fluttertoast.showToast(msg: 'Kode referral disalin');
-            },
-            child: const Text('Salin'),
-          ),
-        ],
+      title: 'Kode Referral Anda',
+      body: Container(
+        width: double.infinity,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: primaryBlue50,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Text(code, style: const TextStyle(fontFamily: 'Gilroy Bold', fontSize: 20)),
       ),
+      secondaryActionText: 'Tutup',
+      primaryActionText: 'Salin',
     );
+    if (copy == true) {
+      await Clipboard.setData(ClipboardData(text: code));
+      Fluttertoast.showToast(msg: 'Kode referral disalin');
+    }
   }
 
   void _navigateToItem(Map<String, dynamic> item, {BuildContext? customContext}) {
@@ -811,6 +811,12 @@ class _PromoScreenState extends State<PromoScreen> {
                                     fontSize: 22,
                                     color: desktopTextPrimary,
                                   ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.refresh_rounded, color: desktopTextSecondary, size: 20),
+                                  onPressed: _loadPromos,
+                                  tooltip: 'Refresh',
                                 ),
                               ],
                             ),
@@ -999,7 +1005,7 @@ class _PromoScreenState extends State<PromoScreen> {
                     icon: Icons.local_offer_outlined,
                     label: 'Promo',
                     active: true,
-                    onTap: () {},
+                    onTap: _loadPromos,
                   ),
                   _desktopSidebarItem(
                     icon: Icons.history_rounded,

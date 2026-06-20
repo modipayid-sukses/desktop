@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:modipay/utils/media.dart';
+import 'package:modipay/design/design.dart';
 import 'package:provider/provider.dart';
 
 class ChangePinScreen extends StatefulWidget {
@@ -117,33 +118,14 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
     }
   }
 
-  void _showSuccess() {
-    showDialog(
+  Future<void> _showSuccess() async {
+    await AppDialog.success(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF22C55E), size: 64),
-            const SizedBox(height: 16),
-            const Text('PIN Berhasil Diubah', style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18)),
-            const SizedBox(height: 8),
-            const Text('PIN transaksi kamu sudah diperbarui.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Gilroy Medium', color: Colors.grey)),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E88E5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)),
-                child: const Text('OK', style: TextStyle(fontFamily: 'Gilroy Bold', color: Colors.white)),
-              ),
-            ),
-          ],
-        ),
-      ),
+      title: 'PIN Berhasil Diubah',
+      description: 'PIN transaksi kamu sudah diperbarui.',
+      actionText: 'OK',
     );
+    if (mounted) Navigator.pop(context);
   }
 
   @override

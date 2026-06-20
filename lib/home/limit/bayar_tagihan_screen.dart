@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
+import 'package:modipay/design/design.dart';
 
 
 import 'package:flutter/material.dart';
@@ -158,10 +159,9 @@ class _BayarTagihanScreenState extends State<BayarTagihanScreen> {
 
   void _showPinSheet() {
     _pinController.clear();
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      title: 'Konfirmasi Pembayaran',
       builder: (ctx) => _buildPinSheet(ctx),
     );
   }
@@ -191,46 +191,15 @@ class _BayarTagihanScreenState extends State<BayarTagihanScreen> {
     }
   }
 
-  void _showSuccessDialog(dynamic newBalance) {
-    showDialog(
+  Future<void> _showSuccessDialog(dynamic newBalance) async {
+    await AppDialog.success(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_rounded,
-                color: Color(0xFF10B981), size: 60),
-            const SizedBox(height: 16),
-            const Text('Pembayaran Berhasil',
-                style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18)),
-            const SizedBox(height: 8),
-            Text(
-              'Tagihan Rp ${_currencyFormat.format(_total.toInt())} berhasil dibayar. Limit Anda akan segera pulih.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontFamily: 'Gilroy Medium',
-                  fontSize: 14,
-                  color: Colors.grey[600]),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              child: const Text('OK',
-                  style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15)),
-            ),
-          ),
-        ],
-      ),
+      title: 'Pembayaran Berhasil',
+      description:
+          'Tagihan Rp ${_currencyFormat.format(_total.toInt())} berhasil dibayar. Limit Anda akan segera pulih.',
+      actionText: 'OK',
     );
+    if (mounted) Navigator.pop(context);
   }
 
   void _showSnackBar(String msg) {
@@ -575,36 +544,9 @@ class _BayarTagihanScreenState extends State<BayarTagihanScreen> {
     return StatefulBuilder(
       builder: (ctx, setSheetState) {
         final notifire = Provider.of<ColorNotifire>(ctx, listen: false);
-        return Container(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            top: 24,
-            left: 24,
-            right: 24,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
+        return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Konfirmasi Pembayaran',
-                style: TextStyle(
-                    fontFamily: 'Gilroy Bold', fontSize: 18),
-              ),
-              const SizedBox(height: 8),
               Text(
                 'Rp ${_currencyFormat.format(_total.toInt())}',
                 style: TextStyle(
@@ -722,11 +664,8 @@ class _BayarTagihanScreenState extends State<BayarTagihanScreen> {
                   ),
                 ),
               ),
-              SizedBox(
-                  height: MediaQuery.of(ctx).padding.bottom + 16),
             ],
-          ),
-        );
+          );
       },
     );
   }
@@ -813,44 +752,14 @@ class _LimitQrisScreenState extends State<_LimitQrisScreen> {
     });
   }
 
-  void _showSuccessDialog() {
-    showDialog(
+  Future<void> _showSuccessDialog() async {
+    await AppDialog.success(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 60),
-            const SizedBox(height: 16),
-            const Text('Pembayaran Berhasil', style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18)),
-            const SizedBox(height: 8),
-            Text(
-              'Tagihan limit sebesar Rp ${_currencyFormat.format(widget.amount)} berhasil dibayar',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 14, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.of(context).pop(true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF040f85),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Kembali', style: TextStyle(color: Colors.white, fontFamily: 'Gilroy Bold')),
-            ),
-          ),
-        ],
-      ),
+      title: 'Pembayaran Berhasil',
+      description: 'Tagihan limit sebesar Rp ${_currencyFormat.format(widget.amount)} berhasil dibayar',
+      actionText: 'Kembali',
     );
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   String _formatTime(int seconds) {

@@ -19,6 +19,7 @@ import '../../services/api_service.dart';
 import '../../services/tts_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
+import '../../design/design.dart';
 
 /// Parse server datetime string as UTC → local.
 DateTime _parseServerDt(String s) {
@@ -1098,48 +1099,21 @@ class _QrisReceiptScreenState extends State<_QrisReceiptScreen> {
     }
   }
 
-  void _showNoteDialog() {
+  Future<void> _showNoteDialog() async {
     _noteController.text = _note ?? '';
-    showDialog(
+    final confirmed = await AppDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Catatan', style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18)),
-        content: TextField(
-          controller: _noteController,
-          maxLines: 4,
-          maxLength: 500,
-          decoration: InputDecoration(
-            hintText: 'Contoh: Hutang pulsa 10rb',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Gilroy Medium', fontSize: 13),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF0D47A1)),
-            ),
-          ),
-          style: const TextStyle(fontFamily: 'Gilroy Medium', fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: TextStyle(color: Colors.grey.shade500, fontFamily: 'Gilroy Medium')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _saveNote(_noteController.text);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D47A1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: const Text('Simpan', style: TextStyle(color: Colors.white, fontFamily: 'Gilroy Bold')),
-          ),
-        ],
+      title: 'Catatan',
+      body: AppTextField(
+        controller: _noteController,
+        maxLines: 4,
+        maxLength: 500,
+        hint: 'Contoh: Hutang pulsa 10rb',
       ),
+      secondaryActionText: 'Batal',
+      primaryActionText: 'Simpan',
     );
+    if (confirmed == true) _saveNote(_noteController.text);
   }
 
   Future<Uint8List?> _captureReceipt() async {

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../services/api_service.dart';
 import '../../../utils/colornotifire.dart';
+import '../../../design/design.dart';
 
 class SavedCustomersBottomSheet extends StatefulWidget {
   final String category;
@@ -101,28 +102,16 @@ class _SavedCustomersBottomSheetState extends State<SavedCustomersBottomSheet> {
   }
 
   Future<void> _deleteCustomer(int id, String name) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await AppDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Hapus Pelanggan',
-          style: TextStyle(fontFamily: 'Gilroy Bold'),
-        ),
-        content: Text('Apakah Anda yakin ingin menghapus "$name" dari daftar pelanggan?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus', style: TextStyle(color: Colors.red, fontFamily: 'Gilroy Bold')),
-          ),
-        ],
-      ),
+      title: 'Hapus Pelanggan',
+      description: 'Apakah Anda yakin ingin menghapus "$name" dari daftar pelanggan?',
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
-    if (confirm != true) return;
+    if (!confirm) return;
 
     try {
       await ApiService.deleteSavedCustomer(id);

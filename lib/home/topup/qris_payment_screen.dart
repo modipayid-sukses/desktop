@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
+import '../../design/design.dart';
 
 /// QRIS payment screen powered by OnixPayz.
 ///
@@ -151,50 +152,14 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
     });
   }
 
-  void _showSuccessDialog() {
-    showDialog<void>(
+  Future<void> _showSuccessDialog() async {
+    await AppDialog.success(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 60),
-            const SizedBox(height: 16),
-            const Text(
-              'Pembayaran Berhasil',
-              style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Saldo Anda telah ditambahkan Rp ${_currencyFormat.format(widget.amount)}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Gilroy Medium',
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              child: const Text(
-                'OK',
-                style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
-              ),
-            ),
-          ),
-        ],
-      ),
+      title: 'Pembayaran Berhasil',
+      description: 'Saldo Anda telah ditambahkan Rp ${_currencyFormat.format(widget.amount)}',
+      actionText: 'OK',
     );
+    if (mounted) Navigator.pop(context);
   }
 
   String get _formattedTime {

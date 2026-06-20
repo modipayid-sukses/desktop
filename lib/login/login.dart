@@ -5,6 +5,7 @@ import 'package:modipay/login/login_otp_screen.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/color.dart';
 import 'package:modipay/utils/responsive.dart';
+import 'package:modipay/design/design.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'desktop_auth_panel.dart';
@@ -228,20 +229,12 @@ class _LoginState extends State<Login> {
             child: Center(
               child: GestureDetector(
                 onTap: () {
-                  showDialog(
+                  AppDialog.show(
                     context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Bantuan'),
-                      content: const Text(
+                    title: 'Bantuan',
+                    description:
                         'Jika nomor HP kamu bermasalah, hubungi layanan pelanggan kami di support@Modipay.id',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Tutup'),
-                        ),
-                      ],
-                    ),
+                    primaryActionText: 'Tutup',
                   );
                 },
                 child: Container(

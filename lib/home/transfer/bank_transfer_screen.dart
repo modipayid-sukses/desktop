@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
+import '../../design/design.dart';
 import 'bank_transfer_inquiry_screen.dart';
 
 class BankTransferScreen extends StatefulWidget {
@@ -58,34 +59,16 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
     } catch (_) {}
   }
 
-  void _showDisabledDialog() {
-    showDialog(
+  Future<void> _showDisabledDialog() async {
+    await AppDialog.show(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Fitur Tidak Aktif',
-          style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
-        ),
-        content: const Text(
-          'Fitur ini belum aktif di akun anda, silahkan hubungi admin',
-          style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'OK',
-              style: TextStyle(fontFamily: 'Gilroy Bold'),
-            ),
-          ),
-        ],
-      ),
+      tone: AppDialogTone.warning,
+      title: 'Fitur Tidak Aktif',
+      description: 'Fitur ini belum aktif di akun anda, silahkan hubungi admin',
+      primaryActionText: 'OK',
     );
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _loadBanks() async {

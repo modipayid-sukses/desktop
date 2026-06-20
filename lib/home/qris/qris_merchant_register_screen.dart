@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
 import '../../utils/colornotifire.dart';
+import '../../design/design.dart';
 
 class QrisMerchantRegisterScreen extends StatefulWidget {
   const QrisMerchantRegisterScreen({Key? key}) : super(key: key);
@@ -77,28 +78,25 @@ class _QrisMerchantRegisterScreenState extends State<QrisMerchantRegisterScreen>
 
   Future<void> _pickImage(bool isProduct) async {
     final picker = ImagePicker();
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await AppBottomSheet.show<ImageSource>(
       context: context,
-      backgroundColor: notifire.getprimerycolor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.camera_alt, color: notifire.getdarkscolor),
-              title: Text('Kamera', style: TextStyle(color: notifire.getdarkscolor, fontFamily: 'Gilroy Medium')),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library, color: notifire.getdarkscolor),
-              title: Text('Galeri', style: TextStyle(color: notifire.getdarkscolor, fontFamily: 'Gilroy Medium')),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
+      title: 'Pilih Sumber Foto',
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.camera_alt, color: notifire.getdarkscolor),
+            title: Text('Kamera', style: TextStyle(color: notifire.getdarkscolor, fontFamily: 'Gilroy Medium')),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.photo_library, color: notifire.getdarkscolor),
+            title: Text('Galeri', style: TextStyle(color: notifire.getdarkscolor, fontFamily: 'Gilroy Medium')),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
       ),
     );
     if (source == null) return;

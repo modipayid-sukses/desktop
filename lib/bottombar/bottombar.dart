@@ -7,6 +7,7 @@ import 'package:modipay/home/home.dart';
 import 'package:modipay/home/topup/topup_channel_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/utils/colornotifire.dart';
+import 'package:modipay/design/design.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -231,44 +232,14 @@ class _BottombarState extends State<Bottombar> {
   }
 
   Future<void> _showDeviceMismatchDialog(BuildContext context) async {
-    await showDialog<void>(
+    await AppDialog.show(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.devices_other_rounded, color: Color(0xFFD32F2F)),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Login dari Perangkat Lain',
-                style: TextStyle(
-                  fontFamily: 'Gilroy Bold',
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
+      tone: AppDialogTone.error,
+      title: 'Login dari Perangkat Lain',
+      description:
           'Akun ini sedang aktif di perangkat lain. Demi keamanan, sesi di perangkat ini telah diakhiri. Silakan login kembali jika ini bukan Anda.',
-          style: TextStyle(
-            fontFamily: 'Gilroy Medium',
-            fontSize: 13.5,
-            height: 1.45,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Mengerti',
-              style: TextStyle(fontFamily: 'Gilroy Bold'),
-            ),
-          ),
-        ],
-      ),
+      primaryActionText: 'Mengerti',
     );
   }
 }

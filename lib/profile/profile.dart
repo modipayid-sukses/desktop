@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:modipay/login/forgot_password_screen.dart';
 import 'package:modipay/login/login_router.dart';
+import 'package:modipay/design/design.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:provider/provider.dart';
@@ -639,132 +640,24 @@ class _ProfileState extends State<Profile> {
   }
 
   Future<void> _showMyDialog() async {
-    return showDialog<void>(
+    final confirmed = await AppDialog.confirm(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(
-              Radius.circular(32.0),
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: notifire.getprimerycolor,
-              borderRadius: const BorderRadius.all(
-                Radius.circular(20),
-              ),
-            ),
-            height: height / 3,
-            child: Column(
-              children: [
-                SizedBox(
-                  height: height / 40,
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  child: Row(
-                    children: [
-                      const Spacer(),
-                      Icon(
-                        Icons.clear,
-                        color: notifire.getdarkscolor,
-                      ),
-                      SizedBox(
-                        width: width / 20,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: height / 40,
-                ),
-                Text(
-                  CustomStrings.sure,
-                  style: TextStyle(
-                    color: notifire.getdarkscolor,
-                    fontFamily: 'Gilroy Bold',
-                    fontSize: height / 40,
-                  ),
-                ),
-                Text(
-                  CustomStrings.log,
-                  style: TextStyle(
-                    color: notifire.getdarkscolor,
-                    fontFamily: 'Gilroy Bold',
-                    fontSize: height / 40,
-                  ),
-                ),
-                SizedBox(
-                  height: height / 20,
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    height: height / 18,
-                    width: width / 2.5,
-                    decoration: BoxDecoration(
-                      color: notifire.getbluecolor,
-                      borderRadius: const BorderRadius.all(
-                        Radius.circular(20),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        CustomStrings.cancel,
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'Gilroy Bold',
-                            fontSize: height / 55),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: height / 100,
-                ),
-                GestureDetector(
-                  onTap: () async {
-                    final auth = Provider.of<AuthProvider>(context, listen: false);
-                    await auth.logout();
-                    if (!mounted) return;
-                    final loginScreen = await resolveLoginScreen();
-                    if (!mounted) return;
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => loginScreen),
-                      (route) => false,
-                    );
-                  },
-                  child: Container(
-                    height: height / 18,
-                    width: width / 2.5,
-                    decoration: const BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(20),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        CustomStrings.logout,
-                        style: TextStyle(
-                            color: const Color(0xffEB5757),
-                            fontFamily: 'Gilroy Bold',
-                            fontSize: height / 55),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      title: 'Keluar',
+      description: 'Apakah Anda yakin ingin keluar?',
+      confirmText: CustomStrings.logout,
+      cancelText: CustomStrings.cancel,
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    await auth.logout();
+    if (!mounted) return;
+    final loginScreen = await resolveLoginScreen();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => loginScreen),
+      (route) => false,
     );
   }
 
@@ -882,75 +775,44 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  void _onTogglePin(AuthProvider auth, bool newVal) {
+  Future<void> _onTogglePin(AuthProvider auth, bool newVal) async {
     final pinController = TextEditingController();
-    showDialog(
+    final confirmed = await AppDialog.show(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          backgroundColor: notifire.getprimerycolor,
-          title: Text(
-            newVal ? 'Aktifkan PIN Transaksi' : 'Nonaktifkan PIN Transaksi',
-            style: TextStyle(fontFamily: 'Gilroy Bold', color: notifire.getdarkscolor, fontSize: 16),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Masukkan PIN kamu untuk konfirmasi',
-                style: TextStyle(fontFamily: 'Gilroy Medium', color: notifire.getdarkgreycolor, fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: pinController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                maxLength: 4,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 24, letterSpacing: 8, color: notifire.getdarkscolor),
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: '    ',
-                  filled: true,
-                  fillColor: notifire.getdarkwhitecolor,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1565C0), width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Batal', style: TextStyle(fontFamily: 'Gilroy Medium', color: notifire.getdarkgreycolor)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (pinController.text.length != 4) return;
-                Navigator.pop(ctx);
-                final result = await auth.togglePinRequired(pinController.text, newVal);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(result['message'] ?? 'Gagal'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1565C0),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Konfirmasi', style: TextStyle(fontFamily: 'Gilroy Bold', color: Colors.white)),
-            ),
-          ],
-        );
-      },
+      title: newVal ? 'Aktifkan PIN Transaksi' : 'Nonaktifkan PIN Transaksi',
+      description: 'Masukkan PIN kamu untuk konfirmasi',
+      body: TextField(
+        controller: pinController,
+        keyboardType: TextInputType.number,
+        obscureText: true,
+        maxLength: 4,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 24, letterSpacing: 8, color: notifire.getdarkscolor),
+        decoration: InputDecoration(
+          counterText: '',
+          hintText: '    ',
+          filled: true,
+          fillColor: notifire.getdarkwhitecolor,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1565C0), width: 1.5)),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+      ),
+      secondaryActionText: 'Batal',
+      primaryActionText: 'Konfirmasi',
     );
+
+    if (confirmed != true || pinController.text.length != 4) return;
+    final result = await auth.togglePinRequired(pinController.text, newVal);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Gagal'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Widget settingtype(image, title) {

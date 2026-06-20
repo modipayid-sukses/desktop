@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
+import 'package:modipay/design/design.dart';
 
 
 import 'package:flutter/material.dart';
@@ -150,24 +151,25 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
 
   Future<void> _pickImage(bool isKtp) async {
     final picker = ImagePicker();
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await AppBottomSheet.show<ImageSource>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt_rounded),
-              title: const Text('Kamera'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
-              title: const Text('Galeri'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
+      title: 'Pilih Sumber Foto',
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.camera_alt_rounded),
+            title: const Text('Kamera'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.photo_library_rounded),
+            title: const Text('Galeri'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
       ),
     );
 
@@ -245,37 +247,14 @@ class _MerchantKycScreenState extends State<MerchantKycScreen> {
     }
   }
 
-  void _showSuccessDialog() {
-    showDialog(
+  Future<void> _showSuccessDialog() async {
+    await AppDialog.success(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 60),
-            const SizedBox(height: 16),
-            const Text('Pengajuan Berhasil', style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18)),
-            const SizedBox(height: 8),
-            Text(
-              'Data KYC Anda sedang dalam proses review. Kami akan memberitahu hasilnya.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 14, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
-              child: const Text('OK', style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15)),
-            ),
-          ),
-        ],
-      ),
+      title: 'Pengajuan Berhasil',
+      description: 'Data KYC Anda sedang dalam proses review. Kami akan memberitahu hasilnya.',
+      actionText: 'OK',
     );
+    if (mounted) Navigator.pop(context);
   }
 
   void _showSnackBar(String msg) {

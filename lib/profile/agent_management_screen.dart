@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../utils/colornotifire.dart';
+import '../design/design.dart';
 import 'add_agent_screen.dart';
 
 class AgentManagementScreen extends StatefulWidget {
@@ -68,110 +69,53 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
 
   Future<void> _updateMarginDialog(double currentMargin) async {
     final marginController = TextEditingController(text: currentMargin.toStringAsFixed(0));
-    final notifire = Provider.of<ColorNotifire>(context, listen: false);
 
-    showDialog(
+    final confirmed = await AppDialog.show(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Ubah Markup Margin',
-            style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Margin markup ini akan ditambahkan ke harga pokok produk untuk semua Agen Anda.',
-                style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: marginController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Markup Margin (Rupiah)',
-                  labelStyle: const TextStyle(fontFamily: 'Gilroy Medium'),
-                  prefixText: 'Rp ',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal', style: TextStyle(fontFamily: 'Gilroy Bold')),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final marginVal = double.tryParse(marginController.text) ?? 0.0;
-                if (marginVal < 0) {
-                  Fluttertoast.showToast(msg: 'Margin tidak boleh negatif');
-                  return;
-                }
-                Navigator.pop(ctx);
-                
-                setState(() => _isLoading = true);
-                try {
-                  final res = await ApiService.updateMargin(marginVal);
-                  Fluttertoast.showToast(msg: res['message'] ?? 'Margin berhasil diperbarui');
-                  if (mounted) {
-                    await Provider.of<AuthProvider>(context, listen: false).fetchProfile();
-                  }
-                } catch (e) {
-                  Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
-                } finally {
-                  if (mounted) setState(() => _isLoading = false);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: notifire.getbluecolor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Simpan', style: TextStyle(fontFamily: 'Gilroy Bold', color: Colors.white)),
-            ),
-          ],
-        );
-      },
+      title: 'Ubah Markup Margin',
+      description: 'Margin markup ini akan ditambahkan ke harga pokok produk untuk semua Agen Anda.',
+      body: AppTextField(
+        label: 'Markup Margin (Rupiah)',
+        controller: marginController,
+        keyboardType: TextInputType.number,
+        hint: 'Rp 0',
+      ),
+      secondaryActionText: 'Batal',
+      primaryActionText: 'Simpan',
     );
+    if (confirmed != true) return;
+
+    final marginVal = double.tryParse(marginController.text) ?? 0.0;
+    if (marginVal < 0) {
+      Fluttertoast.showToast(msg: 'Margin tidak boleh negatif');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final res = await ApiService.updateMargin(marginVal);
+      Fluttertoast.showToast(msg: res['message'] ?? 'Margin berhasil diperbarui');
+      if (mounted) {
+        await Provider.of<AuthProvider>(context, listen: false).fetchProfile();
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _deleteAgentDialog(Map<String, dynamic> agent) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await AppDialog.confirm(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Hapus Agen',
-            style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
-          ),
-          content: Text(
-            'Apakah Anda yakin ingin menghapus "${agent['name'] ?? 'agen ini'}" dari daftar agen Anda? Tindakan ini tidak dapat dibatalkan.',
-            style: const TextStyle(fontFamily: 'Gilroy Medium', fontSize: 13, color: Colors.grey),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal', style: TextStyle(fontFamily: 'Gilroy Bold')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Hapus', style: TextStyle(fontFamily: 'Gilroy Bold', color: Colors.white)),
-            ),
-          ],
-        );
-      },
+      title: 'Hapus Agen',
+      description: 'Apakah Anda yakin ingin menghapus "${agent['name'] ?? 'agen ini'}" dari daftar agen Anda? Tindakan ini tidak dapat dibatalkan.',
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
-    if (confirm != true) return;
+    if (!confirm) return;
 
     setState(() => _isLoading = true);
     try {

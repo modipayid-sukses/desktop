@@ -20,11 +20,13 @@ import '../../services/app_exception.dart';
 import '../../services/api_service.dart';
 import '../../services/biometric_service.dart';
 import '../../utils/colornotifire.dart';
+import '../../utils/color.dart';
 import '../../widgets/transaction_receipt.dart';
 import '../topup/topupcard/confirmpayment.dart';
 import 'components/ppob_numpad.dart';
 import 'components/ppob_cellular_form.dart';
 import 'components/saved_customers_bottom_sheet.dart';
+import '../../design/design.dart';
 
 
 class PPOBProductScreen extends StatefulWidget {
@@ -1875,18 +1877,11 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
   Future<void> _showPostpaidNotification(String title, String message) async {
     if (!mounted) return;
-    await showDialog<void>(
+    await AppDialog.show(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      title: title,
+      description: message,
+      primaryActionText: 'OK',
     );
   }
 
@@ -2651,105 +2646,19 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           child: Column(
             children: [
               if (_plnPostpaidInquiryResult == null) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed:
-                        _isPlnPostpaidInquiring ? null : _doPlnPostpaidInquiry,
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: const Color(0xFF3F6FB4),
-                      disabledBackgroundColor: const Color(0xFF8AA8D6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isPlnPostpaidInquiring
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                'Memeriksa tagihan…',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontFamily: 'Gilroy Bold',
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          )
-                        : const Text(
-                            'Cek Tagihan',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: 14,
-                            ),
-                          ),
-                  ),
+                AppButton.primary(
+                  expand: true,
+                  loading: _isPlnPostpaidInquiring,
+                  label: 'Cek Tagihan',
+                  onPressed: _isPlnPostpaidInquiring ? null : _doPlnPostpaidInquiry,
                 ),
                 // Pesan error inline (mengganti dialog).
-                if (_plnPostpaidError != null &&
-                    !_isPlnPostpaidInquiring) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF4F4),
-                      border:
-                          Border.all(color: const Color(0xFFF5C2C2)),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.info_outline_rounded,
-                          color: Color(0xFFD94C4C),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Tidak dapat memeriksa tagihan',
-                                style: TextStyle(
-                                  color: const Color(0xFF8A2A2A),
-                                  fontFamily: 'Gilroy Bold',
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _plnPostpaidError!,
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontFamily: 'Gilroy Medium',
-                                  fontSize: 12,
-                                  height: 1.35,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                if (_plnPostpaidError != null && !_isPlnPostpaidInquiring) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  AppAlert(
+                    tone: AppAlertTone.error,
+                    title: 'Tidak dapat memeriksa tagihan',
+                    description: _plnPostpaidError!,
                   ),
                 ],
               ],
@@ -2759,33 +2668,23 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE5E9F0)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0F000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(AppRadius.dialog),
+                    border: Border.all(color: grey200),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header dengan accent bar.
+                      // Header.
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
+                            horizontal: AppSpacing.md, vertical: AppSpacing.md),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF4F7FC),
+                          color: primaryBlue50,
                           borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(14),
-                            topRight: Radius.circular(14),
+                            topLeft: Radius.circular(AppRadius.dialog),
+                            topRight: Radius.circular(AppRadius.dialog),
                           ),
-                          border: Border(
-                            bottom: BorderSide(
-                                color: const Color(0xFFE5E9F0)),
-                          ),
+                          border: Border(bottom: BorderSide(color: grey200)),
                         ),
                         child: Row(
                           children: [
@@ -2793,18 +2692,17 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF3F6FB4)
-                                    .withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(10),
+                                color: primaryBlue500.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                               ),
                               alignment: Alignment.center,
                               child: const Icon(
                                 Icons.electrical_services_rounded,
-                                color: Color(0xFF3F6FB4),
+                                color: primaryBlue500,
                                 size: 22,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment:
@@ -2830,29 +2728,14 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF3F6FB4)
-                                    .withOpacity(0.10),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                tarifDaya,
-                                style: const TextStyle(
-                                  color: Color(0xFF3F6FB4),
-                                  fontFamily: 'Gilroy Bold',
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
+                            AppBadge(label: tarifDaya, tone: AppBadgeTone.primary),
                           ],
                         ),
                       ),
                       // Body: Detail Tagihan
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                        padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.lg),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2864,7 +2747,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: AppSpacing.sm),
                             _billRowInline('Periode', periode,
                                 textSecondary, textPrimary),
                             _billRowInline(
@@ -2876,12 +2759,9 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                 textSecondary, textPrimary),
                             _billRowInline('Meter Akhir', meterAkhir,
                                 textSecondary, textPrimary),
-                            const SizedBox(height: 6),
-                            Container(
-                              height: 1,
-                              color: const Color(0xFFEEF1F6),
-                            ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: AppSpacing.xs),
+                            Divider(height: 1, color: grey200),
+                            const SizedBox(height: AppSpacing.xs),
                             _billRowInline(
                                 'Tagihan',
                                 _formatPrice(rpTagPln),
@@ -2894,15 +2774,14 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                 textPrimary),
                             _billRowInline('Denda', _formatPrice(denda),
                                 textSecondary, textPrimary),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: AppSpacing.sm),
                             // Total bayar block (highlight)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 12),
+                                  horizontal: AppSpacing.md, vertical: AppSpacing.md),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF3F6FB4)
-                                    .withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(10),
+                                color: primaryBlue50,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                               ),
                               child: Row(
                                 children: [
@@ -2918,7 +2797,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                   Text(
                                     _formatPrice(totalBayar),
                                     style: const TextStyle(
-                                      color: Color(0xFF3F6FB4),
+                                      color: primaryBlue500,
                                       fontFamily: 'Gilroy Bold',
                                       fontSize: 18,
                                     ),
@@ -2932,45 +2811,22 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.lg),
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
+                      child: AppButton.secondary(
+                        expand: true,
+                        label: 'Cek Ulang',
                         onPressed: _doPlnPostpaidInquiry,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF3F6FB4),
-                          side: const BorderSide(color: Color(0xFF3F6FB4)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Cek Ulang',
-                          style: TextStyle(fontFamily: 'Gilroy Bold'),
-                        ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: ElevatedButton(
+                      child: AppButton.success(
+                        expand: true,
+                        label: 'Bayar Sekarang',
                         onPressed: _payPlnPostpaidBill,
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: Colors.green,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Bayar Sekarang',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'Gilroy Bold',
-                          ),
-                        ),
                       ),
                     ),
                   ],
@@ -2985,18 +2841,12 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
               color: Colors.black.withOpacity(0.28),
               alignment: Alignment.center,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: grey200),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -3338,26 +3188,19 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     ) async {
       if (!mounted) return;
       final pretty = const JsonEncoder.withIndent('  ').convert(payload);
-      await showDialog<void>(
+      await AppDialog.show(
         context: context,
-        builder: (_) => AlertDialog(
-          title: Text(title),
-          content: SingleChildScrollView(
+        title: title,
+        body: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 320),
+          child: SingleChildScrollView(
             child: SelectableText(
               pretty,
-              style: const TextStyle(
-                fontFamily: 'Courier',
-                fontSize: 12,
-              ),
+              style: const TextStyle(fontFamily: 'Courier', fontSize: 12),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tutup'),
-            ),
-          ],
         ),
+        primaryActionText: 'Tutup',
       );
     }
 
@@ -5623,10 +5466,7 @@ class _PpobTransactionDetailTemplatePageState
     final textPrimary = notifire.getdarkscolor;
     final textSecondary = notifire.getdarkgreycolor;
     final cardBg = notifire.gettabwhitecolor;
-
-    const headerBlue = Color(0xFF3F75B7);
-    const pageBg = Color(0xFFF5F5F7);
-    const headerBlendHeight = 280.0;
+    final borderColor = notifire.getIsDark ? grey600 : grey200;
 
     final productName = widget.product['product_name']?.toString() ??
         widget.product['name']?.toString() ??
@@ -5707,231 +5547,144 @@ class _PpobTransactionDetailTemplatePageState
     final total = price + adminFee;
 
     return Scaffold(
-      backgroundColor: pageBg,
-      body: Stack(
-        children: [
-          const Column(
+      backgroundColor: notifire.getprimerycolor,
+      appBar: AppBar(
+        backgroundColor: notifire.getprimerycolor,
+        elevation: 0,
+        foregroundColor: textPrimary,
+        title: Text(
+          'Detail Transaksi',
+          style: TextStyle(color: textPrimary, fontFamily: 'Gilroy Bold', fontSize: 16),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: borderColor),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 126),
+        child: AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                  height: headerBlendHeight,
-                  child: ColoredBox(color: headerBlue)),
-              Expanded(child: ColoredBox(color: pageBg)),
+              _paymentRow('Nama Produk', productName, textSecondary, textPrimary),
+              const SizedBox(height: AppSpacing.sm),
+              if (isPlnDetail) ...[
+                _paymentRow('Nama Pelanggan', apiCustomerName, textSecondary, textPrimary),
+                const SizedBox(height: AppSpacing.sm),
+                _paymentRow('IDPEL', apiCustomerNo, textSecondary, textPrimary),
+                const SizedBox(height: AppSpacing.sm),
+                _paymentRow('TARIF/DAYA', apiTarifDaya, textSecondary, textPrimary),
+              ] else if (widget.gameInquiryData != null) ...[
+                _paymentRow('ID Player', widget.customerId, textSecondary, textPrimary),
+                if ((widget.gameInquiryData!['username'] ?? '').toString().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _paymentRow('Username', widget.gameInquiryData!['username'].toString(), textSecondary, textPrimary),
+                ],
+                if ((widget.gameInquiryData!['region'] ?? '').toString().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _paymentRow('Region', widget.gameInquiryData!['region'].toString(), textSecondary, textPrimary),
+                ],
+              ] else
+                _paymentRow('Nomor Handphone', widget.customerId, textSecondary, textPrimary),
+              const SizedBox(height: AppSpacing.sm),
+              _paymentRow('Harga', widget.formatPrice(price), textSecondary, textPrimary),
+              const SizedBox(height: AppSpacing.sm),
+              _paymentRow(
+                'Biaya Admin',
+                adminFee <= 0 ? 'Gratis!' : widget.formatPrice(adminFee),
+                textSecondary,
+                textPrimary,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Divider(height: 1, color: borderColor),
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md, vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: primaryBlue50,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Total Pembayaran',
+                      style: TextStyle(color: textPrimary, fontFamily: 'Gilroy Bold', fontSize: 13),
+                    ),
+                    const Spacer(),
+                    Text(
+                      widget.formatPrice(total),
+                      style: const TextStyle(color: primaryBlue500, fontFamily: 'Gilroy Bold', fontSize: 17),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _recipientSection(notifire),
             ],
           ),
-          SafeArea(
-            top: false,
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  color: headerBlue,
-                  padding: EdgeInsets.fromLTRB(
-                      16, MediaQuery.of(context).padding.top + 6, 16, 10),
-                  child: Row(
+        ),
+      ),
+      bottomNavigationBar: widget.showBottomAction
+          ? Container(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md + MediaQuery.of(context).padding.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: cardBg,
+                border: Border(top: BorderSide(color: borderColor)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
                     children: [
-                      InkWell(
-                        onTap: () => Navigator.of(context).maybePop(),
-                        borderRadius: BorderRadius.circular(20),
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        ),
+                      Text(
+                        'Total Pembayaran',
+                        style: TextStyle(color: textSecondary, fontFamily: 'Gilroy Medium', fontSize: 13),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Detail Transaksi',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
+                      const Spacer(),
+                      Text(
+                        widget.formatPrice(total),
+                        style: const TextStyle(color: primaryBlue500, fontFamily: 'Gilroy Bold', fontSize: 16),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 126),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                      decoration: BoxDecoration(
-                        color: cardBg,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.16),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Text(
-                              'Detail Transaksi',
-                              style: GoogleFonts.poppins(
-                                color: textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _paymentRow('Nama Produk', productName),
-                          const SizedBox(height: 10),
-                          if (isPlnDetail) ...[
-                            _paymentRow('Nama Pelanggan', apiCustomerName),
-                            const SizedBox(height: 10),
-                            _paymentRow('IDPEL', apiCustomerNo),
-                            const SizedBox(height: 10),
-                            _paymentRow('TARIF/DAYA', apiTarifDaya),
-                          ] else if (widget.gameInquiryData != null) ...[
-                            _paymentRow('ID Player', widget.customerId),
-                            if ((widget.gameInquiryData!['username'] ?? '').toString().isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              _paymentRow('Username', widget.gameInquiryData!['username'].toString()),
-                            ],
-                            if ((widget.gameInquiryData!['region'] ?? '').toString().isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              _paymentRow('Region', widget.gameInquiryData!['region'].toString()),
-                            ],
-                          ] else
-                            _paymentRow('Nomor Handphone', widget.customerId),
-                          const SizedBox(height: 10),
-                          _paymentRow('Harga', widget.formatPrice(price)),
-                          const SizedBox(height: 10),
-                          _paymentRow(
-                            'Biaya Admin',
-                            adminFee <= 0
-                                ? 'Gratis!'
-                                : widget.formatPrice(adminFee),
-                          ),
-                          const SizedBox(height: 8),
-                          Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 10),
-                          _paymentRow(
-                            'Total Pembayaran',
-                            widget.formatPrice(total),
-                            valueStyle: GoogleFonts.poppins(
-                              color: textPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _recipientSection(notifire),
-                        ],
-                      ),
-                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppButton.success(
+                    expand: true,
+                    label: 'Bayar Sekarang',
+                    onPressed: _handleConfirm,
                   ),
-                ),
-                if (widget.showBottomAction)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF0F0F1),
-                      border: Border(top: BorderSide(color: Color(0xFFD6D6DA))),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Total Pembayaran',
-                              style: GoogleFonts.poppins(
-                                color: textPrimary,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              widget.formatPrice(total),
-                              style: GoogleFonts.poppins(
-                                color: headerBlue,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 44,
-                          child: ElevatedButton(
-                            onPressed: _handleConfirm,
-                            style: ElevatedButton.styleFrom(
-                              elevation: 0,
-                              backgroundColor: headerBlue,
-                              disabledBackgroundColor: const Color(0xFF233B63),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: Text(
-                              'Bayar Sekarang',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                                height: 1,
-                                letterSpacing: 1.6,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 
-  Widget _paymentRow(String label, String value, {TextStyle? valueStyle}) {
+  Widget _paymentRow(String label, String value, Color textSecondary, Color textPrimary) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.poppins(
-              color: const Color(0xFF1A1A1A),
-              fontWeight: FontWeight.w400,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: textSecondary, fontFamily: 'Gilroy Medium', fontSize: 13),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: valueStyle ??
-                GoogleFonts.poppins(
-                  color: const Color(0xFF1A1A1A),
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
+            style: TextStyle(color: textPrimary, fontFamily: 'Gilroy Bold', fontSize: 13),
           ),
         ),
       ],
@@ -5939,9 +5692,6 @@ class _PpobTransactionDetailTemplatePageState
   }
 
   Widget _recipientSection(ColorNotifire notifire) {
-    final textSecondary = notifire.getdarkgreycolor;
-    final surface = notifire.gettabwhitecolor;
-
     if (!widget.showRecipientHint && widget.recipientName == null) {
       return const SizedBox.shrink();
     }
@@ -5951,86 +5701,16 @@ class _PpobTransactionDetailTemplatePageState
     }
 
     if (_recipientName != null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              height: 34,
-              width: 34,
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.verified_rounded,
-                  color: Colors.green, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Nama Penerima Terverifikasi',
-                    style: TextStyle(
-                      color: textSecondary,
-                      fontFamily: 'Gilroy Medium',
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _recipientName!,
-                    style: TextStyle(
-                      color: notifire.getdarkscolor,
-                      fontFamily: 'Gilroy Bold',
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+      return AppAlert(
+        tone: AppAlertTone.success,
+        title: 'Nama Penerima Terverifikasi',
+        description: _recipientName,
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.error_outline_rounded,
-                  color: Colors.red, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Nama penerima tidak tersedia',
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontFamily: 'Gilroy Medium',
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return const AppAlert(
+      tone: AppAlertTone.error,
+      title: 'Nama penerima tidak tersedia',
     );
   }
 
