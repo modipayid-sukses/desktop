@@ -4,7 +4,7 @@ import 'package:modipay/utils/color.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'app_tokens.dart';
 
-enum AppButtonVariant { primary, secondary, destructive, ghost, success }
+enum AppButtonVariant { primary, secondary, destructive, ghost, success, neutral }
 
 /// Minimal button set matching shadcn/ui's Button component: filled
 /// primary, outlined secondary, filled destructive, and a borderless
@@ -72,6 +72,18 @@ class AppButton extends StatelessWidget {
     this.icon,
   }) : variant = AppButtonVariant.success;
 
+  /// Dark, brand-neutral fill (no blue) — used where a filled primary
+  /// action is needed but the blue brand accent should be avoided, e.g.
+  /// inside AppDialog.
+  const AppButton.neutral({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.expand = false,
+    this.loading = false,
+    this.icon,
+  }) : variant = AppButtonVariant.neutral;
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.watch<ColorNotifire>().getIsDark;
@@ -104,6 +116,11 @@ class AppButton extends StatelessWidget {
       case AppButtonVariant.success:
         background = success500;
         foreground = Colors.white;
+        border = BorderSide.none;
+        break;
+      case AppButtonVariant.neutral:
+        background = isDark ? Colors.white : grey900;
+        foreground = isDark ? grey900 : Colors.white;
         border = BorderSide.none;
         break;
     }

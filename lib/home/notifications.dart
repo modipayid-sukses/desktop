@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
+import '../utils/responsive.dart';
 
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/media.dart';
@@ -7,6 +9,7 @@ import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/color.dart';
 import '../utils/colornotifire.dart';
 import '../utils/transaction_helpers.dart';
 
@@ -107,57 +110,102 @@ class _NotificationindexState extends State<Notificationindex> {
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
     return Scaffold(
-      appBar: AppBar(
+      backgroundColor: desktopSurfacePage,
+      appBar: isDesktopPopup(context) ? null : AppBar(
         elevation: 0,
-        backgroundColor: notifire.getprimerycolor,
-        iconTheme: IconThemeData(color: notifire.getdarkscolor),
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        leading: DesktopLeadingWrapper(
+          child: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: desktopTextPrimary),
+          ),
+        ),
+        iconTheme: const IconThemeData(color: desktopTextPrimary),
         title: DesktopTitleWrapper(child: Text(
           CustomStrings.notification,
-          style: TextStyle(
-            color: notifire.getdarkscolor,
-            fontFamily: 'Gilroy Bold',
-            fontSize: height / 40,
+          style: GoogleFonts.hankenGrotesk(
+            color: desktopTextPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
           ),
         ))
       ),
-      backgroundColor: notifire.getprimerycolor,
-      body: Stack(
-        children: [
-          Image.asset(
-            "images/background.png",
-            fit: BoxFit.cover,
-          ),
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _notifications.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Belum ada notifikasi',
-                        style: TextStyle(
-                          color: notifire.getdarkgreycolor,
-                          fontFamily: 'Gilroy Medium',
-                          fontSize: height / 50,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _notifications.isEmpty
+              ? Center(
+                  child: Text(
+                    'Belum ada notifikasi',
+                    style: GoogleFonts.hankenGrotesk(
+                      color: desktopTextSecondary,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _notifications.length,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: width / 20,
-                        vertical: height / 30,
-                      ),
-                      itemBuilder: (context, index) {
-                        final n = _notifications[index];
-                        final type = n['icon'] ?? n['type'] ?? 'info';
-                        final isRead = n['is_read'] == true;
-                        final color = _getNotificationColor(type);
-                        final img = _getNotificationImage(type);
-                        return Column(
-                          children: [
-                            InkWell(
-                              borderRadius: const BorderRadius.all(
-                                Radius.circular(20),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 5,
+                                child: Text(
+                                  'Notifikasi',
+                                  style: GoogleFonts.hankenGrotesk(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    color: desktopTextSecondary,
+                                  ),
+                                ),
                               ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Tanggal',
+                                  textAlign: TextAlign.right,
+                                  style: GoogleFonts.hankenGrotesk(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    color: desktopTextSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Divider(height: 1, color: desktopBorder.withOpacity(0.5)),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _notifications.length,
+                          separatorBuilder: (_, __) => Divider(height: 1, color: desktopBorder.withOpacity(0.2)),
+                          itemBuilder: (context, index) {
+                            final n = _notifications[index];
+                            final type = n['icon'] ?? n['type'] ?? 'info';
+                            final isRead = n['is_read'] == true;
+                            final color = _getNotificationColor(type);
+                            final img = _getNotificationImage(type);
+                            return InkWell(
                               onTap: () async {
                                 _showNotificationDetail(n, color, img);
                                 if (!isRead) {
@@ -171,22 +219,19 @@ class _NotificationindexState extends State<Notificationindex> {
                                   }
                                 }
                               },
-                              child: not(
+                              child: notificationRow(
                                 color,
                                 img,
                                 n['title'] ?? '',
                                 _formatDate(n['created_at']),
                                 isRead,
                               ),
-                            ),
-                            SizedBox(
-                              height: height / 60,
-                            ),
-                          ],
-                        );
-                      },
+                            );
+                          },
+                        ),
+                      ],
                     ),
-        ],
+                  ),
       ),
     );
   }
@@ -203,12 +248,15 @@ class _NotificationindexState extends State<Notificationindex> {
           maxChildSize: 0.85,
           expand: false,
           builder: (context, scrollController) {
+            final media = MediaQuery.of(context);
+            final w = media.size.width;
+            final h = media.size.height;
             return Container(
               decoration: BoxDecoration(
                 color: notifire.getprimerycolor,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              padding: EdgeInsets.all(width / 20),
+              padding: EdgeInsets.all(w / 20),
               child: ListView(
                 controller: scrollController,
                 shrinkWrap: true,
@@ -223,24 +271,24 @@ class _NotificationindexState extends State<Notificationindex> {
                       ),
                     ),
                   ),
-                  SizedBox(height: height / 40),
+                  SizedBox(height: h / 40),
                   Row(
                     children: [
                       Container(
-                        height: height / 15,
-                        width: width / 6,
+                        height: h / 15,
+                        width: w / 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: color.withOpacity(0.15),
                         ),
                         child: Center(
                           child: Padding(
-                            padding: EdgeInsets.all(height / 70),
+                            padding: EdgeInsets.all(h / 70),
                             child: Image.asset(imagePath, color: color),
                           ),
                         ),
                       ),
-                      SizedBox(width: width / 30),
+                      SizedBox(width: w / 30),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,16 +298,16 @@ class _NotificationindexState extends State<Notificationindex> {
                               style: TextStyle(
                                 color: notifire.getdarkscolor,
                                 fontFamily: 'Gilroy Bold',
-                                fontSize: height / 45,
+                                fontSize: h / 45,
                               ),
                             ),
-                            SizedBox(height: height / 150),
+                            SizedBox(height: h / 150),
                             Text(
                               _formatDate(notification['created_at']),
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontFamily: 'Gilroy Medium',
-                                fontSize: height / 60,
+                                fontSize: h / 60,
                               ),
                             ),
                           ],
@@ -273,14 +321,14 @@ class _NotificationindexState extends State<Notificationindex> {
                     style: TextStyle(
                       color: notifire.getdarkscolor,
                       fontFamily: 'Gilroy Medium',
-                      fontSize: height / 50,
+                      fontSize: h / 50,
                       height: 1.4,
                     ),
                   ),
-                  SizedBox(height: height / 30),
+                  SizedBox(height: h / 30),
                   SizedBox(
                     width: double.infinity,
-                    height: height / 16,
+                    height: h / 16,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xff6C5CE7),
@@ -294,12 +342,12 @@ class _NotificationindexState extends State<Notificationindex> {
                         style: TextStyle(
                           color: Colors.white,
                           fontFamily: 'Gilroy Bold',
-                          fontSize: height / 50,
+                          fontSize: h / 50,
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(height: height / 50),
+                  SizedBox(height: h / 50),
                 ],
               ),
             );
@@ -309,76 +357,78 @@ class _NotificationindexState extends State<Notificationindex> {
     );
   }
 
-  Widget not(clr, img, txt, txt2, bool isRead) {
-    return Container(
-      height: height / 11,
-      width: width,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(
-          Radius.circular(20),
-        ),
-        color: notifire.gettabwhitecolor,
-      ),
+  Widget notificationRow(clr, img, txt, txt2, bool isRead) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
       child: Row(
         children: [
-          SizedBox(
-            width: width / 35,
-          ),
-          Container(
-            height: height / 15,
-            width: width / 6,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isRead ? clr.withOpacity(0.1) : clr,
-            ),
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(height / 70),
-                child: Image.asset(img, color: isRead ? clr : Colors.white),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: width / 50,
-          ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+            flex: 5,
+            child: Row(
               children: [
-                Text(
-                  txt,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  style: TextStyle(
-                      color: notifire.getdarkscolor,
-                      fontFamily: isRead ? 'Gilroy Medium' : 'Gilroy Bold',
-                      fontSize: height / 54),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: clr.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Image.asset(img, color: clr, width: 16, height: 16),
+                  ),
                 ),
-                SizedBox(
-                  height: height / 150,
-                ),
-                Text(
-                  txt2,
-                  style: TextStyle(
-                      color: Colors.grey,
-                      fontFamily: 'Gilroy Medium',
-                      fontSize: height / 60),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          txt,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.hankenGrotesk(
+                            color: desktopTextPrimary,
+                            fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      if (!isRead) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: desktopErrorRed.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Baru',
+                            style: GoogleFonts.hankenGrotesk(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 10.5,
+                              color: desktopErrorRed,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          if (!isRead)
-            Container(
-              margin: EdgeInsets.only(right: width / 20),
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xffFF3B30),
+          Expanded(
+            flex: 2,
+            child: Text(
+              txt2,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.hankenGrotesk(
+                color: desktopTextSecondary,
+                fontWeight: FontWeight.w500,
+                fontSize: 12.5,
               ),
             ),
+          ),
         ],
       ),
     );

@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../utils/responsive.dart';
 import '../../services/api_service.dart';
 import '../../utils/colornotifire.dart';
 import 'pdam_inquiry_screen.dart';
@@ -15,7 +16,7 @@ import 'components/saved_customers_bottom_sheet.dart';
 const Color _kHeaderBlue = Color(0xFF3F6FB4);
 const Color _kPageBg = Color(0xFFFAFAFA);
 const Color _kCardBorder = Color(0xFFE5E9EE);
-const Color _kInputFill = Color(0xFFF3F4F6);
+const Color _kInputFill = Color(0xFFF5F6F8);
 const Color _kInputBorder = Color(0xFFD4D8DF);
 const Color _kTextPrimary = Color(0xFF1D1D1D);
 const Color _kTextSecondary = Color(0xFF6B7280);
@@ -443,20 +444,22 @@ class _PdamScreenState extends State<PdamScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: _kPageBg,
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        backgroundColor: _kHeaderBlue,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
-          statusBarColor: Colors.transparent,
+        backgroundColor: _kPageBg,
+        leading: DesktopLeadingWrapper(
+          child: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: _kTextPrimary),
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: _kTextPrimary),
         title: DesktopTitleWrapper(child: const Text(
           'PDAM',
           style: TextStyle(
-            color: Colors.white,
+            color: _kTextPrimary,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
@@ -467,150 +470,164 @@ class _PdamScreenState extends State<PdamScreen> {
         onTap: () => FocusScope.of(context).unfocus(),
         child: Column(
           children: [
-            // ── Kartu input (di atas header biru, mirip BPJS/Indihome) ──
+            // ── Kartu input ──────────────────────────────────────────────
             Container(
-              color: _kHeaderBlue,
+              color: _kPageBg,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Field 1: Pilih Kota
-                    const Text(
-                      'Kota PDAM',
-                      style: TextStyle(
-                        color: _kTextPrimary,
-                        fontFamily: 'Gilroy Bold',
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    InkWell(
-                      onTap: _showCityPicker,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: _kInputFill,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _kInputBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _selectedCity != null
-                                    ? _cityNameOf(_selectedCity!)
-                                    : (_isLoadingCities
-                                        ? 'Memuat daftar kota...'
-                                        : 'Pilih kota PDAM'),
-                                style: TextStyle(
-                                  color: _selectedCity != null
-                                      ? _kTextPrimary
-                                      : _kTextSecondary,
-                                  fontFamily: _selectedCity != null
-                                      ? 'Gilroy Bold'
-                                      : 'Gilroy Medium',
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (_isLoadingCities)
-                              const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(
-                                          _kHeaderBlue),
-                                ),
-                              )
-                            else
-                              const Icon(Icons.keyboard_arrow_down_rounded,
-                                  color: _kTextSecondary),
-                          ],
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      child: Text(
+                        'PDAM',
+                        style: TextStyle(
+                          color: _kTextPrimary,
+                          fontFamily: 'Gilroy Bold',
+                          fontSize: 18,
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 14),
-
-                    // Field 2: Nomor Pelanggan
-                    const Text(
-                      'Nomor Pelanggan',
-                      style: TextStyle(
-                        color: _kTextPrimary,
-                        fontFamily: 'Gilroy Bold',
-                        fontSize: 15,
+                    const Divider(height: 0, color: Color(0xFFECEEF2)),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                      child: const Text(
+                        'Kota PDAM',
+                        style: TextStyle(
+                          color: _kTextPrimary,
+                          fontFamily: 'Gilroy Bold',
+                          fontSize: 15,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _kInputFill,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                      child: InkWell(
+                        onTap: _showCityPicker,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _kInputBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _customerIdController,
-                              focusNode: _customerIdFocus,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              style: const TextStyle(
-                                color: _kTextPrimary,
-                                fontFamily: 'Gilroy Medium',
-                                fontSize: 14,
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: _kInputFill,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _selectedCity != null
+                                      ? _cityNameOf(_selectedCity!)
+                                      : (_isLoadingCities
+                                          ? 'Memuat daftar kota...'
+                                          : 'Pilih kota PDAM'),
+                                      style: TextStyle(
+                                        color: _selectedCity != null
+                                            ? _kTextPrimary
+                                            : _kTextSecondary,
+                                        fontFamily: _selectedCity != null
+                                            ? 'Gilroy Bold'
+                                            : 'Gilroy Medium',
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (_isLoadingCities)
+                                    const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                _kHeaderBlue),
+                                      ),
+                                    )
+                                  else
+                                    const Icon(Icons.keyboard_arrow_down_rounded,
+                                        color: _kTextSecondary),
+                                ],
                               ),
-                              onChanged: (_) => _clearError(),
-                              decoration: const InputDecoration(
-                                hintText: 'Masukkan Nomor Pelanggan',
-                                hintStyle: TextStyle(
-                                  color: _kTextSecondary,
-                                  fontFamily: 'Gilroy Medium',
-                                  fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                          child: const Text(
+                            'Nomor Pelanggan',
+                            style: TextStyle(
+                              color: _kTextPrimary,
+                              fontFamily: 'Gilroy Bold',
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: _kInputFill,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _customerIdController,
+                                    focusNode: _customerIdFocus,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    style: const TextStyle(
+                                      color: _kTextPrimary,
+                                      fontFamily: 'Gilroy Medium',
+                                      fontSize: 14,
+                                    ),
+                                    onChanged: (_) => _clearError(),
+                                    decoration: const InputDecoration(
+                                      hintText: 'Masukkan Nomor Pelanggan',
+                                      hintStyle: TextStyle(
+                                        color: _kTextSecondary,
+                                        fontFamily: 'Gilroy Medium',
+                                        fontSize: 14,
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 12),
+                                    ),
+                                  ),
                                 ),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 12),
-                              ),
+                                InkWell(
+                                  onTap: _openSavedCustomers,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    child: Icon(
+                                      Icons.contact_page_outlined,
+                                      color: _kHeaderBlue,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          InkWell(
-                            onTap: _openSavedCustomers,
-                            borderRadius: BorderRadius.circular(8),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              child: Icon(
-                                Icons.contact_page_outlined,
-                                color: _kHeaderBlue,
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
 
             // ── Tombol Cek Tagihan + hasil ─────────────────────────────
             Expanded(

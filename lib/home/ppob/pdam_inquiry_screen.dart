@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
+import '../../utils/responsive.dart';
 
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -69,20 +70,22 @@ class PdamInquiryResultScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: _kPageBg,
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        backgroundColor: _kHeaderBlue,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
-          statusBarColor: Colors.transparent,
+        backgroundColor: _kPageBg,
+        leading: DesktopLeadingWrapper(
+          child: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: _kTextPrimary),
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: _kTextPrimary),
         title: DesktopTitleWrapper(child: const Text(
           'Detail Tagihan',
           style: TextStyle(
-            color: Colors.white,
+            color: _kTextPrimary,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
@@ -356,8 +359,7 @@ class _Card extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kCardBorder),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -524,20 +526,22 @@ class _PdamPayPinScreenState extends State<_PdamPayPinScreen> {
 
     return Scaffold(
       backgroundColor: _kPageBg,
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        backgroundColor: _kHeaderBlue,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
-          statusBarColor: Colors.transparent,
+        backgroundColor: _kPageBg,
+        leading: DesktopLeadingWrapper(
+          child: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: _kTextPrimary),
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: _kTextPrimary),
         title: DesktopTitleWrapper(child: const Text(
           'Konfirmasi Pembayaran',
           style: TextStyle(
-            color: Colors.white,
+            color: _kTextPrimary,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
@@ -548,14 +552,14 @@ class _PdamPayPinScreenState extends State<_PdamPayPinScreen> {
           children: [
             // ── Summary card ───────────────────────────────────────────
             Container(
-              color: _kHeaderBlue,
+              color: _kPageBg,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

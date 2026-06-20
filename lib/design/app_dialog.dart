@@ -52,7 +52,7 @@ class AppDialog extends StatelessWidget {
       case AppDialogTone.warning:
         return warning500;
       case AppDialogTone.neutral:
-        return primaryBlue500;
+        return isDark ? grey200 : grey700;
     }
   }
 
@@ -138,7 +138,7 @@ class AppDialog extends StatelessWidget {
                             label: primaryActionText!,
                             onPressed: () => Navigator.of(context).pop(true),
                           )
-                        : AppButton.primary(
+                        : AppButton.neutral(
                             label: primaryActionText!,
                             onPressed: () => Navigator.of(context).pop(true),
                           ),

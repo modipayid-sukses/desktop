@@ -220,15 +220,16 @@ class _BayarTagihanScreenState extends State<BayarTagihanScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        leading: GestureDetector(
+        leading: DesktopLeadingWrapper(child: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: const Padding(
             padding: EdgeInsets.all(12),
             child: Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
           ),
-        ),
+        )),
         backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: DesktopTitleWrapper(child: const Text(
           'Bayar Tagihan',
           style: TextStyle(
@@ -776,11 +777,12 @@ class _LimitQrisScreenState extends State<_LimitQrisScreen> {
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: DesktopLeadingWrapper(child: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1A1A1A)),
           onPressed: () => Navigator.pop(context),
-        ),
+        )),
         title: DesktopTitleWrapper(child: const Text(
           'Bayar Tagihan via QRIS',
           style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Gilroy Bold', fontSize: 18),

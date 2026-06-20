@@ -106,31 +106,23 @@ class _ProfileState extends State<Profile> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: notifire.getbluecolor,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x2A143A66),
-                      blurRadius: 20,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(20),
+                  color: cardBg,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           width: 62,
                           height: 62,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: const Color(0xFFEFF3FA),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withOpacity(0.35)),
                           ),
                           child: ClipOval(
                             child: auth.userAvatar != null && auth.userAvatar!.isNotEmpty
@@ -145,7 +137,7 @@ class _ProfileState extends State<Profile> {
                                 : Image.asset('images/man4.png', fit: BoxFit.cover),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,9 +147,9 @@ class _ProfileState extends State<Profile> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: Color(0xFF18202A),
                                   fontFamily: 'Gilroy Bold',
-                                  fontSize: 22,
+                                  fontSize: 20,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -165,8 +157,8 @@ class _ProfileState extends State<Profile> {
                                 auth.userEmail,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.88),
+                                style: const TextStyle(
+                                  color: Color(0xFF728095),
                                   fontFamily: 'Gilroy Medium',
                                   fontSize: 13,
                                 ),
@@ -183,22 +175,21 @@ class _ProfileState extends State<Profile> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.18),
+                              color: const Color(0xFFEFF3FA),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.edit_outlined, color: Colors.white, size: 18),
+                            child: const Icon(Icons.edit_outlined, color: Color(0xFF20467A), size: 18),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.14),
+                        color: const Color(0xFFF3F6FB),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white.withOpacity(0.2)),
                       ),
                       child: Row(
                         children: [
@@ -208,7 +199,7 @@ class _ProfileState extends State<Profile> {
                             child: Text(
                               'Member $levelName',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: Color(0xFF18202A),
                                 fontFamily: 'Gilroy Bold',
                                 fontSize: 14,
                               ),
@@ -220,8 +211,8 @@ class _ProfileState extends State<Profile> {
                               MaterialPageRoute(builder: (_) => const LevelDetailScreen()),
                             ),
                             style: TextButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.2),
-                              foregroundColor: Colors.white,
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF20467A),
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -241,10 +232,10 @@ class _ProfileState extends State<Profile> {
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Wrap(
                   spacing: 10,
@@ -342,9 +333,9 @@ class _ProfileState extends State<Profile> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -479,9 +470,9 @@ class _ProfileState extends State<Profile> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Container(
@@ -539,9 +530,9 @@ class _ProfileState extends State<Profile> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -68,6 +68,7 @@ Future<void> main() async {
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.transparent,
             elevation: 0,
+            scrolledUnderElevation: 0,
             centerTitle: true,
             foregroundColor: grey900,
             iconTheme: IconThemeData(color: grey900),

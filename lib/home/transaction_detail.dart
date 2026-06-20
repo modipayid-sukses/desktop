@@ -730,7 +730,6 @@ class _TransactionDetailState extends State<TransactionDetail> {
     final providerLogo = _detectProviderLogo();
     final kind = _detectKind();
 
-    const headerBlue = Color(0xFF3F75B7);
     const pageBg = Color(0xFFF5F5F7);
 
     return Scaffold(
@@ -738,24 +737,18 @@ class _TransactionDetailState extends State<TransactionDetail> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Column(
-              children: [
-                Container(height: 170, color: headerBlue),
-                Expanded(child: Container(color: pageBg)),
-              ],
-            ),
+            child: Container(color: pageBg),
           ),
           SafeArea(
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+                  padding: const EdgeInsets.fromLTRB(4, 10, 14, 8),
                   child: Row(
                     children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Icon(Icons.close_rounded,
-                            color: Colors.white, size: 30),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
                       ),
                       const Expanded(
                         child: Text(
@@ -763,8 +756,8 @@ class _TransactionDetailState extends State<TransactionDetail> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Gilroy Bold',
-                            fontSize: 18,
-                            color: Colors.white,
+                            fontSize: 17,
+                            color: Color(0xFF1A1A1A),
                           ),
                         ),
                       ),

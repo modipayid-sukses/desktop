@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
+import '../../utils/responsive.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -196,7 +197,7 @@ class _PPOBEmoneyBrandScreenState extends State<PPOBEmoneyBrandScreen> {
 
     return Scaffold(
       backgroundColor: notifire.getprimerycolor,
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         elevation: 0,
         centerTitle: true,
         backgroundColor: Colors.transparent,

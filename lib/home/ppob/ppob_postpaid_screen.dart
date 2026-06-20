@@ -19,6 +19,7 @@ import '../../utils/color.dart';
 import '../../utils/media.dart';
 import '../../widgets/transaction_receipt.dart';
 import 'components/saved_customers_bottom_sheet.dart';
+import '../../utils/responsive.dart';
 import '../../design/design.dart';
 
 class PPOBPostpaidScreen extends StatefulWidget {
@@ -600,6 +601,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              if (!isDesktopPopup(context))
               Padding(
                 padding: EdgeInsets.fromLTRB(width / 20, height / 120, width / 20, 0),
                 child: Row(
@@ -632,6 +634,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                   ],
                 ),
               ),
+              if (!isDesktopPopup(context))
               SizedBox(height: height / 60),
 
               Padding(
@@ -683,39 +686,64 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                 padding: EdgeInsets.symmetric(horizontal: width / 20),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: notifire.gettabwhitecolor,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: notifire.getIsDark ? grey600 : grey200),
                   ),
-                  child: TextField(
-                    controller: _customerIdController,
-                    style: TextStyle(
-                      color: notifire.getdarkscolor,
-                      fontFamily: 'Gilroy Medium',
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) {
-                      if (_inquiryResult != null) {
-                        setState(() => _inquiryResult = null);
-                      }
-                    },
-                    decoration: InputDecoration(
-                      hintText: _getHintText(),
-                      hintStyle: TextStyle(
-                        color: notifire.getdarkgreycolor.withOpacity(0.6),
-                        fontFamily: 'Gilroy Medium',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                        child: Text(
+                          widget.title,
+                          style: TextStyle(
+                            color: notifire.getdarkscolor,
+                            fontFamily: 'Gilroy Bold',
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
-                      prefixIcon: Icon(_getInputIcon(), color: notifire.getbluecolor),
-                      suffixIcon: IconButton(
-                        icon: Icon(Icons.contact_page_outlined, color: notifire.getbluecolor),
-                        onPressed: _openSavedCustomers,
+                      const Divider(height: 0, color: Color(0xFFECEEF2)),
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F6F8),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                          ),
+                          child: TextField(
+                            controller: _customerIdController,
+                            style: TextStyle(
+                              color: notifire.getdarkscolor,
+                              fontFamily: 'Gilroy Medium',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) {
+                              if (_inquiryResult != null) {
+                                setState(() => _inquiryResult = null);
+                              }
+                            },
+                            decoration: InputDecoration(
+                              hintText: _getHintText(),
+                              hintStyle: TextStyle(
+                                color: notifire.getdarkgreycolor.withOpacity(0.6),
+                                fontFamily: 'Gilroy Medium',
+                              ),
+                              prefixIcon: Icon(_getInputIcon(), color: notifire.getbluecolor),
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.contact_page_outlined, color: notifire.getbluecolor),
+                                onPressed: _openSavedCustomers,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: width / 30,
+                                vertical: height / 60,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: width / 30,
-                        vertical: height / 60,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -1032,7 +1060,7 @@ class _PostpaidPinScreenState extends State<_PostpaidPinScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D47A1),
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
         backgroundColor: Colors.transparent,

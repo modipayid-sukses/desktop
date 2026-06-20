@@ -221,67 +221,36 @@ class _BankTransferInquiryScreenState extends State<BankTransferInquiryScreen> {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF182974),
-      appBar: AppBar(
-        leading: DesktopLeadingWrapper(child: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.all(8),
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.35)),
-            ),
-            child: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
-        )),
-        backgroundColor: const Color(0xFF182974),
-        elevation: 0,
-        title: DesktopTitleWrapper(child: const Text(
-          'Konfirmasi Transfer',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Gilroy Bold',
-          ),
-        )),
-        centerTitle: true,
-      ),
-      body: Stack(
+      backgroundColor: notifire.gettabwhitecolor,
+      body: Column(
         children: [
-          Positioned.fill(child: Container(color: const Color(0xFF182974))),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 70,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2A5B9C),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.elliptical(220, 90),
-                  bottomRight: Radius.elliptical(220, 90),
-                ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.arrow_back, color: notifire.getdarkscolor),
+                  ),
+                  Text(
+                    'Konfirmasi Transfer',
+                    style: TextStyle(
+                      color: notifire.getdarkscolor,
+                      fontFamily: 'Gilroy Bold',
+                      fontSize: 17,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          Positioned.fill(
-            top: 16,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
-                ),
-              ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(width / 20, 8, width / 20, 20),
               child: Column(
                 children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(width / 20, 28, width / 20, 20),
-                      child: Column(
-                        children: [
                           // ── Detail card ──
                           Container(
                             width: double.infinity,
@@ -401,10 +370,6 @@ class _BankTransferInquiryScreenState extends State<BankTransferInquiryScreen> {
                               ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),

@@ -51,6 +51,17 @@ class _PromoScreenState extends State<PromoScreen> {
 
   final _currencyFormat = NumberFormat('#,###', 'id_ID');
 
+  // Layar transaksi aktif di desktop, dirender di content pane (di samping
+  // sidebar) bukan sebagai Dialog mengambang — lihat _openTransaction.
+  Widget? _desktopActiveScreen;
+  // Key stabil agar Navigator bersarang tidak kehilangan stack rute saat
+  // parent rebuild selagi alur transaksi berlangsung di beberapa layar.
+  GlobalKey<NavigatorState>? _contentNavKey;
+  // Menu sidebar desktop yang sedang aktif/disorot. 'promo' adalah konteks
+  // "rumah" untuk halaman ini — diset balik tiap content pane ditutup.
+  String _activeDesktopMenu = 'promo';
+  String? _activeSubMenuName;
+
   @override
   void initState() {
     super.initState();
@@ -520,75 +531,103 @@ class _PromoScreenState extends State<PromoScreen> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen)).then((_) => _loadPromos());
   }
 
-  void _openTransaction(Widget screen, {BuildContext? customContext}) {
+  void _openTransaction(Widget screen, {BuildContext? customContext, String? menuKey}) {
     final ctx = customContext ?? context;
     if (!isDesktop(ctx)) {
       _navigateAndRefresh(screen);
       return;
     }
 
-    final isAlreadyInPopup = customContext != null && Theme.of(customContext).appBarTheme.elevation == 0.007;
-    if (isAlreadyInPopup) {
+    final isAlreadyInContentPane = customContext != null && Theme.of(customContext).appBarTheme.shadowColor == const Color(0xFF000007);
+    if (isAlreadyInContentPane) {
       Navigator.push(customContext, MaterialPageRoute(builder: (_) => screen));
       return;
     }
 
-    final screenSize = MediaQuery.of(context).size;
-    final modalWidth = 460.0;
-    final modalHeight = (screenSize.height * 0.88).clamp(560.0, 840.0);
+    setState(() {
+      _contentNavKey = GlobalKey<NavigatorState>();
+      _desktopActiveScreen = screen;
+      if (menuKey != null) {
+        _activeDesktopMenu = menuKey;
+        _activeSubMenuName = null;
+      }
+    });
+  }
 
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.45),
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Material(
-                  color: Colors.white,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => Navigator.of(dialogContext).pop(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Icon(Icons.close_rounded, size: 20, color: desktopTextPrimary),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: modalWidth,
-                height: modalHeight,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: MediaQuery(
-                    data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
-                    child: Theme(
-                      data: Theme.of(context).copyWith(
-                        appBarTheme: Theme.of(context).appBarTheme.copyWith(
-                          elevation: 0.007,
+  void _closeDesktopActiveScreen() {
+    setState(() {
+      _desktopActiveScreen = null;
+      _contentNavKey = null;
+      _activeDesktopMenu = 'promo';
+      _activeSubMenuName = null;
+    });
+    _loadPromos();
+  }
+
+  /// Content pane yang menampung layar transaksi aktif, ditampilkan di
+  /// tempat dashboard biasa berada (sidebar & topbar tetap utuh di
+  /// sekelilingnya). Navigator bersarang: agar layar lanjutan yang di-push
+  /// dari dalam alur transaksi (mis. konfirmasi, struk) tetap berada di
+  /// dalam pane ini, bukan keluar jadi halaman penuh.
+  Widget _buildDesktopContentPane(Widget screen) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextButton.icon(
+            onPressed: _closeDesktopActiveScreen,
+            icon: const Icon(Icons.arrow_back_rounded, size: 18, color: desktopTextSecondary),
+            label: const Text(
+              'Kembali',
+              style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 13, color: desktopTextSecondary),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              foregroundColor: desktopTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: Center(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  const modalWidth = 460.0;
+                  final modalHeight = constraints.maxHeight;
+                  return SizedBox(
+                    width: modalWidth,
+                    height: modalHeight,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: MediaQuery(
+                        data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
+                        child: Theme(
+                          data: Theme.of(context).copyWith(
+                            appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                              elevation: 0,
+                              scrolledUnderElevation: 0,
+                              shadowColor: const Color(0xFF000007),
+                            ),
+                          ),
+                          child: Navigator(
+                            key: _contentNavKey,
+                            onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                          ),
                         ),
                       ),
-                      child: Navigator(
-                        onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
-                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            ],
+            ),
           ),
-        );
-      },
-    ).then((_) => _loadPromos());
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmDesktopLogout(AuthProvider auth) async {
@@ -637,6 +676,25 @@ class _PromoScreenState extends State<PromoScreen> {
   }
 
   void _navigateToItem(Map<String, dynamic> item, {BuildContext? customContext}) {
+    final cmd = (item['cmd'] ?? '').toString().toLowerCase();
+    final isPostpaid = cmd == 'postpaid' ||
+        resolvePpobRouteType(item) == 'postpaid' ||
+        (item['category'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['name'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['brand'] ?? '').toString().toLowerCase().contains('bpjs') ||
+        (item['brand'] ?? '').toString().toLowerCase().contains('pdam');
+
+    setState(() {
+      _activeSubMenuName = item['name'] as String?;
+      if (isPostpaid) {
+        _activeDesktopMenu = 'postpaid';
+        _postpaidExpanded = true;
+      } else {
+        _activeDesktopMenu = 'prepaid';
+        _prepaidExpanded = true;
+      }
+    });
+
     // BPJS selalu pakai layar khusus (daftar produk dari admin panel).
     final brandLowerForBpjs = (item['brand'] ?? '').toString().toLowerCase();
     final categoryLowerForBpjs = (item['category'] ?? '').toString().toLowerCase();
@@ -791,7 +849,9 @@ class _PromoScreenState extends State<PromoScreen> {
               children: [
                 _buildDesktopTopbar(auth),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: _desktopActiveScreen != null
+                      ? _buildDesktopContentPane(_desktopActiveScreen!)
+                      : SingleChildScrollView(
                     padding: const EdgeInsets.all(28),
                     child: Align(
                       alignment: Alignment.topLeft,
@@ -983,13 +1043,15 @@ class _PromoScreenState extends State<PromoScreen> {
                   _desktopSidebarItem(
                     icon: Icons.account_balance_wallet_outlined,
                     label: 'Saldo',
-                    onTap: () => _openTransaction(const TopupChannelScreen()),
+                    active: _activeDesktopMenu == 'saldo',
+                    onTap: () => _openTransaction(const TopupChannelScreen(), menuKey: 'saldo'),
                   ),
                   _desktopSidebarItem(
                     icon: Icons.sim_card_outlined,
                     label: 'Prepaid',
                     expandable: true,
                     expanded: _prepaidExpanded,
+                    active: _activeDesktopMenu == 'prepaid',
                     onTap: () => setState(() => _prepaidExpanded = !_prepaidExpanded),
                   ),
                   if (_prepaidExpanded) _desktopSidebarSubItems(_pembelianItems),
@@ -998,13 +1060,14 @@ class _PromoScreenState extends State<PromoScreen> {
                     label: 'Postpaid',
                     expandable: true,
                     expanded: _postpaidExpanded,
+                    active: _activeDesktopMenu == 'postpaid',
                     onTap: () => setState(() => _postpaidExpanded = !_postpaidExpanded),
                   ),
                   if (_postpaidExpanded) _desktopSidebarSubItems(_pembayaranItems),
                   _desktopSidebarItem(
                     icon: Icons.local_offer_outlined,
                     label: 'Promo',
-                    active: true,
+                    active: _activeDesktopMenu == 'promo',
                     onTap: _loadPromos,
                   ),
                   _desktopSidebarItem(
@@ -1023,54 +1086,20 @@ class _PromoScreenState extends State<PromoScreen> {
                   _desktopSidebarItem(
                     icon: Icons.headset_mic_outlined,
                     label: 'Bantuan / CS',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const HelpSupport('Bantuan / CS'),
-                        ),
-                      );
-                    },
+                    active: _activeDesktopMenu == 'bantuan',
+                    onTap: () => _openTransaction(const HelpSupport('Bantuan / CS'), menuKey: 'bantuan'),
                   ),
                   _desktopSidebarItem(
                     icon: Icons.notifications_none_rounded,
                     label: 'Notifikasi',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const Notificationindex(CustomStrings.notification),
-                        ),
-                      );
-                    },
+                    active: _activeDesktopMenu == 'notifikasi',
+                    onTap: () => _openTransaction(const Notificationindex(CustomStrings.notification), menuKey: 'notifikasi'),
                   ),
                   _desktopSidebarItem(
                     icon: Icons.person_outline_rounded,
                     label: 'Akun Saya',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const profile_page.Profile(),
-                        ),
-                      );
-                    },
-                  ),
-                  _desktopSidebarItem(
-                    icon: Icons.settings_outlined,
-                    label: 'Pengaturan',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const profile_page.Profile(),
-                        ),
-                      );
-                    },
+                    active: _activeDesktopMenu == 'akun',
+                    onTap: () => _openTransaction(const profile_page.Profile(), menuKey: 'akun'),
                   ),
                   _desktopSidebarItem(
                     icon: Icons.logout_rounded,
@@ -1172,6 +1201,7 @@ class _PromoScreenState extends State<PromoScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: items.map((item) {
           final label = item['name'] as String? ?? '';
+          final isSubActive = _activeSubMenuName == item['name'];
           return InkWell(
             onTap: () => _navigateToItem(item),
             borderRadius: BorderRadius.circular(6),
@@ -1180,8 +1210,8 @@ class _PromoScreenState extends State<PromoScreen> {
               child: Text(
                 label,
                 style: GoogleFonts.hankenGrotesk(
-                  color: Colors.white.withOpacity(0.6),
-                  fontWeight: FontWeight.w500,
+                  color: isSubActive ? Colors.white : Colors.white.withOpacity(0.6),
+                  fontWeight: isSubActive ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 12,
                 ),
               ),
@@ -1192,6 +1222,32 @@ class _PromoScreenState extends State<PromoScreen> {
     );
   }
 
+  String _getDesktopTopbarTitle() {
+    if (_desktopActiveScreen == null) {
+      return 'Promo';
+    }
+    switch (_activeDesktopMenu) {
+      case 'saldo':
+        return 'Saldo';
+      case 'prepaid':
+        return 'Prepaid';
+      case 'postpaid':
+        return 'Postpaid';
+      case 'promo':
+        return 'Promo';
+      case 'riwayat':
+        return 'Riwayat Transaksi';
+      case 'bantuan':
+        return 'Bantuan / CS';
+      case 'notifikasi':
+        return 'Notifikasi';
+      case 'akun':
+        return 'Akun Saya';
+      default:
+        return 'Promo';
+    }
+  }
+
   Widget _buildDesktopTopbar(AuthProvider auth) {
     return Container(
       height: 72,
@@ -1199,6 +1255,7 @@ class _PromoScreenState extends State<PromoScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Row(
         children: [
+          Text(_getDesktopTopbarTitle(), style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 18, color: desktopTextPrimary)),
           const Spacer(),
           Container(
             height: 40,

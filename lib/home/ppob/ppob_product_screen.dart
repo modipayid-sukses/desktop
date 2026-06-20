@@ -26,6 +26,7 @@ import '../topup/topupcard/confirmpayment.dart';
 import 'components/ppob_numpad.dart';
 import 'components/ppob_cellular_form.dart';
 import 'components/saved_customers_bottom_sheet.dart';
+import '../../utils/responsive.dart';
 import '../../design/design.dart';
 
 
@@ -2101,8 +2102,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                       horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E9EE)),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     children: [
@@ -2171,8 +2171,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E9EE)),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: TextField(
         controller: _hubSearchCtrl,
@@ -2266,8 +2265,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                       horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E9EE)),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     children: [
@@ -2428,8 +2426,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE5E9EE)),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3726,7 +3723,6 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     final textPrimary = const Color(0xFF1D1D1D);
     final textSecondary = const Color(0xFF6B7280);
     final accent = const Color(0xFF3F6FB4);
-    final headerBlue = const Color(0xFF3F6FB4);
     final pageBg = const Color(0xFFFAFAFA);
     final hasCustomerInput = _customerIdController.text.trim().isNotEmpty;
     final isPlnPrabayarTab = _isPln && _plnTabIndex == 0;
@@ -3795,20 +3791,22 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
               ),
             )
           : null,
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        backgroundColor: headerBlue,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
-          statusBarColor: Colors.transparent,
+        backgroundColor: pageBg,
+        leading: DesktopLeadingWrapper(
+          child: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.arrow_back, color: textPrimary),
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: textPrimary),
         title: DesktopTitleWrapper(child: Text(
           widget.title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: textPrimary,
             fontFamily: 'Gilroy Bold',
             fontSize: 18,
           ),
@@ -3823,152 +3821,166 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
               children: [
                 if (!_isInternetHub && !_isMultifinanceHub)
                 Container(
-                  color: headerBlue,
+                  color: pageBg,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          // Prioritas: config dari admin → heuristik existing.
-                          widget.configInputLabel != null &&
-                                  widget.configInputLabel!.trim().isNotEmpty
-                              ? widget.configInputLabel!
-                              : _isPln
-                                  ? 'IDPEL'
-                                  : _isTopupGameFiltered
-                                      ? 'ID Player'
-                                      : (_isCategoryInquiry
-                                          ? 'ID Pelanggan'
-                                          : 'Masukan Nomor HP'),
-                          style: const TextStyle(
-                            color: Color(0xFF121212),
-                            fontFamily: 'Gilroy Bold',
-                            fontSize: 15,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                          child: Text(
+                            widget.title,
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontFamily: 'Gilroy Bold',
+                              fontSize: 18,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3F4F6),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: const Color(0xFFD4D8DF)),
-                                ),
-                                child: TextField(
-                                  controller: _customerIdController,
-                                  focusNode: _customerIdFocusNode,
-                                  readOnly: _enableCustomNumpad,
-                                  showCursor: true,
-                                  keyboardType: TextInputType.phone,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly
-                                  ],
-                                  style: TextStyle(
-                                    color: textPrimary,
-                                    fontFamily: 'Gilroy Medium',
-                                    fontSize: 14,
+                        const Divider(height: 0, color: Color(0xFFECEEF2)),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                          child: Text(
+                            // Prioritas: config dari admin → heuristik existing.
+                            widget.configInputLabel != null &&
+                                    widget.configInputLabel!.trim().isNotEmpty
+                                ? widget.configInputLabel!
+                                : _isPln
+                                    ? 'IDPEL'
+                                    : _isTopupGameFiltered
+                                        ? 'ID Player'
+                                        : (_isCategoryInquiry
+                                            ? 'ID Pelanggan'
+                                            : 'Masukan Nomor HP'),
+                            style: const TextStyle(
+                              color: Color(0xFF121212),
+                              fontFamily: 'Gilroy Bold',
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF5F6F8),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  onChanged: (value) {
-                                    final digitsOnly =
-                                        value.replaceAll(RegExp(r'[^0-9]'), '');
-                                    if (value != digitsOnly) {
-                                      _setCustomerId(digitsOnly);
-                                      return;
-                                    }
-                                    _onCustomerInputChanged();
-
-                                    if (_isPln && _plnTabIndex == 1) {
-                                      if (_plnPostpaidInquiryResult != null ||
-                                          _plnPostpaidError != null) {
-                                        setState(() {
-                                          _plnPostpaidInquiryResult = null;
-                                          _plnPostpaidError = null;
-                                        });
-                                      }
-                                    }
-                                    if (_isCategoryInquiry) {
-                                      if (_bpjsInquiryResult != null ||
-                                          _bpjsInquiryError != null) {
-                                        setState(() {
-                                          _bpjsInquiryResult = null;
-                                          _bpjsInquiryError = null;
-                                        });
-                                      }
-                                    }
-                                  },
-                                  onTap: () {
-                                    if (!_customerIdFocusNode.hasFocus) {
-                                      _customerIdFocusNode.requestFocus();
-                                    }
-                                    _showCustomNumpadSafely();
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText: widget.configInputHint != null &&
-                                            widget.configInputHint!
-                                                .trim()
-                                                .isNotEmpty
-                                        ? widget.configInputHint!
-                                        : _isPln
-                                            ? 'IDPEL : 1122xxxx'
-                                            : _isTopupGameFiltered
-                                                ? 'Masukkan ID Player'
-                                                : _isCategoryInquiry
-                                                    ? _categoryInquiryHint()
-                                                    : 'Contoh : 08xxxxxxxxxx',
-                                    hintStyle: TextStyle(
-                                      color:
-                                          textSecondary.withValues(alpha: 0.6),
+                                  child: TextField(
+                                    controller: _customerIdController,
+                                    focusNode: _customerIdFocusNode,
+                                    readOnly: _enableCustomNumpad,
+                                    showCursor: true,
+                                    keyboardType: TextInputType.phone,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly
+                                    ],
+                                    style: TextStyle(
+                                      color: textPrimary,
                                       fontFamily: 'Gilroy Medium',
+                                      fontSize: 14,
                                     ),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
+                                    onChanged: (value) {
+                                      final digitsOnly =
+                                          value.replaceAll(RegExp(r'[^0-9]'), '');
+                                      if (value != digitsOnly) {
+                                        _setCustomerId(digitsOnly);
+                                        return;
+                                      }
+                                      _onCustomerInputChanged();
+
+                                      if (_isPln && _plnTabIndex == 1) {
+                                        if (_plnPostpaidInquiryResult != null ||
+                                            _plnPostpaidError != null) {
+                                          setState(() {
+                                            _plnPostpaidInquiryResult = null;
+                                            _plnPostpaidError = null;
+                                          });
+                                        }
+                                      }
+                                      if (_isCategoryInquiry) {
+                                        if (_bpjsInquiryResult != null ||
+                                            _bpjsInquiryError != null) {
+                                          setState(() {
+                                            _bpjsInquiryResult = null;
+                                            _bpjsInquiryError = null;
+                                          });
+                                        }
+                                      }
+                                    },
+                                    onTap: () {
+                                      if (!_customerIdFocusNode.hasFocus) {
+                                        _customerIdFocusNode.requestFocus();
+                                      }
+                                      _showCustomNumpadSafely();
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: widget.configInputHint != null &&
+                                              widget.configInputHint!
+                                                  .trim()
+                                                  .isNotEmpty
+                                          ? widget.configInputHint!
+                                          : _isPln
+                                              ? 'IDPEL : 1122xxxx'
+                                              : _isTopupGameFiltered
+                                                  ? 'Masukkan ID Player'
+                                                  : _isCategoryInquiry
+                                                      ? _categoryInquiryHint()
+                                                      : 'Contoh : 08xxxxxxxxxx',
+                                      hintStyle: TextStyle(
+                                        color:
+                                            textSecondary.withValues(alpha: 0.6),
+                                        fontFamily: 'Gilroy Medium',
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(8),
-                              onTap: () => _openSavedCustomers(accent),
-                              child: Padding(
-                                padding: const EdgeInsets.all(2),
-                                child: Icon(
-                                  Icons.contact_page_outlined,
-                                  color: accent,
-                                  size: 34,
-                                ),
-                              ),
-                            ),
-                            if (_isPhoneNumberInput) ...[
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 10),
                               InkWell(
                                 borderRadius: BorderRadius.circular(8),
-                                onTap: _pickNumberFromContact,
+                                onTap: () => _openSavedCustomers(accent),
                                 child: Padding(
                                   padding: const EdgeInsets.all(2),
                                   child: Icon(
-                                    Icons.contacts_rounded,
+                                    Icons.contact_page_outlined,
                                     color: accent,
                                     size: 34,
                                   ),
                                 ),
                               ),
+                              if (_isPhoneNumberInput) ...[
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: _pickNumberFromContact,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2),
+                                    child: Icon(
+                                      Icons.contacts_rounded,
+                                      color: accent,
+                                      size: 34,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ],
                     ),
@@ -5234,7 +5246,7 @@ class _PlnPostpaidInlinePinScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D47A1),
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -5548,7 +5560,7 @@ class _PpobTransactionDetailTemplatePageState
 
     return Scaffold(
       backgroundColor: notifire.getprimerycolor,
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         backgroundColor: notifire.getprimerycolor,
         elevation: 0,
         foregroundColor: textPrimary,

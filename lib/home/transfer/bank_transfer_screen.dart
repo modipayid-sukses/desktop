@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/services.dart';
+import '../../utils/responsive.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -197,181 +197,212 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF182974),
-      appBar: AppBar(
-        leading: DesktopLeadingWrapper(child: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.all(8),
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.35)),
-            ),
-            child: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
-        )),
-        backgroundColor: const Color(0xFF182974),
-        elevation: 0,
-        title: DesktopTitleWrapper(child: const Text(
-          'Transfer Bank',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Gilroy Bold',
-          ),
-        )),
-        centerTitle: true,
-      ),
-      body: Stack(
+      backgroundColor: const Color(0xFFF8F9FD),
+      body: Column(
         children: [
-          Positioned.fill(child: Container(color: const Color(0xFF182974))),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 70,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2A5B9C),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.elliptical(220, 90),
-                  bottomRight: Radius.elliptical(220, 90),
-                ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
+              child: Row(
+                children: [
+                  if (!isDesktop(context))
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.arrow_back, color: notifire.getdarkscolor),
+                    )
+                  else
+                    const SizedBox(width: 16),
+                  Text(
+                    'Transfer Bank',
+                    style: TextStyle(
+                      color: notifire.getdarkscolor,
+                      fontFamily: 'Gilroy Bold',
+                      fontSize: 17,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          Positioned.fill(
-            top: 16,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
+          Expanded(
+            child: _loadingBanks
+                ? Center(
+                    child: CircularProgressIndicator(
+                        color: notifire.getbluecolor))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF16215C).withOpacity(0.06),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _fieldLabel('Pilih Bank Tujuan'),
+                              const SizedBox(height: 8),
+                              _buildBankSelector(),
+                              const SizedBox(height: 20),
+                              _fieldLabel('Nomor Rekening'),
+                              const SizedBox(height: 8),
+                              _buildAccountField(),
+                              const SizedBox(height: 20),
+                              _fieldLabel('Jumlah Transfer'),
+                              const SizedBox(height: 8),
+                              _buildAmountField(),
+                              const SizedBox(height: 12),
+                              _buildQuickAmounts(),
+                              const SizedBox(height: 20),
+                              _fieldLabel('Catatan (Opsional)'),
+                              const SizedBox(height: 8),
+                              _buildNotesField(),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.lock_outline_rounded,
+                                size: 16, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Transaksi aman dan terenkripsi',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontFamily: 'Gilroy Medium',
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+          _buildBottomPanel(),
+        ],
+      ),
+    );
+  }
+
+  Widget _fieldLabel(String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: Colors.grey[750],
+        fontFamily: 'Gilroy Medium',
+        fontSize: 14,
+      ),
+    );
+  }
+
+  Widget _buildBankSelector() {
+    return GestureDetector(
+      onTap: _showBankPicker,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F6F8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            if (_selectedBank != null) ...[
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: notifire.getbluecolor.withOpacity(0.1),
+                child: Text(
+                  _selectedBank!['name'].toString().isNotEmpty
+                      ? _selectedBank!['name'].toString()[0].toUpperCase()
+                      : 'B',
+                  style: TextStyle(
+                    color: notifire.getbluecolor,
+                    fontFamily: 'Gilroy Bold',
+                    fontSize: 12,
+                  ),
                 ),
               ),
-              child: _loadingBanks
-                  ? Center(
-                      child:
-                          CircularProgressIndicator(color: notifire.getbluecolor))
-                  : SingleChildScrollView(
-                      padding:
-                          EdgeInsets.fromLTRB(width / 20, 28, width / 20, 32),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // ── Bank Tujuan ──
-                          _simpleLabel('Bank Tujuan'),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: _showBankPicker,
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF7F8FA),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: _selectedBank != null
-                                      ? notifire.getbluecolor.withOpacity(0.3)
-                                      : Colors.grey.withOpacity(0.15),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _selectedBank?['name'] ??
-                                          'Pilih bank tujuan',
-                                      style: TextStyle(
-                                        color: _selectedBank != null
-                                            ? notifire.getdarkscolor
-                                            : Colors.grey[400],
-                                        fontFamily: 'Gilroy Medium',
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(Icons.keyboard_arrow_down_rounded,
-                                      color: Colors.grey[400], size: 22),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 22),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(
+                _selectedBank?['name'] ?? 'Pilih bank tujuan',
+                style: TextStyle(
+                  color: _selectedBank != null
+                      ? notifire.getdarkscolor
+                      : Colors.grey[600],
+                  fontFamily: 'Gilroy Medium',
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                color: Colors.grey[600], size: 22),
+          ],
+        ),
+      ),
+    );
+  }
 
-                          // ── Nomor Rekening ──
-                          _simpleLabel('Nomor Rekening'),
-                          const SizedBox(height: 4),
-                          _underlineTextField(
-                            controller: _accountController,
-                            hint: 'Masukkan nomor rekening',
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
-                            ],
-                          ),
-                          const SizedBox(height: 22),
-
-                          // ── Jumlah Transfer ──
-                          _simpleLabel('Jumlah Transfer'),
-                          const SizedBox(height: 4),
-                          _underlineTextField(
-                            controller: _amountController,
-                            hint: '0',
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
-                            ],
-                            onChanged: _onAmountChanged,
-                            prefixText: 'Rp ',
-                          ),
-                          const SizedBox(height: 22),
-
-                          // ── Catatan ──
-                          _simpleLabel('Catatan'),
-                          const SizedBox(height: 4),
-                          _underlineTextField(
-                            controller: _notesController,
-                            hint: 'Opsional',
-                            keyboardType: TextInputType.text,
-                          ),
-                          const SizedBox(height: 36),
-
-                          // ── Submit button ──
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _goToInquiry,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: notifire.getbluecolor,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                                elevation: 0,
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2),
-                                    )
-                                  : Text(
-                                      'Transfer Sekarang',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Gilroy Bold',
-                                        fontSize: height / 50,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+  Widget _buildAccountField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6F8),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _accountController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: TextStyle(
+                color: notifire.getdarkscolor,
+                fontFamily: 'Gilroy Medium',
+                fontSize: 15,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Masukkan nomor rekening',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  fontFamily: 'Gilroy Medium',
+                  fontSize: 15,
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: _goToInquiry,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Cek',
+                style: TextStyle(
+                  color: notifire.getbluecolor,
+                  fontFamily: 'Gilroy Bold',
+                  fontSize: 15,
+                ),
+              ),
             ),
           ),
         ],
@@ -379,59 +410,191 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
     );
   }
 
-  Widget _simpleLabel(String label) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: Colors.grey[600],
-        fontFamily: 'Gilroy Medium',
-        fontSize: 13,
+  Widget _buildAmountField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6F8),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: _amountController,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        onChanged: _onAmountChanged,
+        style: TextStyle(
+          color: notifire.getdarkscolor,
+          fontFamily: 'Gilroy Bold',
+          fontSize: 18,
+        ),
+        decoration: InputDecoration(
+          prefixText: 'Rp ',
+          prefixStyle: TextStyle(
+            color: notifire.getdarkscolor,
+            fontFamily: 'Gilroy Bold',
+            fontSize: 18,
+          ),
+          hintText: '0',
+          hintStyle: TextStyle(
+            color: Colors.grey[400],
+            fontFamily: 'Gilroy Bold',
+            fontSize: 18,
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+        ),
       ),
     );
   }
 
-  Widget _underlineTextField({
-    required TextEditingController controller,
-    required String hint,
-    TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters,
-    void Function(String)? onChanged,
-    String? prefixText,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      onChanged: onChanged,
-      style: TextStyle(
-        color: notifire.getdarkscolor,
-        fontFamily: 'Gilroy Medium',
-        fontSize: 16,
+  Widget _buildQuickAmounts() {
+    final List<int> quickAmounts = [50000, 100000, 500000];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: quickAmounts.map((amount) {
+        return GestureDetector(
+          onTap: () {
+            _amountController.text = _currencyFormat.format(amount);
+            setState(() {});
+          },
+          child: Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.withOpacity(0.35)),
+            ),
+            child: Text(
+              'Rp ${_currencyFormat.format(amount)}',
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontFamily: 'Gilroy Medium',
+                fontSize: 13,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildNotesField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6F8),
+        borderRadius: BorderRadius.circular(12),
       ),
-      decoration: InputDecoration(
-        prefixText: prefixText,
-        prefixStyle: TextStyle(
+      child: TextField(
+        controller: _notesController,
+        keyboardType: TextInputType.text,
+        maxLines: 3,
+        style: TextStyle(
           color: notifire.getdarkscolor,
-          fontFamily: 'Gilroy Medium',
-          fontSize: 16,
-        ),
-        hintText: hint,
-        hintStyle: TextStyle(
-          color: Colors.grey[350],
           fontFamily: 'Gilroy Medium',
           fontSize: 15,
         ),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        border: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey.withOpacity(0.25)),
+        decoration: InputDecoration(
+          hintText: 'Tambah catatan untuk transfer ini...',
+          hintStyle: TextStyle(
+            color: Colors.grey[400],
+            fontFamily: 'Gilroy Medium',
+            fontSize: 14,
+          ),
+          contentPadding: const EdgeInsets.all(16),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
         ),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey.withOpacity(0.25)),
-        ),
-        focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: notifire.getbluecolor, width: 1.5),
-        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomPanel() {
+    final adminFee = _selectedBank != null
+        ? (double.tryParse((_selectedBank!['total_fee'] ??
+                    _selectedBank!['admin'] ??
+                    0)
+                .toString()) ??
+            2500.0)
+        : 2500.0;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        MediaQuery.of(context).padding.bottom + 16,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+            top: BorderSide(color: Colors.grey.withOpacity(0.15))),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Biaya Admin',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontFamily: 'Gilroy Medium',
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                'Rp ${_currencyFormat.format(adminFee.toInt())}',
+                style: TextStyle(
+                  color: notifire.getdarkscolor,
+                  fontFamily: 'Gilroy Bold',
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _goToInquiry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: notifire.getbluecolor,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Transfer Sekarang',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Gilroy Bold',
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 18),
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -471,15 +471,16 @@ class _QrisCustomerPaymentScreenState extends State<QrisCustomerPaymentScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D47A1),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1D1D1D),
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: DesktopTitleWrapper(child: const Text(
           'Pembayaran QRIS',
-          style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18),
+          style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 18, color: Color(0xFF1D1D1D)),
         )),
         leading: DesktopLeadingWrapper(child: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Color(0xFF1D1D1D)),
           onPressed: () => Navigator.pop(context),
         )),
       ),

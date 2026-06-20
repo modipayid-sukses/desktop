@@ -10,6 +10,7 @@ import 'package:modipay/services/receipt_settings_service.dart';
 import 'package:modipay/widgets/purchase_receipt.dart';
 import 'package:modipay/widgets/pln_prepaid_receipt.dart';
 import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -231,9 +232,10 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
+      appBar: isDesktopPopup(context) ? null : AppBar(
         backgroundColor: Colors.white,
-        elevation: 0.5,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: DesktopLeadingWrapper(child: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: const Icon(Icons.arrow_back_ios_new_rounded,

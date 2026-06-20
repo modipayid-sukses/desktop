@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
 import 'package:modipay/home/transfer/sendall.dart';
+import '../../utils/responsive.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -412,118 +413,66 @@ class _SendMoneyState extends State<SendMoney> {
     final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Container(
-            height: height,
-            width: width,
-            color: Colors.transparent,
-            child: Image.asset(
-              "images/background.png",
-              fit: BoxFit.cover,
-            ),
+      appBar: isDesktopPopup(context) ? null : AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF182974)),
+        ),
+        title: const Text(
+          'Kirim uang',
+          style: TextStyle(fontSize: 17, fontFamily: 'Gilroy Bold', color: Color(0xFF182974)),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: _showAddContactDialog,
+            icon: const Icon(Icons.add, color: Color(0xFF182974)),
           ),
-          Column(
+        ],
+      ),
+      body: Column(
             children: [
-              Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF182974), Color(0xFF3567A9)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              Padding(
+                padding: EdgeInsets.fromLTRB(width / 20, 8, width / 20, 0),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: false,
+                  style: TextStyle(
+                    fontSize: height / 50,
+                    color: const Color(0xFF182974),
                   ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
-                  ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(width / 20, 8, width / 20, 24),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                height: 40,
-                                width: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                ),
-                                child: const Icon(Icons.arrow_back, color: Colors.white),
-                              ),
-                            ),
-                            const Expanded(
-                              child: Text(
-                                'Kirim uang',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontFamily: 'Gilroy Bold',
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _showAddContactDialog,
-                              child: Container(
-                                height: 40,
-                                width: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                ),
-                                child: const Icon(Icons.add, color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: height / 45),
-                        TextField(
-                          controller: _searchController,
-                          autofocus: false,
-                          style: TextStyle(
-                            fontSize: height / 50,
-                            color: const Color(0xFF182974),
-                          ),
-                          onChanged: (val) {
-                            setState(() {
-                              _searchQuery = val.trim();
-                            });
-                          },
-                          decoration: InputDecoration(
-                            hintText: "Cari kontak..",
-                            filled: true,
-                            fillColor: Colors.white,
-                            hintStyle: TextStyle(color: const Color(0xFF3567A9).withOpacity(0.5), fontSize: height / 60),
-                            prefixIcon: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.asset(
-                                "images/search.png",
-                                color: const Color(0xFF3567A9),
-                                height: 20,
-                              ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.3)),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: const Color(0xFF3567A9).withOpacity(0.3)),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Color(0xFF182974), width: 1.5),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
-                      ],
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val.trim();
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: "Cari kontak..",
+                    filled: true,
+                    fillColor: const Color(0xFFF5F6F8),
+                    hintStyle: TextStyle(color: const Color(0xFF3567A9).withOpacity(0.5), fontSize: height / 60),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Image.asset(
+                        "images/search.png",
+                        color: const Color(0xFF3567A9),
+                        height: 20,
+                      ),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: const BorderSide(color: Color(0xFF182974), width: 1.5),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
@@ -618,8 +567,6 @@ class _SendMoneyState extends State<SendMoney> {
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 }

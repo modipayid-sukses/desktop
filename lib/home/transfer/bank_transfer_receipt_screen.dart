@@ -175,7 +175,6 @@ class _BankTransferReceiptScreenState extends State<BankTransferReceiptScreen> {
     final detailDateFormat = DateFormat('dd MMM yyyy, HH:mm:ss', 'id_ID');
     final now = widget.transactionTime;
 
-    const headerBlue = Color(0xFF3F75B7);
     const pageBg = Color(0xFFF5F5F7);
     final amountText = 'Rp ${currencyFormat.format(widget.amount.toInt())}';
     final adminText = widget.admin > 0
@@ -188,32 +187,27 @@ class _BankTransferReceiptScreenState extends State<BankTransferReceiptScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Column(
-              children: [
-                Container(height: 170, color: headerBlue),
-                Expanded(child: Container(color: pageBg)),
-              ],
-            ),
+            child: Container(color: pageBg),
           ),
           SafeArea(
             child: Column(
               children: [
                 // ── Header ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+                  padding: const EdgeInsets.fromLTRB(4, 10, 14, 8),
                   child: Row(
                     children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pushAndRemoveUntil(
+                      IconButton(
+                        onPressed: () => Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
                               builder: (_) => const Bottombar()),
                           (route) => false,
                         ),
-                        child: const Icon(
+                        icon: const Icon(
                           Icons.close_rounded,
-                          color: Colors.white,
-                          size: 30,
+                          color: Color(0xFF1A1A1A),
+                          size: 26,
                         ),
                       ),
                       const Expanded(
@@ -222,8 +216,8 @@ class _BankTransferReceiptScreenState extends State<BankTransferReceiptScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Gilroy Bold',
-                            fontSize: 18,
-                            color: Colors.white,
+                            fontSize: 17,
+                            color: Color(0xFF1A1A1A),
                           ),
                         ),
                       ),

@@ -6,9 +6,9 @@ class DesktopTitleWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If the elevation in appBarTheme is our special flag (0.007),
+    // If the shadowColor in appBarTheme is our special flag (0xFF000007),
     // it means we are inside the desktop popup!
-    final isPopup = Theme.of(context).appBarTheme.elevation == 0.007;
+    final isPopup = Theme.of(context).appBarTheme.shadowColor == const Color(0xFF000007);
     if (isPopup) {
       return const SizedBox.shrink();
     }
@@ -26,7 +26,7 @@ class DesktopLeadingWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPopup = Theme.of(context).appBarTheme.elevation == 0.007;
+    final isPopup = Theme.of(context).appBarTheme.shadowColor == const Color(0xFF000007);
     final isFirstInPopup = isPopup && (ModalRoute.of(context)?.isFirst ?? false);
     if (isFirstInPopup) {
       return const SizedBox.shrink();

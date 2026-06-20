@@ -20,6 +20,7 @@ import '../../services/tts_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
 import '../../design/design.dart';
+import '../../widgets/desktop_title_wrapper.dart';
 
 /// Parse server datetime string as UTC → local.
 DateTime _parseServerDt(String s) {
@@ -528,63 +529,37 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      body: Stack(
-        children: [
-          // Header gradient
-          Container(
-            height: MediaQuery.of(context).padding.top + 180,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0D47A1), Color(0xFF42A5F5)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF9FAFB),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: DesktopLeadingWrapper(
+          child: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
           ),
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                // Top bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('QRIS Merchant', style: TextStyle(color: Colors.white, fontFamily: 'Gilroy Bold', fontSize: 18)),
-                            Text(businessName, style: TextStyle(color: Colors.white.withOpacity(0.7), fontFamily: 'Gilroy Medium', fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _loadData,
-                        child: Container(
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+        ),
+        title: DesktopTitleWrapper(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('QRIS Merchant', style: TextStyle(color: Color(0xFF111827), fontFamily: 'Gilroy Bold', fontSize: 16)),
+              Text(businessName, style: TextStyle(color: Colors.grey.shade600, fontFamily: 'Gilroy Medium', fontSize: 12)),
+            ],
+          ),
+        ),
+        actions: [
+          IconButton(
+            onPressed: _loadData,
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF111827)),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
                 // Balance card
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -704,9 +679,6 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
               ],
             ),
           ),
-
-        ],
-      ),
     );
   }
 
