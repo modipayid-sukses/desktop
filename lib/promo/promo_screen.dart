@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,7 +29,6 @@ import 'package:modipay/home/ppob/ppob_postpaid_screen.dart';
 import 'package:modipay/home/ppob/ppob_emoney_brand_screen.dart';
 import 'package:modipay/home/ppob/ppob_topup_game_list_screen.dart';
 import 'package:modipay/home/ppob/ppob_all_services_screen.dart';
-import 'package:modipay/home/ppob/nfc_toll_scan_screen.dart';
 import 'package:modipay/home/transfer/bank_transfer_screen.dart';
 import 'package:modipay/home/qris/qris_scan_screen.dart';
 import 'package:intl/intl.dart';
@@ -310,17 +310,23 @@ class _PromoScreenState extends State<PromoScreen> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PPOBProductScreen(
-              category: category,
-              title: brand.isNotEmpty ? brand : category,
-              cmd: p['cmd'] ?? 'prepaid',
-              initialBrand: brand.isNotEmpty ? brand : null,
-            ),
-          ),
-        );
+        // Lewat _navigateToItem (bukan push langsung) supaya promo mendarat
+        // di layar yang SAMA dengan kalau user tap menu Prepaid/Postpaid
+        // biasa (mis. promo "Paket Data" → Prepaid > Paket Data, promo
+        // "Pulsa" → Prepaid > Pulsa), termasuk kasus khusus BPJS/PDAM/
+        // e-wallet/postpaid yang route-nya berbeda dari produk biasa.
+        _navigateToItem(<String, dynamic>{
+          'name': productName,
+          'category': category,
+          'brand': brand,
+          'cmd': p['cmd'] ?? 'prepaid',
+          'inquiryType': p['inquiry_type'] ?? p['inquiryType'],
+          'initialBrand': brand.isNotEmpty
+              ? brand
+              : (p['initial_brand'] ?? p['initialBrand']),
+          'postpaid': p['is_postpaid'] == true || p['postpaid'] == true,
+          'productTypeFilter': p['product_type_filter'] ?? p['product_type'],
+        });
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -359,6 +365,8 @@ class _PromoScreenState extends State<PromoScreen> {
                       children: [
                         Text(
                           productName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Color(0xFF111827),
                             fontSize: 14,
@@ -368,6 +376,8 @@ class _PromoScreenState extends State<PromoScreen> {
                         const SizedBox(height: 2),
                         Text(
                           '$brand • $category',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontSize: 11,
@@ -523,6 +533,7 @@ class _PromoScreenState extends State<PromoScreen> {
       setState(() {
         _pembelianItems  = parseGroup(data['pembelian']  as List? ?? [], 'prepaid');
         _pembayaranItems = parseGroup(data['pembayaran'] as List? ?? [], 'pasca');
+        reclassifyPostpaidItems(_pembelianItems, _pembayaranItems);
       });
     }
   }
@@ -544,24 +555,33 @@ class _PromoScreenState extends State<PromoScreen> {
       return;
     }
 
-    setState(() {
-      _contentNavKey = GlobalKey<NavigatorState>();
-      _desktopActiveScreen = screen;
-      if (menuKey != null) {
-        _activeDesktopMenu = menuKey;
-        _activeSubMenuName = null;
-      }
+    // Tunda ke frame berikutnya agar tidak menghapus widget yang sedang
+    // di-hover mouse di tengah pemrosesan pointer event (lihat fix serupa
+    // di home.dart _openTransaction untuk detail bug MouseTracker-nya).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _contentNavKey = GlobalKey<NavigatorState>();
+        _desktopActiveScreen = screen;
+        if (menuKey != null) {
+          _activeDesktopMenu = menuKey;
+          _activeSubMenuName = null;
+        }
+      });
     });
   }
 
   void _closeDesktopActiveScreen() {
-    setState(() {
-      _desktopActiveScreen = null;
-      _contentNavKey = null;
-      _activeDesktopMenu = 'promo';
-      _activeSubMenuName = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _desktopActiveScreen = null;
+        _contentNavKey = null;
+        _activeDesktopMenu = 'promo';
+        _activeSubMenuName = null;
+      });
+      _loadPromos();
     });
-    _loadPromos();
   }
 
   /// Content pane yang menampung layar transaksi aktif, ditampilkan di
@@ -677,10 +697,16 @@ class _PromoScreenState extends State<PromoScreen> {
 
   void _navigateToItem(Map<String, dynamic> item, {BuildContext? customContext}) {
     final cmd = (item['cmd'] ?? '').toString().toLowerCase();
+    // 'pasca' adalah konvensi cmd untuk item Postpaid di seluruh app (lihat
+    // reclassifyPostpaidItems, parseGroup(pembayaran, 'pasca')) — cek string
+    // 'postpaid' saja tidak menangkap nama seperti "PLN Pasca"/"PLN Pascabayar".
     final isPostpaid = cmd == 'postpaid' ||
+        cmd == 'pasca' ||
         resolvePpobRouteType(item) == 'postpaid' ||
         (item['category'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['category'] ?? '').toString().toLowerCase().contains('pasca') ||
         (item['name'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['name'] ?? '').toString().toLowerCase().contains('pasca') ||
         (item['brand'] ?? '').toString().toLowerCase().contains('bpjs') ||
         (item['brand'] ?? '').toString().toLowerCase().contains('pdam');
 
@@ -721,8 +747,6 @@ class _PromoScreenState extends State<PromoScreen> {
     final routeType = resolvePpobRouteType(item);
     if (routeType == 'all_services') {
       _openTransaction(const PPOBAllServicesScreen(), customContext: customContext);
-    } else if (routeType == 'nfc_toll') {
-      _openTransaction(const NfcTollScanScreen(), customContext: customContext);
     } else if (routeType == 'bank_transfer') {
       _openTransaction(const BankTransferScreen(), customContext: customContext);
     } else if (routeType == 'qris_payment') {
@@ -966,7 +990,10 @@ class _PromoScreenState extends State<PromoScreen> {
                                         physics: const NeverScrollableScrollPhysics(),
                                         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                                           maxCrossAxisExtent: 400,
-                                          mainAxisExtent: 96,
+                                          // 96 terlalu pendek saat baris "promo
+                                          // berakhir" muncul — Column info bisa
+                                          // overflow ~29px (lihat _buildPromoItem).
+                                          mainAxisExtent: 128,
                                           crossAxisSpacing: 16,
                                           mainAxisSpacing: 16,
                                         ),
@@ -1068,12 +1095,13 @@ class _PromoScreenState extends State<PromoScreen> {
                     icon: Icons.local_offer_outlined,
                     label: 'Promo',
                     active: _activeDesktopMenu == 'promo',
-                    onTap: _loadPromos,
+                    onTap: _desktopActiveScreen != null ? _closeDesktopActiveScreen : _loadPromos,
                   ),
                   _desktopSidebarItem(
                     icon: Icons.history_rounded,
                     label: 'Riwayat Transaksi',
-                    onTap: () {
+                    onTap: () => WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
                       Navigator.pop(context);
                       Navigator.push(
                         context,
@@ -1081,7 +1109,7 @@ class _PromoScreenState extends State<PromoScreen> {
                           builder: (_) => const Seealltransaction(),
                         ),
                       );
-                    },
+                    }),
                   ),
                   _desktopSidebarItem(
                     icon: Icons.headset_mic_outlined,
@@ -1257,33 +1285,55 @@ class _PromoScreenState extends State<PromoScreen> {
         children: [
           Text(_getDesktopTopbarTitle(), style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 18, color: desktopTextPrimary)),
           const Spacer(),
-          Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: const Color(0xFF182974).withOpacity(0.1),
-                  child: Text(
-                    auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF182974)),
+          InkWell(
+            onTap: () => _openTransaction(const profile_page.Profile(), menuKey: 'akun'),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  ClipOval(
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      color: const Color(0xFF182974).withOpacity(0.1),
+                      child: auth.userAvatar != null && auth.userAvatar!.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: ApiService.avatarUrl(auth.userAvatar),
+                              cacheKey: auth.userAvatar,
+                              fit: BoxFit.cover,
+                              fadeInDuration: Duration.zero,
+                              errorWidget: (_, __, ___) => Center(
+                                child: Text(
+                                  auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF182974)),
+                                ),
+                              ),
+                            )
+                          : Center(
+                              child: Text(
+                                auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF182974)),
+                              ),
+                            ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(auth.userName, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 13, color: desktopTextPrimary)),
-                    Text(auth.userLevel, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10, color: desktopTextSecondary)),
-                  ],
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(auth.userName, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 13, color: desktopTextPrimary)),
+                      Text(auth.userLevel.toUpperCase(), style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10, color: desktopTextSecondary)),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -150,7 +150,7 @@ String resolvePpobRouteType(Map<String, dynamic> item) {
       _containsTollKeyword(brand) ||
       _containsTollKeyword(itemName) ||
       _containsTollKeyword(initialBrand)) {
-    return 'nfc_toll';
+    return 'product';
   }
 
   // E-Money / E-Wallet tanpa brand spesifik → tampilkan halaman pilih brand.
@@ -203,7 +203,7 @@ String? _normalizeRouteValue(dynamic value) {
     case 'e_toll':
     case 'e-toll':
     case 'toll':
-      return 'nfc_toll';
+      return 'product';
     case 'product':
     case 'prepaid':
     case 'produk':
@@ -232,4 +232,38 @@ bool _containsTollKeyword(String value) {
       value.contains('etoll') ||
       value.contains('toll') ||
       value.contains('tol');
+}
+
+// Kategori yang seharusnya selalu masuk grup Postpaid (pembayaran) meski
+// admin panel/backend menaruhnya di grup pembelian (prepaid) secara keliru.
+const List<String> _knownPostpaidKeywords = [
+  'indihome',
+  'gas negara',
+  'pgn',
+  'tv pasca',
+  'tv berbayar',
+  'tv kabel',
+];
+
+bool isKnownPostpaidItem(Map<String, dynamic> item) {
+  final name = (item['name'] ?? '').toString().toLowerCase();
+  final category = (item['category'] ?? '').toString().toLowerCase();
+  final hay = '$name $category';
+  return _knownPostpaidKeywords.any((k) => hay.contains(k));
+}
+
+/// Pindahkan item yang seharusnya Postpaid dari [pembelian] ke [pembayaran]
+/// berdasarkan nama/kategori yang dikenal (lihat [isKnownPostpaidItem]).
+/// Dipanggil setelah `parseGroup` di setiap layar yang menampilkan
+/// submenu Prepaid/Postpaid (home, promo, riwayat transaksi, semua layanan).
+void reclassifyPostpaidItems(
+  List<Map<String, dynamic>> pembelian,
+  List<Map<String, dynamic>> pembayaran,
+) {
+  pembelian.removeWhere((item) {
+    if (!isKnownPostpaidItem(item)) return false;
+    item['cmd'] = 'pasca';
+    pembayaran.add(item);
+    return true;
+  });
 }

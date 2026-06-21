@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../utils/colornotifire.dart';
 import '../../utils/media.dart';
-import 'nfc_toll_scan_screen.dart';
 import 'bpjs_screen.dart';
 import 'pdam_screen.dart';
 import 'ppob_emoney_brand_screen.dart';
@@ -106,6 +105,7 @@ class _PPOBAllServicesScreenState extends State<PPOBAllServicesScreen> {
           if (topupGame.isNotEmpty) _topupGameItems = parseGroup(topupGame, 'prepaid');
           final lainnya = data['lainnya'] as List? ?? [];
           if (lainnya.isNotEmpty) _lainnyaItems = parseGroup(lainnya, 'prepaid');
+          reclassifyPostpaidItems(_pembelianItems, _pembayaranItems);
         });
       } catch (_) {}
     }
@@ -139,9 +139,7 @@ class _PPOBAllServicesScreenState extends State<PPOBAllServicesScreen> {
 
     final routeType = resolvePpobRouteType(item);
 
-    if (routeType == 'nfc_toll') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const NfcTollScanScreen()));
-    } else if (routeType == 'bank_transfer') {
+    if (routeType == 'bank_transfer') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const BankTransferScreen()));
     } else if (routeType == 'postpaid') {
       final brandLower = (item['brand'] ?? '').toString().toLowerCase();
@@ -350,7 +348,8 @@ class _AllServicesMenuButtonState extends State<_AllServicesMenuButton> {
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) async {
         await Future.delayed(const Duration(milliseconds: 180));
-        if (mounted) setState(() => _pressed = false);
+        if (!mounted) return;
+        setState(() => _pressed = false);
         widget.onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),

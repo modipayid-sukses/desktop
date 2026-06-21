@@ -22,7 +22,7 @@ class DesktopAuthShell extends StatelessWidget {
             child: Center(
               child: Container(
                 margin: const EdgeInsets.all(24),
-                constraints: const BoxConstraints(maxWidth: 1200, maxHeight: 760),
+                constraints: const BoxConstraints(maxWidth: 1280, maxHeight: 760),
                 decoration: BoxDecoration(
                   color: desktopSurfaceCard,
                   borderRadius: BorderRadius.circular(32),
@@ -91,6 +91,16 @@ class DesktopAuthBrandPanel extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          // Illustration sitting behind the status pill and service icon grid
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.16,
+              child: Image.network(
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuBQdt6tQHKUwtPmQh5PrrpEx7tR5yH8v3FeH3rvgSRa4pFFaWLiyJB6eu8xIN253pbAwDYVInuj_U8GFqV9RrOME-Q9cXjqws82x4lDbE1TIKCXkquIulmvMzuEXTxgi__RBo0wC4R078i_ryLiU32dB8fHS7oF6CGNYrBlNlAq3wY8Gj8_gIz2fo_dzN7uAo9DGlolnPvuxs6qUxjcjL4ZPAFjHeauvI2MKfTAo6UHdAKxqqiRNZfIyN15bwMia3zVEbiT3YrmlZKC',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
           // Decorative glow circle
           Positioned(
             top: -100,
@@ -159,7 +169,7 @@ class DesktopAuthBrandPanel extends StatelessWidget {
                 Text.rich(
                   TextSpan(
                     style: GoogleFonts.hankenGrotesk(
-                      fontSize: 32,
+                      fontSize: 48,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                       height: 1.15,
@@ -174,7 +184,7 @@ class DesktopAuthBrandPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 14, width: 80),
                 // Subtitle
                 Text(
                   'Top up lebih mudah, bayar tagihan lebih cepat, semua dalam satu platform yang aman dan handal untuk bisnis Anda.',
@@ -309,17 +319,6 @@ class DesktopAuthBrandPanel extends StatelessWidget {
               ],
             ),
           ),
-          // Illustration Mockup at bottom
-          Positioned(
-            bottom: -20,
-            left: 0,
-            right: 0,
-            height: 240,
-            child: Image.network(
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuBQdt6tQHKUwtPmQh5PrrpEx7tR5yH8v3FeH3rvgSRa4pFFaWLiyJB6eu8xIN253pbAwDYVInuj_U8GFqV9RrOME-Q9cXjqws82x4lDbE1TIKCXkquIulmvMzuEXTxgi__RBo0wC4R078i_ryLiU32dB8fHS7oF6CGNYrBlNlAq3wY8Gj8_gIz2fo_dzN7uAo9DGlolnPvuxs6qUxjcjL4ZPAFjHeauvI2MKfTAo6UHdAKxqqiRNZfIyN15bwMia3zVEbiT3YrmlZKC',
-              fit: BoxFit.contain,
-            ),
-          ),
         ],
       ),
     );
@@ -327,6 +326,7 @@ class DesktopAuthBrandPanel extends StatelessWidget {
 }
 
 /// Input field bordered icon-prefixed yang dipakai di semua form auth desktop.
+/// Border dan ikon menyorot warna biru saat field sedang difokus.
 Widget desktopBorderedField({
   required IconData icon,
   required TextEditingController controller,
@@ -334,35 +334,110 @@ Widget desktopBorderedField({
   TextInputType? keyboardType,
   bool obscureText = false,
   Widget? suffix,
+  FocusNode? focusNode,
+  TextInputAction? textInputAction,
+  ValueChanged<String>? onSubmitted,
 }) {
-  return Container(
-    height: 52,
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    decoration: BoxDecoration(
-      border: Border.all(color: desktopBorder),
-      borderRadius: BorderRadius.circular(12),
-      color: desktopSurfaceCard,
-    ),
-    child: Row(
-      children: [
-        Icon(icon, color: desktopTextSecondary.withOpacity(0.6), size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: TextField(
-            controller: controller,
-            obscureText: obscureText,
-            keyboardType: keyboardType,
-            style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w500, color: desktopTextPrimary),
-            decoration: InputDecoration(
-              isDense: true,
-              border: InputBorder.none,
-              hintText: hint,
-              hintStyle: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopBorder),
+  return _DesktopBorderedField(
+    icon: icon,
+    controller: controller,
+    hint: hint,
+    keyboardType: keyboardType,
+    obscureText: obscureText,
+    suffix: suffix,
+    focusNode: focusNode,
+    textInputAction: textInputAction,
+    onSubmitted: onSubmitted,
+  );
+}
+
+class _DesktopBorderedField extends StatefulWidget {
+  final IconData icon;
+  final TextEditingController controller;
+  final String hint;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+  final Widget? suffix;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+
+  const _DesktopBorderedField({
+    required this.icon,
+    required this.controller,
+    required this.hint,
+    this.keyboardType,
+    this.obscureText = false,
+    this.suffix,
+    this.focusNode,
+    this.textInputAction,
+    this.onSubmitted,
+  });
+
+  @override
+  State<_DesktopBorderedField> createState() => _DesktopBorderedFieldState();
+}
+
+class _DesktopBorderedFieldState extends State<_DesktopBorderedField> {
+  late final FocusNode _focusNode = widget.focusNode ?? FocusNode();
+  late final bool _ownsFocusNode = widget.focusNode == null;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  void _handleFocusChange() {
+    if (_isFocused != _focusNode.hasFocus) {
+      setState(() => _isFocused = _focusNode.hasFocus);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: desktopSurfacePage,
+      ),
+      child: Row(
+        children: [
+          Icon(widget.icon, color: _isFocused ? desktopAccentBlue : desktopTextSecondary.withOpacity(0.6), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              obscureText: widget.obscureText,
+              keyboardType: widget.keyboardType,
+              textInputAction: widget.textInputAction,
+              onSubmitted: widget.onSubmitted,
+              style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w500, color: desktopTextPrimary),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: widget.hint,
+                hintStyle: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopBorder),
+              ),
             ),
           ),
-        ),
-        if (suffix != null) suffix,
-      ],
-    ),
-  );
+          if (widget.suffix != null) Padding(padding: const EdgeInsets.only(left: 8), child: widget.suffix!),
+        ],
+      ),
+    );
+  }
 }

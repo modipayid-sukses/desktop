@@ -14,7 +14,7 @@ import 'components/saved_customers_bottom_sheet.dart';
 
 // ── Tokens warna mengikuti style PPOB ────────────────────────────────────────
 const Color _kHeaderBlue = Color(0xFF3F6FB4);
-const Color _kPageBg = Color(0xFFFAFAFA);
+const Color _kPageBg = Color(0xFFF8F9FD);
 const Color _kCardBorder = Color(0xFFE5E9EE);
 const Color _kInputFill = Color(0xFFF5F6F8);
 const Color _kInputBorder = Color(0xFFD4D8DF);
@@ -470,249 +470,260 @@ class _BpjsScreenState extends State<BpjsScreen> {
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Column(
-          children: [
-            // ── Kartu input ──────────────────────────────────────────────
-            Container(
-              color: _kPageBg,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
-                      child: Text(
-                        'BPJS',
-                        style: TextStyle(
-                          color: _kTextPrimary,
-                          fontFamily: 'Gilroy Bold',
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                    const Divider(height: 0, color: Color(0xFFECEEF2)),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-                      child: const Text(
-                        'Jenis BPJS',
-                        style: TextStyle(
-                          color: _kTextPrimary,
-                          fontFamily: 'Gilroy Bold',
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-                      child: InkWell(
-                        onTap: _showProductPicker,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          height: 48,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: _kInputFill,
-                            borderRadius: BorderRadius.circular(12),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF16215C).withValues(alpha: 0.06),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _selectedProduct != null
-                                      ? _productNameOf(_selectedProduct!)
-                                      : (_isLoadingProducts
-                                          ? 'Memuat daftar produk...'
-                                          : 'Pilih jenis BPJS'),
-                                      style: TextStyle(
-                                        color: _selectedProduct != null
-                                            ? _kTextPrimary
-                                            : _kTextSecondary,
-                                        fontFamily: _selectedProduct != null
-                                            ? 'Gilroy Bold'
-                                            : 'Gilroy Medium',
-                                        fontSize: 14,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  if (_isLoadingProducts)
-                                    const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.4,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                                _kHeaderBlue),
-                                      ),
-                                    )
-                                  else
-                                    const Icon(Icons.keyboard_arrow_down_rounded,
-                                        color: _kTextSecondary),
-                                ],
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text(
+                              'BPJS',
+                              style: TextStyle(
+                                color: _kTextPrimary,
+                                fontFamily: 'Gilroy Bold',
+                                fontSize: 22,
                               ),
                             ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-                          child: const Text(
-                            'Nomor BPJS',
-                            style: TextStyle(
-                              color: _kTextPrimary,
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-                          child: Container(
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: _kInputFill,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
+                          const Divider(height: 0, color: Color(0xFFECEEF2)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _customerIdController,
-                                    focusNode: _customerIdFocus,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                    style: const TextStyle(
-                                      color: _kTextPrimary,
-                                      fontFamily: 'Gilroy Medium',
-                                      fontSize: 14,
-                                    ),
-                                    onChanged: (_) => _clearError(),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Masukkan Nomor BPJS',
-                                      hintStyle: TextStyle(
-                                        color: _kTextSecondary,
-                                        fontFamily: 'Gilroy Medium',
-                                        fontSize: 14,
-                                      ),
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 12),
-                                    ),
+                                const Text(
+                                  'Jenis BPJS',
+                                  style: TextStyle(
+                                    color: _kTextPrimary,
+                                    fontFamily: 'Gilroy Bold',
+                                    fontSize: 15,
                                   ),
                                 ),
+                                const SizedBox(height: 8),
                                 InkWell(
-                                  onTap: _openSavedCustomers,
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    child: Icon(
-                                      Icons.contact_page_outlined,
-                                      color: _kHeaderBlue,
-                                      size: 24,
+                                  onTap: _showProductPicker,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    height: 48,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                                    decoration: BoxDecoration(
+                                      color: _kInputFill,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _selectedProduct != null
+                                                ? _productNameOf(_selectedProduct!)
+                                                : (_isLoadingProducts
+                                                    ? 'Memuat daftar produk...'
+                                                    : 'Pilih jenis BPJS'),
+                                            style: TextStyle(
+                                              color: _selectedProduct != null
+                                                  ? _kTextPrimary
+                                                  : _kTextSecondary,
+                                              fontFamily: _selectedProduct != null
+                                                  ? 'Gilroy Bold'
+                                                  : 'Gilroy Medium',
+                                              fontSize: 14,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (_isLoadingProducts)
+                                          const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.4,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      _kHeaderBlue),
+                                            ),
+                                          )
+                                        else
+                                          const Icon(Icons.keyboard_arrow_down_rounded,
+                                              color: _kTextSecondary),
+                                      ],
                                     ),
                                   ),
                                 ),
+                                const SizedBox(height: 24),
+                                const Text(
+                                  'Nomor BPJS',
+                                  style: TextStyle(
+                                    color: _kTextPrimary,
+                                    fontFamily: 'Gilroy Bold',
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: _kInputFill,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _customerIdController,
+                                          focusNode: _customerIdFocus,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.digitsOnly,
+                                          ],
+                                          style: const TextStyle(
+                                            color: _kTextPrimary,
+                                            fontFamily: 'Gilroy Medium',
+                                            fontSize: 14,
+                                          ),
+                                          onChanged: (_) => _clearError(),
+                                          decoration: const InputDecoration(
+                                            hintText: 'Masukkan Nomor BPJS',
+                                            hintStyle: TextStyle(
+                                              color: _kTextSecondary,
+                                              fontFamily: 'Gilroy Medium',
+                                              fontSize: 14,
+                                            ),
+                                            border: InputBorder.none,
+                                            contentPadding: EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                          ),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: _openSavedCustomers,
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          child: Icon(
+                                            Icons.contact_page_outlined,
+                                            color: _kHeaderBlue,
+                                            size: 24,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (_inquiryError != null && !_isInquiring) ...[
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _kErrorBg,
+                                      border: Border.all(color: _kErrorBorder),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _inquiryError!,
+                                      style: const TextStyle(
+                                        color: _kErrorText,
+                                        fontFamily: 'Gilroy Medium',
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-            // ── Tombol Cek Tagihan + hasil ─────────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _isInquiring ? null : _doInquiry,
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: _kHeaderBlue,
-                          disabledBackgroundColor: const Color(0xFF8AA8D6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isInquiring
-                            ? const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.4,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(
-                                              Colors.white),
-                                    ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'Memeriksa tagihan…',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontFamily: 'Gilroy Bold',
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : const Text(
-                                'Cek Tagihan',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontFamily: 'Gilroy Bold',
-                                  fontSize: 14,
-                                ),
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF2F4F8),
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
                               ),
+                            ),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: ElevatedButton(
+                                onPressed: _isInquiring ? null : _doInquiry,
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0,
+                                  backgroundColor: _kHeaderBlue,
+                                  disabledBackgroundColor: const Color(0xFF8AA8D6),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: _isInquiring
+                                    ? const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.4,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      Colors.white),
+                                            ),
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text(
+                                            'Memeriksa tagihan…',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontFamily: 'Gilroy Bold',
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : const Text(
+                                        'Cek Tagihan',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontFamily: 'Gilroy Bold',
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    if (_inquiryError != null && !_isInquiring) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _kErrorBg,
-                          border: Border.all(color: _kErrorBorder),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          _inquiryError!,
-                          style: const TextStyle(
-                            color: _kErrorText,
-                            fontFamily: 'Gilroy Medium',
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      )
     );
   }
 }

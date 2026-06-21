@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:modipay/promo/promo_screen.dart';
@@ -22,7 +23,6 @@ import 'package:modipay/design/design.dart';
 import 'package:modipay/home/ppob/bpjs_screen.dart';
 import 'package:modipay/home/ppob/pdam_screen.dart';
 import 'package:modipay/home/ppob/ppob_all_services_screen.dart';
-import 'package:modipay/home/ppob/nfc_toll_scan_screen.dart';
 import 'package:modipay/home/transfer/bank_transfer_screen.dart';
 import 'package:modipay/home/qris/qris_scan_screen.dart';
 import 'package:modipay/home/ppob/ppob_topup_game_list_screen.dart';
@@ -193,6 +193,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
       setState(() {
         _pembelianItems  = parseGroup(data['pembelian']  as List? ?? [], 'prepaid');
         _pembayaranItems = parseGroup(data['pembayaran'] as List? ?? [], 'pasca');
+        reclassifyPostpaidItems(_pembelianItems, _pembayaranItems);
       });
     }
   }
@@ -1633,7 +1634,8 @@ class _SeealltransactionState extends State<Seealltransaction> {
                   _desktopSidebarItem(
                     icon: Icons.local_offer_outlined,
                     label: 'Promo',
-                    onTap: () {
+                    onTap: () => WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
                       Navigator.pop(context);
                       Navigator.push(
                         context,
@@ -1641,13 +1643,13 @@ class _SeealltransactionState extends State<Seealltransaction> {
                           builder: (_) => const PromoScreen(),
                         ),
                       );
-                    },
+                    }),
                   ),
                   _desktopSidebarItem(
                     icon: Icons.history_rounded,
                     label: 'Riwayat Transaksi',
                     active: _activeDesktopMenu == 'riwayat',
-                    onTap: _loadAllData,
+                    onTap: _desktopActiveScreen != null ? _closeDesktopActiveScreen : _loadAllData,
                   ),
                   _desktopSidebarItem(
                     icon: Icons.headset_mic_outlined,
@@ -1761,7 +1763,8 @@ class _SeealltransactionState extends State<Seealltransaction> {
                 const Icon(Icons.headset_mic_outlined, size: 16, color: desktopAccentBlue),
                 const SizedBox(width: 6),
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text('CS Online', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextPrimary)),
                     Text('08:00 - 22:00', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 9, color: desktopTextSecondary)),
@@ -1810,32 +1813,42 @@ class _SeealltransactionState extends State<Seealltransaction> {
           ),
           const SizedBox(width: 16),
           GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const profile_page.Profile(),
-                ),
-              );
-            },
+            onTap: () => _openTransaction(const profile_page.Profile(), menuKey: 'akun'),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: desktopAccentBlue.withOpacity(0.15),
-                  child: Text(
-                    auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
-                    style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                ClipOval(
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    color: desktopAccentBlue.withOpacity(0.15),
+                    child: auth.userAvatar != null && auth.userAvatar!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: ApiService.avatarUrl(auth.userAvatar),
+                            cacheKey: auth.userAvatar,
+                            fit: BoxFit.cover,
+                            fadeInDuration: Duration.zero,
+                            errorWidget: (_, __, ___) => Center(
+                              child: Text(
+                                auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                                style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                              style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(auth.userName, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 13, color: desktopTextPrimary)),
-                    Text(auth.userLevel, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10, color: desktopTextSecondary)),
+                    Text(auth.userLevel.toUpperCase(), style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10, color: desktopTextSecondary)),
                   ],
                 ),
               ],
@@ -1847,24 +1860,33 @@ class _SeealltransactionState extends State<Seealltransaction> {
   }
 
   void _openTransaction(Widget screen, {String? menuKey}) {
-    setState(() {
-      _contentNavKey = GlobalKey<NavigatorState>();
-      _desktopActiveScreen = screen;
-      if (menuKey != null) {
-        _activeDesktopMenu = menuKey;
-        _activeSubMenuName = null;
-      }
+    // Tunda ke frame berikutnya agar tidak menghapus widget yang sedang
+    // di-hover mouse di tengah pemrosesan pointer event (lihat fix serupa
+    // di home.dart _openTransaction untuk detail bug MouseTracker-nya).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _contentNavKey = GlobalKey<NavigatorState>();
+        _desktopActiveScreen = screen;
+        if (menuKey != null) {
+          _activeDesktopMenu = menuKey;
+          _activeSubMenuName = null;
+        }
+      });
     });
   }
 
   void _closeDesktopActiveScreen() {
-    setState(() {
-      _desktopActiveScreen = null;
-      _contentNavKey = null;
-      _activeDesktopMenu = 'riwayat';
-      _activeSubMenuName = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _desktopActiveScreen = null;
+        _contentNavKey = null;
+        _activeDesktopMenu = 'riwayat';
+        _activeSubMenuName = null;
+      });
+      _onRefresh();
     });
-    _onRefresh();
   }
 
   /// Content pane yang menampung layar transaksi aktif, ditampilkan di
@@ -1980,10 +2002,16 @@ class _SeealltransactionState extends State<Seealltransaction> {
 
   void _navigateToItem(Map<String, dynamic> item) {
     final cmd = (item['cmd'] ?? '').toString().toLowerCase();
+    // 'pasca' adalah konvensi cmd untuk item Postpaid di seluruh app (lihat
+    // reclassifyPostpaidItems, parseGroup(pembayaran, 'pasca')) — cek string
+    // 'postpaid' saja tidak menangkap nama seperti "PLN Pasca"/"PLN Pascabayar".
     final isPostpaid = cmd == 'postpaid' ||
+        cmd == 'pasca' ||
         resolvePpobRouteType(item) == 'postpaid' ||
         (item['category'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['category'] ?? '').toString().toLowerCase().contains('pasca') ||
         (item['name'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['name'] ?? '').toString().toLowerCase().contains('pasca') ||
         (item['brand'] ?? '').toString().toLowerCase().contains('bpjs') ||
         (item['brand'] ?? '').toString().toLowerCase().contains('pdam');
 
@@ -2020,8 +2048,6 @@ class _SeealltransactionState extends State<Seealltransaction> {
     final routeType = resolvePpobRouteType(item);
     if (routeType == 'all_services') {
       _openTransaction(const PPOBAllServicesScreen());
-    } else if (routeType == 'nfc_toll') {
-      _openTransaction(const NfcTollScanScreen());
     } else if (routeType == 'bank_transfer') {
       _openTransaction(const BankTransferScreen());
     } else if (routeType == 'qris_payment') {

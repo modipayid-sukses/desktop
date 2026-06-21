@@ -173,19 +173,24 @@ class _PPOBEmoneyBrandScreenState extends State<PPOBEmoneyBrandScreen> {
   }
 
   void _onBrandTap(String brand) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PPOBProductScreen(
-          category: widget.category,
-          title: brand,
-          cmd: 'prepaid',
-          inquiryType: 'emoney',
-          initialBrand: brand,
-          productTypeFilter: widget.productTypeFilter,
+    // Defer: push sinkron di sini melepas InkWell ini mid-pointer-dispatch,
+    // memicu assertion '_debugDuringDeviceUpdate' di desktop.
+    Future.microtask(() {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PPOBProductScreen(
+            category: widget.category,
+            title: brand,
+            cmd: 'prepaid',
+            inquiryType: 'emoney',
+            initialBrand: brand,
+            productTypeFilter: widget.productTypeFilter,
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   @override

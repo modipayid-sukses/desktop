@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'dart:convert';
@@ -214,10 +214,18 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     return false;
   }
 
+  // Kartu Tol/E-Toll: input-nya nomor kartu, bukan nomor HP, jadi ikon
+  // "pilih dari kontak" (Icons.contacts_rounded) tidak relevan di sini.
+  bool get _isTollCategory {
+    final hay =
+        '${widget.category.toLowerCase()} ${widget.title.toLowerCase()} ${(widget.initialBrand ?? '').toLowerCase()}';
+    return hay.contains('e-toll') || hay.contains('etoll') || hay.contains('toll') || hay.contains('tol');
+  }
+
   // Input merepresentasikan nomor HP (Pulsa, Data, E-Wallet, dll) sehingga
   // bisa diisi dari kontak handphone pengguna.
   bool get _isPhoneNumberInput =>
-      !_isPln && !_isTopupGameFiltered && !_isCategoryInquiry;
+      !_isPln && !_isTopupGameFiltered && !_isCategoryInquiry && !_isTollCategory;
 
   // Halaman hub "Tagihan Internet": menampilkan grid provider (Indihome, Biznet, …)
   // alih-alih input + Cek Tagihan, karena tiap provider beda inquiry_sku.
@@ -1214,6 +1222,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       highlightColor: Colors.grey.shade100,
       child: GridView.builder(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: 6,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -2095,7 +2104,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
               final brand = provider['name']!;
               final logo = provider['logo'];
               return InkWell(
-                onTap: () => _onPickInternetProvider(brand),
+                // Defer: Navigator.push sync di onTap rawan _debugDuringDeviceUpdate di desktop.
+                onTap: () => Future.microtask(() => _onPickInternetProvider(brand)),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -2258,7 +2268,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             itemBuilder: (_, i) {
               final brand = filtered[i];
               return InkWell(
-                onTap: () => _onPickMultifinance(brand),
+                // Defer: Navigator.push sync di onTap rawan _debugDuringDeviceUpdate di desktop.
+                onTap: () => Future.microtask(() => _onPickMultifinance(brand)),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -3748,49 +3759,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: pageBg,
-      bottomNavigationBar: isPlnPrabayarTab
-          ? SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: SizedBox(
-                  height: 50,
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: (canContinuePlnPrabayar &&
-                            !_isValidatingRecipient)
-                        ? _continuePlnPrabayar
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accent,
-                      disabledBackgroundColor:
-                          accent.withValues(alpha: 0.35),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isValidatingRecipient
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Lanjutkan',
-                            style: TextStyle(
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: 15,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-            )
-          : null,
+      backgroundColor: const Color(0xFFF8F9FD),
+      bottomNavigationBar: null,
       appBar: isDesktopPopup(context) ? null : AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -3817,471 +3787,474 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: _dismissInputAndNumpad,
-            child: Column(
-              children: [
-                if (!_isInternetHub && !_isMultifinanceHub)
-                Container(
-                  color: pageBg,
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                          child: Text(
-                            widget.title,
-                            style: TextStyle(
-                              color: textPrimary,
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: 18,
-                            ),
-                          ),
-                        ),
-                        const Divider(height: 0, color: Color(0xFFECEEF2)),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-                          child: Text(
-                            // Prioritas: config dari admin → heuristik existing.
-                            widget.configInputLabel != null &&
-                                    widget.configInputLabel!.trim().isNotEmpty
-                                ? widget.configInputLabel!
-                                : _isPln
-                                    ? 'IDPEL'
-                                    : _isTopupGameFiltered
-                                        ? 'ID Player'
-                                        : (_isCategoryInquiry
-                                            ? 'ID Pelanggan'
-                                            : 'Masukan Nomor HP'),
-                            style: const TextStyle(
-                              color: Color(0xFF121212),
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-                          child: Row(
+            child: SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: Container(
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF5F6F8),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: TextField(
-                                    controller: _customerIdController,
-                                    focusNode: _customerIdFocusNode,
-                                    readOnly: _enableCustomNumpad,
-                                    showCursor: true,
-                                    keyboardType: TextInputType.phone,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly
-                                    ],
-                                    style: TextStyle(
-                                      color: textPrimary,
-                                      fontFamily: 'Gilroy Medium',
-                                      fontSize: 14,
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF16215C).withOpacity(0.06),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    onChanged: (value) {
-                                      final digitsOnly =
-                                          value.replaceAll(RegExp(r'[^0-9]'), '');
-                                      if (value != digitsOnly) {
-                                        _setCustomerId(digitsOnly);
-                                        return;
-                                      }
-                                      _onCustomerInputChanged();
-
-                                      if (_isPln && _plnTabIndex == 1) {
-                                        if (_plnPostpaidInquiryResult != null ||
-                                            _plnPostpaidError != null) {
-                                          setState(() {
-                                            _plnPostpaidInquiryResult = null;
-                                            _plnPostpaidError = null;
-                                          });
-                                        }
-                                      }
-                                      if (_isCategoryInquiry) {
-                                        if (_bpjsInquiryResult != null ||
-                                            _bpjsInquiryError != null) {
-                                          setState(() {
-                                            _bpjsInquiryResult = null;
-                                            _bpjsInquiryError = null;
-                                          });
-                                        }
-                                      }
-                                    },
-                                    onTap: () {
-                                      if (!_customerIdFocusNode.hasFocus) {
-                                        _customerIdFocusNode.requestFocus();
-                                      }
-                                      _showCustomNumpadSafely();
-                                    },
-                                    decoration: InputDecoration(
-                                      hintText: widget.configInputHint != null &&
-                                              widget.configInputHint!
-                                                  .trim()
-                                                  .isNotEmpty
-                                          ? widget.configInputHint!
-                                          : _isPln
-                                              ? 'IDPEL : 1122xxxx'
-                                              : _isTopupGameFiltered
-                                                  ? 'Masukkan ID Player'
-                                                  : _isCategoryInquiry
-                                                      ? _categoryInquiryHint()
-                                                      : 'Contoh : 08xxxxxxxxxx',
-                                      hintStyle: TextStyle(
-                                        color:
-                                            textSecondary.withValues(alpha: 0.6),
-                                        fontFamily: 'Gilroy Medium',
-                                      ),
-                                      border: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                  ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              InkWell(
-                                borderRadius: BorderRadius.circular(8),
-                                onTap: () => _openSavedCustomers(accent),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(2),
-                                  child: Icon(
-                                    Icons.contact_page_outlined,
-                                    color: accent,
-                                    size: 34,
-                                  ),
-                                ),
-                              ),
-                              if (_isPhoneNumberInput) ...[
-                                const SizedBox(width: 6),
-                                InkWell(
-                                  borderRadius: BorderRadius.circular(8),
-                                  onTap: _pickNumberFromContact,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(2),
-                                    child: Icon(
-                                      Icons.contacts_rounded,
-                                      color: accent,
-                                      size: 34,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_isPln && _isPlnPostpaidOnly)
-                  const SizedBox.shrink()
-                else if (_isPln)
-                  Container(
-                    margin: const EdgeInsets.only(top: 0),
-                    decoration: const BoxDecoration(color: Colors.white),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              if (_plnTabIndex == 0) return;
-                              setState(() {
-                                _plnTabIndex = 0;
-                                _plnPostpaidInquiryResult = null;
-                              });
-                            },
-                            child: Container(
-                              height: 48,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  right: const BorderSide(
-                                      color: Color(0xFFD9DEE7)),
-                                  bottom: BorderSide(
-                                    color: _plnTabIndex == 0
-                                        ? accent
-                                        : const Color(0xFFD9DEE7),
-                                    width: _plnTabIndex == 0 ? 3 : 1,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                'Prabayar',
-                                style: TextStyle(
-                                  color: Color(0xFF3A3A3A),
-                                  fontFamily: _plnTabIndex == 0
-                                      ? 'Gilroy Bold'
-                                      : 'Gilroy Medium',
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              if (_plnTabIndex == 1) return;
-                              setState(() {
-                                _plnTabIndex = 1;
-                                _selectedProduct = null;
-                                _inquiryResult = null;
-                              });
-                            },
-                            child: Container(
-                              height: 48,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: _plnTabIndex == 1
-                                        ? accent
-                                        : const Color(0xFFD9DEE7),
-                                    width: _plnTabIndex == 1 ? 3 : 1,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                'Pascabayar',
-                                style: TextStyle(
-                                  color: Color(0xFF3A3A3A),
-                                  fontFamily: _plnTabIndex == 1
-                                      ? 'Gilroy Bold'
-                                      : 'Gilroy Medium',
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else if (_isPulsaCategory && _brands.length >= 2)
-                  Container(
-                    margin: const EdgeInsets.only(top: 0),
-                    decoration: const BoxDecoration(color: Colors.white),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              setState(() => _pulsaTabIndex = 0);
-
-                              final customerId =
-                                  _customerIdController.text.trim();
-                              if (customerId.isNotEmpty) {
-                                await _handlePulsaPrefixAutoSwitch(customerId);
-                              }
-
-                              if (_isPulsaPrefixDetected && _products.isEmpty) {
-                                await _loadProducts(showLoading: true);
-                              }
-                            },
-                            child: Container(
-                              height: 48,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  right: const BorderSide(
-                                      color: Color(0xFFD9DEE7)),
-                                  bottom: BorderSide(
-                                    color: _pulsaTabIndex == 0
-                                        ? accent
-                                        : const Color(0xFFD9DEE7),
-                                    width: _pulsaTabIndex == 0 ? 3 : 1,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                'Pulsa',
-                                style: TextStyle(
-                                  color: const Color(0xFF3A3A3A),
-                                  fontFamily: _pulsaTabIndex == 0
-                                      ? 'Gilroy Bold'
-                                      : 'Gilroy Medium',
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              setState(() {
-                                _pulsaTabIndex = 1;
-                                _products = [];
-                              });
-
-                              if (_selectedBrand != null) {
-                                await _loadProducts(showLoading: true);
-                              }
-                            },
-                            child: Container(
-                              height: 48,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: _pulsaTabIndex == 1
-                                        ? accent
-                                        : const Color(0xFFD9DEE7),
-                                    width: _pulsaTabIndex == 1 ? 3 : 1,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                'Pulsa Transfer',
-                                style: TextStyle(
-                                  color: const Color(0xFF3A3A3A),
-                                  fontFamily: _pulsaTabIndex == 1
-                                      ? 'Gilroy Bold'
-                                      : 'Gilroy Medium',
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: _isEmoney && !hasInitialBrand
-                      ? (_ewalletBrandPicked
-                          ? _buildEwalletProductsView(
-                              textPrimary, textSecondary, accent)
-                          : _buildEwalletList(
-                              textPrimary, textSecondary, accent))
-                      : _isEmoney && hasInitialBrand
-                          ? _buildEwalletWithDynamicView(
-                              textPrimary, textSecondary, accent)
-                      : _isInternetHub
-                          ? _buildInternetHub(textPrimary, textSecondary, accent)
-                          : _isMultifinanceHub
-                          ? _buildMultifinanceHub(textPrimary, textSecondary, accent)
-                          : _isCategoryInquiry
-                          ? _buildBpjsSection(textPrimary, textSecondary)
-                          : isPlnPostpaidTab
-                          ? _buildPlnPostpaidSection(textPrimary, textSecondary)
-                          : _isCellularCategory
-                          ? PPOBCellularForm(
-                              controller: _customerIdController,
-                              focusNode: _customerIdFocusNode,
-                              brands: _brands,
-                              selectedBrand: _selectedBrand,
-                              products: _products,
-                              selectedProduct: _selectedProduct,
-                              showBrandTabs: showBrandTabs,
-                              isPulsaPrefixDetected: _isPulsaPrefixDetected,
-                              isInject: _isInject,
-                              onBrandSelected: _selectBrand,
-                              onProductSelected: _onProductSelected,
-                              pulsaTabIndex: _pulsaTabIndex,
-                              onPulsaTabChanged: (index) => setState(() => _pulsaTabIndex = index),
-                              validator: _validateCustomerIdByBrand,
-                              formatPrice: _formatPrice,
-                              productDescription: _productDescription,
-                              buildShimmerProducts: _buildShimmerProducts,
-                              isLoadingProducts: _isLoadingProducts,
-                              isPulsaTransferTab: isPulsaTransferTab,
-                              hasCustomerInput: hasCustomerInput,
-                              originalPrice: _originalPrice,
-                              promoPrice: _promoPrice,
-                              isPromoProduct: _isPromoProduct,
-                              extractRewardCoins: _extractRewardCoins,
-                              promoRemainingLabel: _promoRemainingLabel,
-                              pulsaProviderLogoAsset: _pulsaProviderLogoAsset,
-                              accentColor: accent,
-                              textPrimary: textPrimary,
-                              textSecondary: textSecondary,
-                            )
-                          : (showBrandTabs ||
-                                  _isTopupGameFiltered ||
-                                  // Admin config kasih layout eksplisit
-                                  // (mis. Token PLN: list 1 kolom tanpa brand tab)
-                                  (widget.configProductLayout != null &&
-                                      widget.configProductLayout!.trim().isNotEmpty))
-                              ? Column(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    if (showBrandTabs) ...[
-                                      SizedBox(
-                                        height: 42,
-                                        child: ListView.builder(
-                                          scrollDirection: Axis.horizontal,
-                                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                                          itemCount: _brands.length,
-                                          itemBuilder: (_, i) {
-                                            final brand = _brands[i].toString();
-                                            final selected = _selectedBrand == brand;
-                                            return Padding(
-                                              padding: const EdgeInsets.only(right: 8),
-                                              child: ChoiceChip(
-                                                selected: selected,
-                                                side: BorderSide.none,
-                                                selectedColor: accent.withValues(alpha: 0.15),
-                                                backgroundColor: Colors.white,
-                                                labelStyle: TextStyle(
-                                                  color: selected ? accent : textPrimary,
-                                                  fontFamily:
-                                                      selected ? 'Gilroy Bold' : 'Gilroy Medium',
-                                                ),
-                                                label: Text(brand),
-                                                onSelected: (_) => _selectBrand(brand),
-                                              ),
-                                            );
-                                          },
+                    // content inside card (Card Header + tabs + products)
+                              if (!_isInternetHub && !_isMultifinanceHub)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                                      child: Text(
+                                        widget.title,
+                                        style: TextStyle(
+                                          color: textPrimary,
+                                          fontFamily: 'Gilroy Bold',
+                                          fontSize: 22,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      const SizedBox(height: 4),
+                                    ),
+                                    const Divider(height: 0, color: Color(0xFFECEEF2)),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+                                      child: Text(
+                                        widget.configInputLabel != null &&
+                                                widget.configInputLabel!.trim().isNotEmpty
+                                            ? widget.configInputLabel!
+                                            : _isPln
+                                                ? 'IDPEL'
+                                                : _isTopupGameFiltered
+                                                    ? 'ID Player'
+                                                    : (_isCategoryInquiry
+                                                        ? 'ID Pelanggan'
+                                                        : 'Masukan Nomor HP'),
+                                        style: const TextStyle(
+                                          color: Color(0xFF121212),
+                                          fontFamily: 'Gilroy Bold',
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Container(
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF5F6F8),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: TextField(
+                                                controller: _customerIdController,
+                                                focusNode: _customerIdFocusNode,
+                                                readOnly: _enableCustomNumpad,
+                                                showCursor: true,
+                                                keyboardType: TextInputType.phone,
+                                                inputFormatters: [
+                                                  FilteringTextInputFormatter.digitsOnly
+                                                ],
+                                                style: TextStyle(
+                                                  color: textPrimary,
+                                                  fontFamily: 'Gilroy Medium',
+                                                  fontSize: 14,
+                                                ),
+                                                onChanged: (value) {
+                                                  final digitsOnly =
+                                                      value.replaceAll(RegExp(r'[^0-9]'), '');
+                                                  if (value != digitsOnly) {
+                                                    _setCustomerId(digitsOnly);
+                                                    return;
+                                                  }
+                                                  _onCustomerInputChanged();
+
+                                                  if (_isPln && _plnTabIndex == 1) {
+                                                    if (_plnPostpaidInquiryResult != null ||
+                                                        _plnPostpaidError != null) {
+                                                      setState(() {
+                                                        _plnPostpaidInquiryResult = null;
+                                                        _plnPostpaidError = null;
+                                                      });
+                                                    }
+                                                  }
+                                                  if (_isCategoryInquiry) {
+                                                    if (_bpjsInquiryResult != null ||
+                                                        _bpjsInquiryError != null) {
+                                                      setState(() {
+                                                        _bpjsInquiryResult = null;
+                                                        _bpjsInquiryError = null;
+                                                      });
+                                                    }
+                                                  }
+                                                },
+                                                onTap: () {
+                                                  if (!_customerIdFocusNode.hasFocus) {
+                                                    _customerIdFocusNode.requestFocus();
+                                                  }
+                                                  _showCustomNumpadSafely();
+                                                },
+                                                decoration: InputDecoration(
+                                                  hintText: widget.configInputHint != null &&
+                                                          widget.configInputHint!
+                                                              .trim()
+                                                              .isNotEmpty
+                                                      ? widget.configInputHint!
+                                                      : _isPln
+                                                          ? 'IDPEL : 1122xxxx'
+                                                          : _isTopupGameFiltered
+                                                              ? 'Masukkan ID Player'
+                                                              : _isCategoryInquiry
+                                                                  ? _categoryInquiryHint()
+                                                                  : 'Contoh : 08xxxxxxxxxx',
+                                                  hintStyle: TextStyle(
+                                                    color:
+                                                        textSecondary.withValues(alpha: 0.6),
+                                                    fontFamily: 'Gilroy Medium',
+                                                  ),
+                                                  border: InputBorder.none,
+                                                  contentPadding: const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          InkWell(
+                                            borderRadius: BorderRadius.circular(8),
+                                            onTap: () => _openSavedCustomers(accent),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(2),
+                                              child: Icon(
+                                                Icons.contact_page_outlined,
+                                                color: accent,
+                                                size: 34,
+                                              ),
+                                            ),
+                                          ),
+                                          if (_isPhoneNumberInput) ...[
+                                            const SizedBox(width: 6),
+                                            InkWell(
+                                              borderRadius: BorderRadius.circular(8),
+                                              onTap: _pickNumberFromContact,
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(2),
+                                                child: Icon(
+                                                  Icons.contacts_rounded,
+                                                  color: accent,
+                                                  size: 34,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              if (_isPln && _isPlnPostpaidOnly)
+                                const SizedBox.shrink()
+                              else if (_isPln)
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    border: Border(
+                                      top: BorderSide(color: Color(0xFFECEEF2)),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () {
+                                            if (_plnTabIndex == 0) return;
+                                            setState(() {
+                                              _plnTabIndex = 0;
+                                              _plnPostpaidInquiryResult = null;
+                                            });
+                                          },
+                                          child: Container(
+                                            height: 48,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                right: const BorderSide(
+                                                    color: Color(0xFFD9DEE7)),
+                                                bottom: BorderSide(
+                                                  color: _plnTabIndex == 0
+                                                      ? accent
+                                                      : const Color(0xFFD9DEE7),
+                                                  width: _plnTabIndex == 0 ? 3 : 1,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Prabayar',
+                                              style: TextStyle(
+                                                color: const Color(0xFF3A3A3A),
+                                                fontFamily: _plnTabIndex == 0
+                                                    ? 'Gilroy Bold'
+                                                    : 'Gilroy Medium',
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () {
+                                            if (_plnTabIndex == 1) return;
+                                            setState(() {
+                                              _plnTabIndex = 1;
+                                              _selectedProduct = null;
+                                              _inquiryResult = null;
+                                            });
+                                          },
+                                          child: Container(
+                                            height: 48,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                bottom: BorderSide(
+                                                  color: _plnTabIndex == 1
+                                                      ? accent
+                                                      : const Color(0xFFD9DEE7),
+                                                  width: _plnTabIndex == 1 ? 3 : 1,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Pascabayar',
+                                              style: TextStyle(
+                                                color: const Color(0xFF3A3A3A),
+                                                fontFamily: _plnTabIndex == 1
+                                                    ? 'Gilroy Bold'
+                                                    : 'Gilroy Medium',
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
-                                    Expanded(
-                                      child: !shouldShowProducts
-                                          ? Center(
-                                              child: isPulsaTransferTab
-                                                  ? Column(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        SizedBox(
-                                                          height: 240,
-                                                          width: 240,
-                                                          child: Lottie.asset(
-                                                              'assets/lottie/empty_cart.json'),
-                                                        ),
-                                                      ],
-                                                    )
-                                                  : Text(
-                                                      hasCustomerInput && _isCellularCategory
-                                                          ? 'Prefix nomor tidak terdeteksi'
-                                                          : 'Harap masukan no.hp terlebih dahulu',
-                                                      style: TextStyle(
-                                                        color: textSecondary.withValues(
-                                                            alpha: 0.6),
-                                                        fontFamily: 'Gilroy Medium',
-                                                        fontSize: 18,
-                                                      ),
-                                                    ),
+                                  ),
+                                )
+                              else if (_isPulsaCategory && _brands.length >= 2)
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    border: Border(
+                                      top: BorderSide(color: Color(0xFFECEEF2)),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            setState(() => _pulsaTabIndex = 0);
+                                            final customerId = _customerIdController.text.trim();
+                                            if (customerId.isNotEmpty) {
+                                              await _handlePulsaPrefixAutoSwitch(customerId);
+                                            }
+                                            if (_isPulsaPrefixDetected && _products.isEmpty) {
+                                              await _loadProducts(showLoading: true);
+                                            }
+                                          },
+                                          child: Container(
+                                            height: 48,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                right: const BorderSide(
+                                                    color: Color(0xFFD9DEE7)),
+                                                bottom: BorderSide(
+                                                  color: _pulsaTabIndex == 0
+                                                      ? accent
+                                                      : const Color(0xFFD9DEE7),
+                                                  width: _pulsaTabIndex == 0 ? 3 : 1,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Pulsa',
+                                              style: TextStyle(
+                                                color: const Color(0xFF3A3A3A),
+                                                fontFamily: _pulsaTabIndex == 0
+                                                    ? 'Gilroy Bold'
+                                                    : 'Gilroy Medium',
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            setState(() {
+                                              _pulsaTabIndex = 1;
+                                              _products = [];
+                                            });
+                                            if (_selectedBrand != null) {
+                                              await _loadProducts(showLoading: true);
+                                            }
+                                          },
+                                          child: Container(
+                                            height: 48,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                bottom: BorderSide(
+                                                  color: _pulsaTabIndex == 1
+                                                      ? accent
+                                                      : const Color(0xFFD9DEE7),
+                                                  width: _pulsaTabIndex == 1 ? 3 : 1,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Pulsa Transfer',
+                                              style: TextStyle(
+                                                color: const Color(0xFF3A3A3A),
+                                                fontFamily: _pulsaTabIndex == 1
+                                                    ? 'Gilroy Bold'
+                                                    : 'Gilroy Medium',
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              _isEmoney && !hasInitialBrand
+                                  ? (_ewalletBrandPicked
+                                      ? _buildEwalletProductsView(textPrimary, textSecondary, accent)
+                                      : _buildEwalletList(textPrimary, textSecondary, accent))
+                                  : _isEmoney && hasInitialBrand
+                                      ? _buildEwalletWithDynamicView(textPrimary, textSecondary, accent)
+                                      : _isInternetHub
+                                          ? _buildInternetHub(textPrimary, textSecondary, accent)
+                                          : _isMultifinanceHub
+                                          ? _buildMultifinanceHub(textPrimary, textSecondary, accent)
+                                          : _isCategoryInquiry
+                                          ? _buildBpjsSection(textPrimary, textSecondary)
+                                          : isPlnPostpaidTab
+                                          ? _buildPlnPostpaidSection(textPrimary, textSecondary)
+                                          : _isCellularCategory
+                                          ? PPOBCellularForm(
+                                              controller: _customerIdController,
+                                              focusNode: _customerIdFocusNode,
+                                              brands: _brands,
+                                              selectedBrand: _selectedBrand,
+                                              products: _products,
+                                              selectedProduct: _selectedProduct,
+                                              showBrandTabs: showBrandTabs,
+                                              isPulsaPrefixDetected: _isPulsaPrefixDetected,
+                                              isInject: _isInject,
+                                              onBrandSelected: _selectBrand,
+                                              onProductSelected: _onProductSelected,
+                                              pulsaTabIndex: _pulsaTabIndex,
+                                              onPulsaTabChanged: (index) => setState(() => _pulsaTabIndex = index),
+                                              validator: _validateCustomerIdByBrand,
+                                              formatPrice: _formatPrice,
+                                              productDescription: _productDescription,
+                                              buildShimmerProducts: _buildShimmerProducts,
+                                              isLoadingProducts: _isLoadingProducts,
+                                              isPulsaTransferTab: isPulsaTransferTab,
+                                              hasCustomerInput: hasCustomerInput,
+                                              originalPrice: _originalPrice,
+                                              promoPrice: _promoPrice,
+                                              isPromoProduct: _isPromoProduct,
+                                              extractRewardCoins: _extractRewardCoins,
+                                              promoRemainingLabel: _promoRemainingLabel,
+                                              pulsaProviderLogoAsset: _pulsaProviderLogoAsset,
+                                              accentColor: accent,
+                                              textPrimary: textPrimary,
+                                              textSecondary: textSecondary,
                                             )
-                                          : _isLoadingProducts
-                                              ? _buildShimmerProducts()
-                                              : _products.isEmpty
-                                                  ? Center(
+                                          : Column(
+                                              children: [
+                                                if (showBrandTabs) ...[
+                                                  SizedBox(
+                                                    height: 42,
+                                                    child: ListView.builder(
+                                                      scrollDirection: Axis.horizontal,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                                      itemCount: _brands.length,
+                                                      itemBuilder: (_, i) {
+                                                        final brand = _brands[i].toString();
+                                                        final selected = _selectedBrand == brand;
+                                                        return Padding(
+                                                          padding: const EdgeInsets.only(right: 8),
+                                                          child: ChoiceChip(
+                                                            selected: selected,
+                                                            side: BorderSide.none,
+                                                            selectedColor: accent.withValues(alpha: 0.15),
+                                                            backgroundColor: Colors.white,
+                                                            labelStyle: TextStyle(
+                                                              color: selected ? accent : textPrimary,
+                                                              fontFamily: selected ? 'Gilroy Bold' : 'Gilroy Medium',
+                                                            ),
+                                                            label: Text(brand),
+                                                            onSelected: (_) => _selectBrand(brand),
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                ],
+                                                if (!shouldShowProducts)
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 32),
+                                                    child: Center(
+                                                      child: isPulsaTransferTab
+                                                          ? Column(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                SizedBox(
+                                                                  height: 240,
+                                                                  width: 240,
+                                                                  child: Lottie.asset('assets/lottie/empty_cart.json'),
+                                                                ),
+                                                              ],
+                                                            )
+                                                          : Text(
+                                                              hasCustomerInput && _isCellularCategory
+                                                                  ? 'Prefix nomor tidak terdeteksi'
+                                                                  : 'Harap masukan no.hp terlebih dahulu',
+                                                              style: TextStyle(
+                                                                color: textSecondary.withValues(alpha: 0.6),
+                                                                fontFamily: 'Gilroy Medium',
+                                                                fontSize: 18,
+                                                              ),
+                                                            ),
+                                                    ),
+                                                  )
+                                                else if (_products.isEmpty)
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 32),
+                                                    child: Center(
                                                       child: Text(
                                                         'Belum ada produk tersedia',
                                                         style: TextStyle(
@@ -4289,258 +4262,263 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                                           fontFamily: 'Gilroy Medium',
                                                         ),
                                                       ),
-                                                    )
-                                                  : RepaintBoundary(
-                                                      child: NotificationListener<
-                                                          UserScrollNotification>(
-                                                        onNotification: (notification) {
-                                                          if (notification.direction !=
-                                                              ScrollDirection.idle) {
-                                                            _hideCustomNumpad();
-                                                          }
-                                                          return false;
-                                                        },
-                                                        child: GridView.builder(
-                                                          padding: const EdgeInsets.fromLTRB(
-                                                              16, 0, 16, 16),
-                                                          physics:
-                                                              const ClampingScrollPhysics(),
-                                                          itemCount: _products.length,
-                                                          gridDelegate:
-                                                              SliverGridDelegateWithFixedCrossAxisCount(
-                                                            // Prioritas: config admin
-                                                            // (configProductLayout='list' → 1 kolom,
-                                                            //  configProductColumns → N kolom)
-                                                            // → fallback heuristik existing.
-                                                            crossAxisCount: () {
-                                                              final cfgLayout = widget
-                                                                  .configProductLayout
-                                                                  ?.toLowerCase();
-                                                              if (cfgLayout == 'list') return 1;
-                                                              if (widget.configProductColumns !=
-                                                                      null &&
-                                                                  widget.configProductColumns! >= 1 &&
-                                                                  widget.configProductColumns! <= 3) {
-                                                                return widget.configProductColumns!;
-                                                              }
-                                                              return (isPlnPrabayarTab ||
-                                                                      _isTopupGameFiltered)
-                                                                  ? 1
-                                                                  : 2;
-                                                            }(),
-                                                            crossAxisSpacing: 10,
-                                                            mainAxisSpacing: 10,
-                                                            mainAxisExtent: () {
-                                                              final cfgLayout = widget
-                                                                  .configProductLayout
-                                                                  ?.toLowerCase();
-                                                              final isList = cfgLayout == 'list' ||
-                                                                  isPlnPrabayarTab ||
-                                                                  _isTopupGameFiltered;
-                                                              if (isPlnPrabayarTab) return 100.0;
-                                                              if (_isTopupGameFiltered) return 124.0;
-                                                              if (isList) return 100.0;
-                                                              return 148.0;
-                                                            }(),
-                                                          ),
-                                                          itemBuilder: (_, i) {
-                                                            final p = Map<String, dynamic>.from(
-                                                                _products[i]);
-                                                            final isPromo = p['_is_promo_pre'] ?? _isPromoProduct(p);
-                                                            final originalPrice =
-                                                                p['_original_price_pre'] ?? _originalPrice(p);
-                                                            final promoPrice = p['_promo_price_pre'] ?? _promoPrice(p);
-                                                            final rewardCoins =
-                                                                p['_reward_coins_pre'] ?? _extractRewardCoins(p);
-                                                            final promoLabel = p['_promo_label_pre'] ?? _promoRemainingLabel(p);
-                                                            
-                                                            final isSelected = (_isEmoney ||
-                                                                    (_isPln &&
-                                                                        _plnTabIndex == 0)) &&
-                                                                _selectedProduct != null &&
-                                                                _selectedProduct![
-                                                                        'buyer_sku_code'] ==
-                                                                    p['buyer_sku_code'];
-                                                            final providerLogoAsset =
-                                                                p['_logo_asset_pre'] ?? (_isCellularCategory
-                                                                    ? _pulsaProviderLogoAsset(p)
-                                                                    : '');
-
-                                                            return Material(
-                                                              color: Colors.white,
-                                                              borderRadius:
-                                                                  BorderRadius.circular(12),
-                                                              elevation: 16,
-                                                              shadowColor: Colors.black
-                                                                  .withValues(alpha: 0.18),
-                                                              child: Container(
-                                                                child: Ink(
-                                                                  decoration: BoxDecoration(
-                                                                    color: Colors.white,
-                                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            12),
-                                                    border: Border.all(
-                                                      color: isSelected
-                                                          ? accent.withValues(
-                                                              alpha: 0.35)
-                                                          : Colors.transparent,
                                                     ),
-                                                  ),
-                                                  child: InkWell(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            12),
-                                                    onTap: () =>
-                                                        _onProductSelected(p),
-                                                    child: Padding(
-                                                      padding: const EdgeInsets
-                                                          .fromLTRB(
-                                                          10, 10, 10, 10),
-                                                      child: Stack(
-                                                        children: [
-                                                          if (providerLogoAsset
-                                                              .isNotEmpty)
-                                                            Positioned(
-                                                              right: 6,
-                                                              bottom: 2,
-                                                              child: Opacity(
-                                                                opacity: 0.30,
-                                                                child:
-                                                                    Image.asset(
-                                                                  providerLogoAsset,
-                                                                  width: 72,
-                                                                  height: 72,
-                                                                  fit: BoxFit
-                                                                      .contain,
+                                                  )
+                                                else
+                                                  RepaintBoundary(
+                                                    child: NotificationListener<UserScrollNotification>(
+                                                      onNotification: (notification) {
+                                                        if (notification.direction != ScrollDirection.idle) {
+                                                          _hideCustomNumpad();
+                                                        }
+                                                        return false;
+                                                      },
+                                                      child: GridView.builder(
+                                                        shrinkWrap: true,
+                                                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                                        physics: const NeverScrollableScrollPhysics(),
+                                                        itemCount: _products.length,
+                                                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                                          crossAxisCount: () {
+                                                            final cfgLayout = widget.configProductLayout?.toLowerCase();
+                                                            if (cfgLayout == 'list') return 1;
+                                                            if (widget.configProductColumns != null &&
+                                                                widget.configProductColumns! >= 1 &&
+                                                                widget.configProductColumns! <= 3) {
+                                                              return widget.configProductColumns!;
+                                                            }
+                                                            return (isPlnPrabayarTab || _isTopupGameFiltered) ? 1 : 2;
+                                                          }(),
+                                                          crossAxisSpacing: 10,
+                                                          mainAxisSpacing: 10,
+                                                          mainAxisExtent: () {
+                                                            final cfgLayout = widget.configProductLayout?.toLowerCase();
+                                                            final isList = cfgLayout == 'list' || isPlnPrabayarTab || _isTopupGameFiltered;
+                                                            if (isPlnPrabayarTab) return 100.0;
+                                                            if (_isTopupGameFiltered) return 124.0;
+                                                            if (isList) return 100.0;
+                                                            return 148.0;
+                                                          }(),
+                                                        ),
+                                                        itemBuilder: (_, i) {
+                                                          final p = Map<String, dynamic>.from(_products[i]);
+                                                          final isPromo = p['_is_promo_pre'] ?? _isPromoProduct(p);
+                                                          final originalPrice = p['_original_price_pre'] ?? _originalPrice(p);
+                                                          final promoPrice = p['_promo_price_pre'] ?? _promoPrice(p);
+                                                          final rewardCoins = p['_reward_coins_pre'] ?? _extractRewardCoins(p);
+                                                          final promoLabel = p['_promo_label_pre'] ?? _promoRemainingLabel(p);
+                                                          final isSelected = (_isEmoney || (_isPln && _plnTabIndex == 0)) &&
+                                                              _selectedProduct != null &&
+                                                              _selectedProduct!['buyer_sku_code'] == p['buyer_sku_code'];
+                                                          final providerLogoAsset = p['_logo_asset_pre'] ??
+                                                              (_isCellularCategory ? _pulsaProviderLogoAsset(p) : '');
+
+                                                          return Material(
+                                                            color: Colors.white,
+                                                            borderRadius: BorderRadius.circular(12),
+                                                            elevation: 16,
+                                                            shadowColor: Colors.black.withValues(alpha: 0.18),
+                                                            child: Ink(
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.white,
+                                                                borderRadius: BorderRadius.circular(12),
+                                                                border: Border.all(
+                                                                  color: isSelected
+                                                                      ? accent.withValues(alpha: 0.35)
+                                                                      : Colors.transparent,
                                                                 ),
                                                               ),
-                                                            ),
-                                                          Row(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment.start,
-                                                            children: [
-                                                              Expanded(
-                                                                child: Column(
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment.start,
-                                                                  mainAxisSize:
-                                                                      MainAxisSize.min,
-                                                                  children: [
-                                                                    Text(
-                                                                      p['product_name'] ?? '-',
-                                                                      maxLines: 2,
-                                                                      overflow: TextOverflow.ellipsis,
-                                                                      style: TextStyle(
-                                                                        color: textPrimary,
-                                                                        fontFamily: 'Gilroy Bold',
-                                                                        fontSize: 14,
-                                                                      ),
-                                                                    ),
-                                                                    const SizedBox(height: 4),
-                                                                    if (isPromo)
-                                                                      Text(
-                                                                        _formatPrice(originalPrice),
-                                                                        style: TextStyle(
-                                                                          color: textSecondary,
-                                                                          fontFamily: 'Gilroy Medium',
-                                                                          fontSize: 11,
-                                                                          decoration: TextDecoration.lineThrough,
-                                                                        ),
-                                                                      ),
-                                                                    if (isPromo)
-                                                                      const SizedBox(height: 2),
-                                                                    Text(
-                                                                      _formatPrice(isPromo ? promoPrice : p['price']),
-                                                                      style: TextStyle(
-                                                                        color: isPromo
-                                                                            ? const Color(0xFFE53935)
-                                                                            : accent,
-                                                                        fontFamily: 'Gilroy Bold',
-                                                                        fontSize: 18,
-                                                                      ),
-                                                                    ),
-                                                                    if (rewardCoins != null && !isPromo) ...[
-                                                                      const SizedBox(height: 4),
-                                                                      Text(
-                                                                        '+$rewardCoins coin',
-                                                                        style: const TextStyle(
-                                                                          color: Color(0xFFFF9800),
-                                                                          fontFamily: 'Gilroy Bold',
-                                                                          fontSize: 11,
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                              if (isPromo)
-                                                                Container(
-                                                                  margin: const EdgeInsets.only(left: 6),
-                                                                  child: Column(
-                                                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                                                    mainAxisSize: MainAxisSize.min,
+                                                              child: InkWell(
+                                                                borderRadius: BorderRadius.circular(12),
+                                                                onTap: () => _onProductSelected(p),
+                                                                child: Padding(
+                                                                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                                                                  child: Stack(
                                                                     children: [
-                                                                      Container(
-                                                                        padding: const EdgeInsets.symmetric(
-                                                                          horizontal: 6,
-                                                                          vertical: 2,
-                                                                        ),
-                                                                        decoration: BoxDecoration(
-                                                                          color: const Color(0xFFE53935),
-                                                                          borderRadius: BorderRadius.circular(6),
-                                                                        ),
-                                                                        child: const Text(
-                                                                          'PROMO',
-                                                                          style: TextStyle(
-                                                                            color: Colors.white,
-                                                                            fontFamily: 'Gilroy Bold',
-                                                                            fontSize: 9,
+                                                                      if (providerLogoAsset.isNotEmpty)
+                                                                        Positioned(
+                                                                          right: 6,
+                                                                          bottom: 2,
+                                                                          child: Opacity(
+                                                                            opacity: 0.30,
+                                                                            child: Image.asset(
+                                                                              providerLogoAsset,
+                                                                              width: 72,
+                                                                              height: 72,
+                                                                              fit: BoxFit.contain,
+                                                                            ),
                                                                           ),
                                                                         ),
-                                                                      ),
-                                                                      const SizedBox(height: 4),
-                                                                      Text(
-                                                                        promoLabel,
-                                                                        style: const TextStyle(
-                                                                          color: Color(0xFFEF6C00),
-                                                                          fontFamily: 'Gilroy Medium',
-                                                                          fontSize: 10,
-                                                                        ),
-                                                                      ),
-                                                                      if (rewardCoins != null) ...[
-                                                                        const SizedBox(height: 2),
-                                                                        Text(
-                                                                          '+$rewardCoins coin',
-                                                                          style: const TextStyle(
-                                                                            color: Color(0xFFFF9800),
-                                                                            fontFamily: 'Gilroy Bold',
-                                                                            fontSize: 11,
+                                                                      Row(
+                                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          Expanded(
+                                                                            child: Column(
+                                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                                              mainAxisSize: MainAxisSize.min,
+                                                                              children: [
+                                                                                Text(
+                                                                                  p['product_name'] ?? '-',
+                                                                                  maxLines: 2,
+                                                                                  overflow: TextOverflow.ellipsis,
+                                                                                  style: TextStyle(
+                                                                                    color: textPrimary,
+                                                                                    fontFamily: 'Gilroy Bold',
+                                                                                    fontSize: 14,
+                                                                                  ),
+                                                                                ),
+                                                                                const SizedBox(height: 4),
+                                                                                if (isPromo)
+                                                                                  Text(
+                                                                                    _formatPrice(originalPrice),
+                                                                                    style: TextStyle(
+                                                                                      color: textSecondary,
+                                                                                      fontFamily: 'Gilroy Medium',
+                                                                                      fontSize: 11,
+                                                                                      decoration: TextDecoration.lineThrough,
+                                                                                    ),
+                                                                                  ),
+                                                                                if (isPromo) const SizedBox(height: 2),
+                                                                                Text(
+                                                                                  _formatPrice(isPromo ? promoPrice : p['price']),
+                                                                                  style: TextStyle(
+                                                                                    color: isPromo
+                                                                                        ? const Color(0xFFE53935)
+                                                                                        : accent,
+                                                                                    fontFamily: 'Gilroy Bold',
+                                                                                    fontSize: 18,
+                                                                                  ),
+                                                                                ),
+                                                                                if (rewardCoins != null && !isPromo) ...[
+                                                                                  const SizedBox(height: 4),
+                                                                                  Text(
+                                                                                    '+$rewardCoins coin',
+                                                                                    style: const TextStyle(
+                                                                                      color: Color(0xFFFF9800),
+                                                                                      fontFamily: 'Gilroy Bold',
+                                                                                      fontSize: 11,
+                                                                                    ),
+                                                                                  ),
+                                                                                ],
+                                                                              ],
+                                                                            ),
                                                                           ),
-                                                                        ),
-                                                                      ],
+                                                                          if (isPromo)
+                                                                            Container(
+                                                                              margin: const EdgeInsets.only(left: 6),
+                                                                              child: Column(
+                                                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                                                mainAxisSize: MainAxisSize.min,
+                                                                                children: [
+                                                                                  Container(
+                                                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                                                    decoration: BoxDecoration(
+                                                                                      color: const Color(0xFFE53935),
+                                                                                      borderRadius: BorderRadius.circular(6),
+                                                                                    ),
+                                                                                    child: const Text(
+                                                                                      'PROMO',
+                                                                                      style: TextStyle(
+                                                                                        color: Colors.white,
+                                                                                        fontFamily: 'Gilroy Bold',
+                                                                                        fontSize: 9,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                  const SizedBox(height: 4),
+                                                                                  Text(
+                                                                                    promoLabel,
+                                                                                    style: const TextStyle(
+                                                                                      color: Color(0xFFEF6C00),
+                                                                                      fontFamily: 'Gilroy Medium',
+                                                                                      fontSize: 10,
+                                                                                    ),
+                                                                                  ),
+                                                                                  if (rewardCoins != null) ...[
+                                                                                    const SizedBox(height: 2),
+                                                                                    Text(
+                                                                                      '+$rewardCoins coin',
+                                                                                      style: const TextStyle(
+                                                                                        color: Color(0xFFFF9800),
+                                                                                        fontFamily: 'Gilroy Bold',
+                                                                                        fontSize: 11,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ],
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                        ],
+                                                                      ),
                                                                     ],
                                                                   ),
                                                                 ),
-                                                            ],
-                                                          ),
-                                                        ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
                                                       ),
                                                     ),
                                                   ),
-                                                ),
+                                              ],
+                                            ),
+                                    // ── Grey Footer Button ─────────────────────────────────
+                                    if (isPlnPrabayarTab)
+                                      Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFF2F4F8),
+                                          borderRadius: BorderRadius.only(
+                                            bottomLeft: Radius.circular(16),
+                                            bottomRight: Radius.circular(16),
+                                          ),
+                                        ),
+                                        child: SizedBox(
+                                          width: double.infinity,
+                                          height: 52,
+                                          child: ElevatedButton(
+                                            onPressed: (canContinuePlnPrabayar && !_isValidatingRecipient)
+                                                ? _continuePlnPrabayar
+                                                : null,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: accent,
+                                              disabledBackgroundColor: accent.withValues(alpha: 0.35),
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
                                               ),
-                                            );
-                                          },
+                                            ),
+                                            child: _isValidatingRecipient
+                                                ? const SizedBox(
+                                                    height: 22,
+                                                    width: 22,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2.4,
+                                                      color: Colors.white,
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    'Lanjutkan',
+                                                    style: TextStyle(
+                                                      fontFamily: 'Gilroy Bold',
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
                                   ],
-                                )
-                              : const SizedBox.shrink(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
           if (_enableCustomNumpad && _showCustomNumpad)
@@ -4723,10 +4701,28 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _isLoadingProducts
-              ? _buildShimmerProducts()
-              : _buildCustomAmountSection(
-                  textPrimary, textSecondary, accent, quickAmounts),
+          // Visibility(maintainState: true) (bukan ternary/Stack) menjaga
+          // kedua subtree tetap ter-mount tanpa memaksa GridView shimmer
+          // melalui dry-layout (Stack/IndexedStack memanggil computeDryLayout
+          // pada children non-positioned, yang selalu gagal untuk viewport
+          // scroll seperti GridView). Ternary lepas-pasang widget tepat di
+          // bawah kursor saat data produk datang async, memicu assertion
+          // '_debugDuringDeviceUpdate' di MouseTracker (desktop).
+          child: Column(
+            children: [
+              Visibility(
+                visible: _isLoadingProducts,
+                maintainState: true,
+                child: _buildShimmerProducts(),
+              ),
+              Visibility(
+                visible: !_isLoadingProducts,
+                maintainState: true,
+                child: _buildCustomAmountSection(
+                    textPrimary, textSecondary, accent, quickAmounts),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -4847,7 +4843,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
   Widget _buildCustomAmountSection(Color textPrimary, Color textSecondary,
       Color accent, List<int> quickAmounts) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5018,7 +5014,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           child: Row(
             children: [
               IconButton(
-                onPressed: _backToEwalletList,
+                onPressed: () => Future.microtask(_backToEwalletList),
                 icon: Icon(Icons.arrow_back_rounded, color: textPrimary),
                 splashRadius: 22,
               ),
@@ -5033,11 +5029,23 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             ],
           ),
         ),
-        Expanded(
-          child: _isLoadingProducts
-              ? _buildShimmerProducts()
-              : _buildCustomAmountSection(
-                  textPrimary, textSecondary, accent, quickAmounts),
+        // Visibility(maintainState: true) (bukan ternary/Stack) menjaga
+        // kedua subtree tetap ter-mount tanpa memaksa GridView shimmer
+        // melalui dry-layout (Stack/IndexedStack memanggil computeDryLayout
+        // pada children non-positioned, yang selalu gagal untuk viewport
+        // scroll seperti GridView). Ternary lepas-pasang widget tepat di
+        // bawah kursor saat data produk datang async, memicu assertion
+        // '_debugDuringDeviceUpdate' di MouseTracker (desktop).
+        Visibility(
+          visible: _isLoadingProducts,
+          maintainState: true,
+          child: _buildShimmerProducts(),
+        ),
+        Visibility(
+          visible: !_isLoadingProducts,
+          maintainState: true,
+          child: _buildCustomAmountSection(
+              textPrimary, textSecondary, accent, quickAmounts),
         ),
       ],
     );
@@ -5056,6 +5064,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     ];
 
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       itemCount: ewalletBrands.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -5067,7 +5077,9 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         final brandLogo = brand['logo'] as String?;
 
         return InkWell(
-          onTap: () => _onEwalletBrandTap(brandName),
+          // Defer: setState sync di sini melepas InkWell ini mid-pointer-dispatch,
+          // memicu assertion '_debugDuringDeviceUpdate' di desktop.
+          onTap: () => Future.microtask(() => _onEwalletBrandTap(brandName)),
           borderRadius: BorderRadius.circular(14),
           child: Ink(
             decoration: BoxDecoration(

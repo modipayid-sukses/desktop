@@ -101,190 +101,219 @@ class PPOBCellularForm extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        Expanded(
-          child: !shouldShowProducts
-              ? Center(
-                  child: isPulsaTransferTab
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              height: 240,
-                              width: 240,
-                              child: Lottie.asset('assets/lottie/empty_cart.json'),
-                            ),
-                          ],
-                        )
-                      : Text(
-                          hasCustomerInput
-                              ? 'Prefix nomor tidak terdeteksi'
-                              : 'Harap masukan no.hp terlebih dahulu',
-                          style: TextStyle(
-                            color: textSecondary.withOpacity(0.6),
-                            fontFamily: 'Gilroy Medium',
-                            fontSize: 18,
-                          ),
-                        ),
-                )
-              : isLoadingProducts
-                  ? buildShimmerProducts()
-                  : products.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Belum ada produk tersedia',
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontFamily: 'Gilroy Medium',
-                            ),
-                          ),
-                        )
-                      : GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          physics: const ClampingScrollPhysics(),
-                          itemCount: products.length,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            mainAxisExtent: 148,
-                          ),
-                          itemBuilder: (_, i) {
-                            final p = Map<String, dynamic>.from(products[i]);
-                            final isPromo = p['_is_promo_pre'] ?? isPromoProduct(p);
-                            final origPrice = p['_original_price_pre'] ?? originalPrice(p);
-                            final promPrice = p['_promo_price_pre'] ?? promoPrice(p);
-                            final rewardCoins = p['_reward_coins_pre'] ?? extractRewardCoins(p);
-                            final providerLogoAsset = p['_logo_asset_pre'] ?? pulsaProviderLogoAsset(p);
-                            final promoLabel = p['_promo_label_pre'] ?? promoRemainingLabel(p);
+        if (!shouldShowProducts)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            alignment: Alignment.center,
+            child: isPulsaTransferTab
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        height: 240,
+                        width: 240,
+                        child: Lottie.asset('assets/lottie/empty_cart.json'),
+                      ),
+                    ],
+                  )
+                : Text(
+                    hasCustomerInput
+                        ? 'Prefix nomor tidak terdeteksi'
+                        : 'Harap masukan no.hp terlebih dahulu',
+                    style: TextStyle(
+                      color: textSecondary.withOpacity(0.6),
+                      fontFamily: 'Gilroy Medium',
+                      fontSize: 18,
+                    ),
+                  ),
+          )
+        else if (isLoadingProducts)
+          buildShimmerProducts()
+        else if (products.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            alignment: Alignment.center,
+            child: Text(
+              'Belum ada produk tersedia',
+              style: TextStyle(
+                color: textSecondary,
+                fontFamily: 'Gilroy Medium',
+              ),
+            ),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            itemCount: products.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              mainAxisExtent: 148,
+            ),
+            itemBuilder: (_, i) {
+              final p = Map<String, dynamic>.from(products[i]);
+              final isPromo = p['_is_promo_pre'] ?? isPromoProduct(p);
+              final origPrice = p['_original_price_pre'] ?? originalPrice(p);
+              final promPrice = p['_promo_price_pre'] ?? promoPrice(p);
+              final rewardCoins = p['_reward_coins_pre'] ?? extractRewardCoins(p);
+              final providerLogoAsset = p['_logo_asset_pre'] ?? pulsaProviderLogoAsset(p);
+              final promoLabel = p['_promo_label_pre'] ?? promoRemainingLabel(p);
 
-                            return Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              elevation: 16,
-                              shadowColor: Colors.black.withOpacity(0.08),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () => onProductSelected(p),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: Stack(
-                                    children: [
-                                      if (providerLogoAsset.isNotEmpty)
-                                        Positioned(
-                                          right: 6,
-                                          bottom: 2,
-                                          child: Opacity(
-                                            opacity: 0.30,
-                                            child: Image.asset(
-                                              providerLogoAsset,
-                                              width: 72,
-                                              height: 72,
-                                              fit: BoxFit.contain,
-                                            ),
-                                          ),
-                                        ),
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+              return Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                elevation: 16,
+                shadowColor: Colors.black.withOpacity(0.08),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => onProductSelected(p),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Stack(
+                      children: [
+                        if (providerLogoAsset.isNotEmpty)
+                          Positioned(
+                            right: 6,
+                            bottom: 2,
+                            child: Opacity(
+                              opacity: 0.30,
+                              child: Image.asset(
+                                providerLogoAsset,
+                                width: 72,
+                                height: 72,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    p['product_name'] ?? '-',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: textPrimary,
+                                      fontFamily: 'Gilroy Bold',
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    productDescription(p),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontSize: 10,
+                                      fontFamily: 'Gilroy Medium',
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (rewardCoins != null && rewardCoins > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  p['product_name'] ?? '-',
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    color: textPrimary,
-                                                    fontFamily: 'Gilroy Bold',
-                                                    fontSize: 14,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                if (isPromo)
-                                                  Text(
-                                                    formatPrice(origPrice),
-                                                    style: TextStyle(
-                                                      color: textSecondary,
-                                                      fontFamily: 'Gilroy Medium',
-                                                      fontSize: 11,
-                                                      decoration: TextDecoration.lineThrough,
-                                                    ),
-                                                  ),
-                                                if (isPromo)
-                                                  const SizedBox(height: 2),
-                                                Text(
-                                                  formatPrice(isPromo ? promPrice : p['price']),
-                                                  style: TextStyle(
-                                                    color: isPromo
-                                                        ? const Color(0xFFE53935)
-                                                        : accentColor,
-                                                    fontFamily: 'Gilroy Bold',
-                                                    fontSize: 18,
-                                                  ),
-                                                ),
-                                                if (rewardCoins != null && !isPromo) ...[
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    '+$rewardCoins coin',
-                                                    style: const TextStyle(
-                                                      color: Color(0xFFFF9800),
-                                                      fontFamily: 'Gilroy Bold',
-                                                      fontSize: 11,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ],
+                                          Icon(Icons.monetization_on,
+                                              color: Colors.amber[700], size: 12),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            '+$rewardCoins Koin',
+                                            style: TextStyle(
+                                              color: Colors.amber[800],
+                                              fontSize: 9,
+                                              fontFamily: 'Gilroy Bold',
                                             ),
                                           ),
-                                          if (isPromo)
-                                            Container(
-                                              margin: const EdgeInsets.only(left: 6),
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.end,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(0xFFE53935),
-                                                      borderRadius: BorderRadius.circular(6),
-                                                    ),
-                                                    child: const Text(
-                                                      'PROMO',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontFamily: 'Gilroy Bold',
-                                                        fontSize: 9,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    promoLabel,
-                                                    style: const TextStyle(
-                                                      color: Color(0xFFEF6C00),
-                                                      fontFamily: 'Gilroy Medium',
-                                                      fontSize: 10,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
                                         ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  if (isPromo) ...[
+                                    Text(
+                                      formatPrice(origPrice),
+                                      style: TextStyle(
+                                        color: textSecondary.withOpacity(0.6),
+                                        fontSize: 10,
+                                        fontFamily: 'Gilroy Medium',
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                    Text(
+                                      formatPrice(promPrice),
+                                      style: TextStyle(
+                                        color: accentColor,
+                                        fontSize: 14,
+                                        fontFamily: 'Gilroy Bold',
+                                      ),
+                                    ),
+                                  ] else
+                                    Text(
+                                      formatPrice(origPrice),
+                                      style: TextStyle(
+                                        color: accentColor,
+                                        fontSize: 14,
+                                        fontFamily: 'Gilroy Bold',
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (isPromo)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE53935),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'PROMO',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontFamily: 'Gilroy Bold',
+                                          fontSize: 9,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      promoLabel,
+                                      style: const TextStyle(
+                                        color: Color(0xFFEF6C00),
+                                        fontFamily: 'Gilroy Medium',
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            );
-                          },
+                          ],
                         ),
-        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
       ],
     );
   }

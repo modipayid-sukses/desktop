@@ -106,178 +106,189 @@ class _ProfileState extends State<Profile> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   color: cardBg,
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 62,
-                          height: 62,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF3FA),
-                            shape: BoxShape.circle,
-                          ),
-                          child: ClipOval(
-                            child: auth.userAvatar != null && auth.userAvatar!.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: ApiService.avatarUrl(auth.userAvatar),
-                                    cacheKey: auth.userAvatar,
-                                    fit: BoxFit.cover,
-                                    fadeInDuration: Duration.zero,
-                                    errorWidget: (_, __, ___) =>
-                                        Image.asset('images/man4.png', fit: BoxFit.cover),
-                                  )
-                                : Image.asset('images/man4.png', fit: BoxFit.cover),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              Text(
-                                'Halo, $firstName',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF18202A),
-                                  fontFamily: 'Gilroy Bold',
-                                  fontSize: 20,
+                              Container(
+                                width: 62,
+                                height: 62,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEFF3FA),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: ClipOval(
+                                  child: auth.userAvatar != null && auth.userAvatar!.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: ApiService.avatarUrl(auth.userAvatar),
+                                          cacheKey: auth.userAvatar,
+                                          fit: BoxFit.cover,
+                                          fadeInDuration: Duration.zero,
+                                          errorWidget: (_, __, ___) =>
+                                              Image.asset('images/man4.png', fit: BoxFit.cover),
+                                        )
+                                      : Image.asset('images/man4.png', fit: BoxFit.cover),
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                auth.userEmail,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF728095),
-                                  fontFamily: 'Gilroy Medium',
-                                  fontSize: 13,
+                              Positioned(
+                                right: -2,
+                                bottom: -2,
+                                child: InkWell(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const EditProfile()),
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF20467A),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                    ),
+                                    child: const Icon(Icons.edit, color: Colors.white, size: 12),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        InkWell(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const EditProfile()),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF3FA),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.edit_outlined, color: Color(0xFF20467A), size: 18),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F6FB),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(_levelIcon(levelName), color: _levelColor(levelName), size: 20),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 14),
                           Expanded(
-                            child: Text(
-                              'Member $levelName',
-                              style: const TextStyle(
-                                color: Color(0xFF18202A),
-                                fontFamily: 'Gilroy Bold',
-                                fontSize: 14,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Halo, $firstName',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFF18202A),
+                                    fontFamily: 'Gilroy Bold',
+                                    fontSize: 20,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  auth.userEmail,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFF728095),
+                                    fontFamily: 'Gilroy Medium',
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.push(
+                          const SizedBox(width: 8),
+                          _kycBadge(auth),
+                          const SizedBox(width: 8),
+                          _circleIconButton(
+                            icon: Icons.notifications_none_rounded,
+                            onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const LevelDetailScreen()),
+                              MaterialPageRoute(builder: (_) => const Notifications()),
                             ),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF20467A),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text(
-                              'Lihat Level',
-                              style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 12),
+                          ),
+                          const SizedBox(width: 8),
+                          _circleIconButton(
+                            icon: Icons.language_outlined,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const Language()),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F6FB),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(_levelIcon(levelName), color: _levelColor(levelName), size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Member Level',
+                                    style: TextStyle(
+                                      color: Color(0xFF8A93A3),
+                                      fontFamily: 'Gilroy Medium',
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Member $levelName',
+                                    style: const TextStyle(
+                                      color: Color(0xFF18202A),
+                                      fontFamily: 'Gilroy Bold',
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LevelDetailScreen()),
+                              ),
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF20467A),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text(
+                                'Lihat Level',
+                                style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (auth.referralCode != null && auth.referralCode!.isNotEmpty)
+                      _referralCodeStrip(auth.referralCode!)
+                    else
+                      const SizedBox(height: 8),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _profileStatPill(
-                      icon: Icons.verified_user_outlined,
-                      label: auth.kycStatus.toLowerCase() == 'approved' ? 'KYC Terverifikasi' : 'KYC Belum Lengkap',
-                      accent: auth.kycStatus.toLowerCase() == 'approved'
-                          ? const Color(0xFF2E7D32)
-                          : const Color(0xFFB26A00),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const KycScreen()),
-                      ),
-                    ),
-                    _profileStatPill(
-                      icon: Icons.notifications_none_rounded,
-                      label: 'Notifikasi',
-                      accent: const Color(0xFF3F6FB4),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const Notifications()),
-                      ),
-                    ),
-                    _profileStatPill(
-                      icon: Icons.language_outlined,
-                      label: 'Bahasa',
-                      accent: const Color(0xFF4B5FA9),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const Language()),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (auth.isMasterAgent && auth.referralCode != null && auth.referralCode!.isNotEmpty) ...[
-                _referralCodeCard(auth.referralCode!),
-                const SizedBox(height: 16),
-              ],
               _sectionCard(
                 title: 'Akun',
                 children: [
@@ -347,9 +358,13 @@ class _ProfileState extends State<Profile> {
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
+                    const SizedBox(height: 4),
+                    _securityToggleRow(
+                      icon: Icons.fingerprint,
+                      title: 'Login Biometrik',
+                      subtitle: _biometricAvailable
+                          ? 'Gunakan Face ID / sidik jari untuk login lebih cepat.'
+                          : 'Biometrik tidak tersedia di perangkat ini.',
                       value: _biometricEnabled,
                       onChanged: !_biometricAvailable
                           ? null
@@ -363,29 +378,10 @@ class _ProfileState extends State<Profile> {
                               await BiometricService.setEnabled(val);
                               if (mounted) setState(() => _biometricEnabled = val);
                             },
-                      activeColor: notifire.getbluecolor,
-                      title: const Text(
-                        'Login Biometrik',
-                        style: TextStyle(
-                          fontFamily: 'Gilroy Medium',
-                          color: Color(0xFF202A36),
-                          fontSize: 14,
-                        ),
-                      ),
-                      subtitle: Text(
-                        _biometricAvailable
-                            ? 'Gunakan Face ID / sidik jari untuk login lebih cepat.'
-                            : 'Biometrik tidak tersedia di perangkat ini.',
-                        style: const TextStyle(
-                          fontFamily: 'Gilroy Medium',
-                          color: Color(0xFF728095),
-                          fontSize: 12,
-                        ),
-                      ),
                     ),
-                    const Divider(height: 10),
+                    const Divider(height: 18),
                     _pinRequiredToggle(auth),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                   ],
                 ),
               ),
@@ -465,62 +461,110 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  Widget _referralCodeCard(String referralCode) {
+  Widget _referralCodeStrip(String referralCode) {
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: const BoxDecoration(
+        color: Color(0xFFEAF0FB),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
       ),
-      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF3FA),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.card_giftcard_outlined, color: Color(0xFF20467A), size: 20),
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Kode Referral Saya',
-                  style: TextStyle(
-                    color: Color(0xFF18202A),
-                    fontFamily: 'Gilroy Bold',
-                    fontSize: 14,
-                  ),
+            child: RichText(
+              overflow: TextOverflow.ellipsis,
+              text: TextSpan(
+                style: const TextStyle(
+                  color: Color(0xFF18202A),
+                  fontFamily: 'Gilroy Medium',
+                  fontSize: 13,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  referralCode,
-                  style: const TextStyle(
-                    color: Color(0xFF728095),
-                    fontFamily: 'Gilroy Medium',
-                    fontSize: 13,
-                    letterSpacing: 1,
+                children: [
+                  const TextSpan(text: 'Kode Referral Saya: '),
+                  TextSpan(
+                    text: referralCode,
+                    style: const TextStyle(fontFamily: 'Gilroy Bold'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          IconButton(
-            onPressed: () async {
+          InkWell(
+            onTap: () async {
               await Clipboard.setData(ClipboardData(text: referralCode));
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Kode referral disalin')),
               );
             },
-            icon: const Icon(Icons.copy_outlined, color: Color(0xFF20467A), size: 20),
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.copy_outlined, color: Color(0xFF20467A), size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    'Salin Kode',
+                    style: TextStyle(
+                      color: Color(0xFF20467A),
+                      fontFamily: 'Gilroy Bold',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _kycBadge(AuthProvider auth) {
+    final isApproved = auth.kycStatus.toLowerCase() == 'approved';
+    final accent = isApproved ? const Color(0xFF2E7D32) : const Color(0xFFC0392B);
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const KycScreen()),
+      ),
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: accent.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          isApproved ? 'KYC Terverifikasi' : 'KYC Belum Lengkap',
+          style: TextStyle(
+            color: accent,
+            fontFamily: 'Gilroy Bold',
+            fontSize: 11,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _circleIconButton({required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          color: Color(0xFFEFF3FA),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: const Color(0xFF20467A), size: 18),
       ),
     );
   }
@@ -547,40 +591,6 @@ class _ProfileState extends State<Profile> {
           const SizedBox(height: 8),
           ...children,
         ],
-      ),
-    );
-  }
-
-  Widget _profileStatPill({
-    required IconData icon,
-    required String label,
-    required Color accent,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: accent.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: accent),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: accent,
-                fontFamily: 'Gilroy Bold',
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -737,32 +747,68 @@ class _ProfileState extends State<Profile> {
   Widget _pinRequiredToggle(AuthProvider auth) {
     final hasPin = auth.hasPin;
     final pinRequired = auth.pinRequired;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: width / 20),
-      child: Container(
-        color: Colors.transparent,
-        child: Row(
-          children: [
-            Icon(Icons.lock_outline, size: height / 34, color: notifire.getdarkscolor),
-            SizedBox(width: width / 25),
-            Expanded(
-              child: Text(
-                'PIN untuk Transaksi',
-                style: TextStyle(
-                  fontSize: height / 50,
-                  color: notifire.getdarkscolor,
+    return _securityToggleRow(
+      icon: Icons.lock_outline,
+      title: 'PIN untuk Transaksi',
+      value: hasPin && pinRequired,
+      onChanged: !hasPin ? null : (val) => _onTogglePin(auth, val),
+    );
+  }
+
+  Widget _securityToggleRow({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF3FA),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: const Color(0xFF20467A), size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
                   fontFamily: 'Gilroy Medium',
+                  color: Color(0xFF202A36),
+                  fontSize: 14,
                 ),
               ),
-            ),
-            CupertinoSwitch(
-              value: hasPin && pinRequired,
-              activeTrackColor: notifire.getbluecolor,
-              onChanged: !hasPin ? null : (val) => _onTogglePin(auth, val),
-            ),
-          ],
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontFamily: 'Gilroy Medium',
+                    color: Color(0xFF728095),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-      ),
+        const SizedBox(width: 8),
+        Switch.adaptive(
+          value: value,
+          onChanged: onChanged,
+          activeColor: notifire.getbluecolor,
+        ),
+      ],
     );
   }
 

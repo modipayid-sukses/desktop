@@ -11,7 +11,7 @@ class ApiService {
   // Override with --dart-define=API_BASE_URL=http://<your-ip>:8000/api for local dev.
   static const String _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://panel.modipay.biz.id/api',
+    defaultValue: 'https://dev.modipay.biz.id/api',
   );
 
   static String get baseUrl => _baseUrl;

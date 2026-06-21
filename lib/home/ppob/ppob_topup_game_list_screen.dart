@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../utils/responsive.dart';
 import 'ppob_menu_route.dart';
 import 'ppob_product_screen.dart';
 import 'ppob_postpaid_screen.dart';
@@ -188,9 +189,12 @@ class PPOBTopUpGameListScreen extends StatelessWidget {
       backgroundColor: pageBg,
       body: Column(
         children: [
-          // Header biru
+          // Header putih, judul rata kiri — tombol back disembunyikan saat
+          // di-render di dalam desktop content pane (lihat
+          // _buildDesktopContentPane), supaya tidak dobel dengan tombol
+          // "Kembali" di pane tersebut.
           Container(
-            color: headerBlue,
+            color: Colors.white,
             padding: EdgeInsets.fromLTRB(
               12,
               MediaQuery.of(context).padding.top + 8,
@@ -199,22 +203,23 @@ class PPOBTopUpGameListScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
+                isDesktopPopup(context)
+                    ? const SizedBox(width: 12)
+                    : IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                 Expanded(
                   child: Text(
                     title,
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF1A1A1A),
                       fontFamily: 'Gilroy Bold',
                       fontSize: 18,
                     ),
                   ),
                 ),
-                const SizedBox(width: 48),
               ],
             ),
           ),

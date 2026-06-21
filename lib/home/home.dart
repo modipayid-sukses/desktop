@@ -13,7 +13,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:modipay/home/notifications.dart';
 import 'package:modipay/home/ppob/ppob_all_services_screen.dart';
-import 'package:modipay/home/ppob/nfc_toll_scan_screen.dart';
 import 'package:modipay/home/ppob/ppob_emoney_brand_screen.dart';
 import 'package:modipay/home/ppob/ppob_menu_route.dart';
 import 'package:modipay/home/ppob/bpjs_screen.dart';
@@ -390,24 +389,104 @@ class _HomeState extends State<Home> {
       return;
     }
 
-    setState(() {
-      _contentNavKey = GlobalKey<NavigatorState>();
-      _desktopActiveScreen = screen;
-      if (menuKey != null) {
-        _activeDesktopMenu = menuKey;
-        _activeSubMenuName = null;
-      }
+    // Tunda penggantian widget tree ke frame berikutnya: jika dilakukan
+    // langsung di sini (sinkron di tengah pemrosesan pointer event), widget
+    // yang sedang di-hover mouse (mis. InkWell) bisa terhapus saat
+    // MouseTracker masih memproses device update, memicu assertion
+    // '!_debugDuringDeviceUpdate' di desktop.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _contentNavKey = GlobalKey<NavigatorState>();
+        _desktopActiveScreen = screen;
+        if (menuKey != null) {
+          _activeDesktopMenu = menuKey;
+          _activeSubMenuName = null;
+        }
+      });
     });
   }
 
   void _closeDesktopActiveScreen() {
-    setState(() {
-      _desktopActiveScreen = null;
-      _contentNavKey = null;
-      _activeDesktopMenu = 'beranda';
-      _activeSubMenuName = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _desktopActiveScreen = null;
+        _contentNavKey = null;
+        _activeDesktopMenu = 'beranda';
+        _activeSubMenuName = null;
+      });
+      _onRefresh();
     });
-    _onRefresh();
+  }
+
+  /// Tampilkan [screen] sebagai dialog overlay mengambang di atas dashboard
+  /// (bukan navigasi/penggantian halaman) — dashboard tetap ter-mount di
+  /// belakang barrier gelap. MediaQuery di-override ke ukuran kecil
+  /// (mobile-like) supaya screen yang biasanya punya layout desktop terpisah
+  /// (sidebar duplikat) ikut merender versi mobile/ringkas-nya. Tombol close
+  /// (X) ditambahkan sendiri di sini karena beberapa screen (mis.
+  /// Seealltransaction versi mobile) tidak punya AppBar/back button bawaan
+  /// untuk menutup dirinya sendiri.
+  void _showModalPopup(Widget screen) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Tutup',
+      barrierColor: Colors.black.withOpacity(0.45),
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (dialogContext, _, __) {
+        return SafeArea(
+          child: Center(
+            child: LayoutBuilder(
+              builder: (ctx, constraints) {
+                final wide = isDesktop(ctx);
+                final modalWidth = wide ? 460.0 : constraints.maxWidth;
+                final modalHeight = wide ? constraints.maxHeight * 0.85 : constraints.maxHeight * 0.92;
+                return SizedBox(
+                  width: modalWidth,
+                  height: modalHeight,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Material(
+                          borderRadius: BorderRadius.circular(20),
+                          clipBehavior: Clip.antiAlias,
+                          child: MediaQuery(
+                            data: MediaQuery.of(ctx).copyWith(size: Size(modalWidth, modalHeight)),
+                            child: screen,
+                          ),
+                        ),
+                        Positioned(
+                          top: -14,
+                          right: -14,
+                          child: InkWell(
+                            onTap: () => Navigator.pop(dialogContext),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                              ),
+                              child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF18202A)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    ).then((_) => _onRefresh());
   }
 
   /// Content pane yang menampung layar transaksi aktif, ditampilkan di
@@ -657,6 +736,7 @@ class _HomeState extends State<Home> {
       _keuanganItems   = parseGroup(data['keuangan']   as List? ?? [], 'prepaid');
       _topupGameItems  = parseGroup(data['topup_game'] as List? ?? [], 'prepaid');
       _lainnyaItems    = parseGroup(data['lainnya']    as List? ?? [], 'prepaid');
+      reclassifyPostpaidItems(_pembelianItems, _pembayaranItems);
     });
   }
 
@@ -1182,34 +1262,6 @@ class _HomeState extends State<Home> {
   List<Map<String, dynamic>> get _pembelianDisplayItems => _pembelianItems;
   List<Map<String, dynamic>> get _pembayaranDisplayItems => _pembayaranItems;
 
-  // Normalisasi kategori dari Loketbayar/Digiflazz (mis. 'PAKET DATA' →
-  // 'Paket Data') agar cocok dengan map kategori backend & label UI.
-  String _prettifyPpobCategory(String raw) {
-    final s = raw.trim();
-    if (s.isEmpty) return s;
-    const map = {
-      'paket data': 'Paket Data',
-      'pulsa': 'Pulsa',
-      'token pln': 'Token PLN',
-      'pln pasca': 'PLN Pascabayar',
-      'pln pascabayar': 'PLN Pascabayar',
-      'paket telpon': 'Paket Telpon',
-      'paket sms': 'Paket SMS',
-      'masa aktif': 'Masa Aktif',
-      'topup game': 'TopUp Game',
-      'top up game': 'TopUp Game',
-      'voucher': 'Voucher',
-      'e-money': 'E-Money',
-      'e-wallet': 'E-Wallet',
-    };
-    final lower = s.toLowerCase();
-    if (map.containsKey(lower)) return map[lower]!;
-    return lower
-        .split(' ')
-        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
-        .join(' ');
-  }
-
   Widget _buildCardAction({
     IconData? icon,
     String? svgAsset,
@@ -1274,14 +1326,25 @@ class _HomeState extends State<Home> {
     }
     return GestureDetector(
       onTap: () {
+        // Lewat _navigateToItem (bukan push langsung) supaya promo mendarat
+        // di layar yang SAMA dengan kalau user tap menu Prepaid/Postpaid
+        // biasa (mis. promo "Paket Data" → Prepaid > Paket Data, promo
+        // "Pulsa" → Prepaid > Pulsa), termasuk kasus khusus BPJS/PDAM/
+        // e-wallet/postpaid yang route-nya berbeda dari produk biasa.
         final rawCat = (p['category'] ?? '').toString();
-        final niceCat = _prettifyPpobCategory(rawCat);
-        _navigateAndRefresh(PPOBProductScreen(
-          category: niceCat,
-          title: niceCat,
-          cmd: p['cmd'] ?? 'prepaid',
-          initialBrand: (p['brand'] ?? p['operator_name'])?.toString(),
-        ));
+        final brand = (p['brand'] ?? p['operator_name'])?.toString() ?? '';
+        _navigateToItem(<String, dynamic>{
+          'name': productName,
+          'category': rawCat,
+          'brand': brand,
+          'cmd': p['cmd'] ?? 'prepaid',
+          'inquiryType': p['inquiry_type'] ?? p['inquiryType'],
+          'initialBrand': brand.isNotEmpty
+              ? brand
+              : (p['initial_brand'] ?? p['initialBrand']),
+          'postpaid': p['is_postpaid'] == true || p['postpaid'] == true,
+          'productTypeFilter': p['product_type_filter'] ?? p['product_type'],
+        });
       },
       child: Container(
         clipBehavior: Clip.antiAlias,
@@ -1555,10 +1618,16 @@ class _HomeState extends State<Home> {
 
   void _navigateToItem(Map<String, dynamic> item, {BuildContext? customContext}) {
     final cmd = (item['cmd'] ?? '').toString().toLowerCase();
+    // 'pasca' adalah konvensi cmd untuk item Postpaid di seluruh app (lihat
+    // reclassifyPostpaidItems, parseGroup(pembayaran, 'pasca')) — cek string
+    // 'postpaid' saja tidak menangkap nama seperti "PLN Pasca"/"PLN Pascabayar".
     final isPostpaid = cmd == 'postpaid' ||
+        cmd == 'pasca' ||
         resolvePpobRouteType(item) == 'postpaid' ||
         (item['category'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['category'] ?? '').toString().toLowerCase().contains('pasca') ||
         (item['name'] ?? '').toString().toLowerCase().contains('postpaid') ||
+        (item['name'] ?? '').toString().toLowerCase().contains('pasca') ||
         (item['brand'] ?? '').toString().toLowerCase().contains('bpjs') ||
         (item['brand'] ?? '').toString().toLowerCase().contains('pdam');
 
@@ -1599,8 +1668,6 @@ class _HomeState extends State<Home> {
     final routeType = resolvePpobRouteType(item);
     if (routeType == 'all_services') {
       _openTransaction(const PPOBAllServicesScreen(), customContext: customContext);
-    } else if (routeType == 'nfc_toll') {
-      _openTransaction(const NfcTollScanScreen(), customContext: customContext);
     } else if (routeType == 'bank_transfer') {
       _openTransaction(const BankTransferScreen(), customContext: customContext);
     } else if (routeType == 'qris_payment') {
@@ -2153,7 +2220,8 @@ class _HomeState extends State<Home> {
                 const Icon(Icons.headset_mic_outlined, size: 16, color: desktopAccentBlue),
                 const SizedBox(width: 6),
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text('CS Online', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 11, color: desktopTextPrimary)),
                     Text('08:00 - 22:00', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 9, color: desktopTextSecondary)),
@@ -2194,27 +2262,44 @@ class _HomeState extends State<Home> {
           ),
           const SizedBox(width: 16),
           GestureDetector(
-            onTap: () => _navigateAndRefresh(const profile_page.Profile()),
+            onTap: () => _openTransaction(const profile_page.Profile(), menuKey: 'akun'),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: desktopAccentBlue.withOpacity(0.15),
-                  child: Text(
-                    auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
-                    style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                ClipOval(
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    color: desktopAccentBlue.withOpacity(0.15),
+                    child: auth.userAvatar != null && auth.userAvatar!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: ApiService.avatarUrl(auth.userAvatar),
+                            cacheKey: auth.userAvatar,
+                            fit: BoxFit.cover,
+                            fadeInDuration: Duration.zero,
+                            errorWidget: (_, __, ___) => Center(
+                              child: Text(
+                                auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                                style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+                              style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(auth.userName, style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 13, color: desktopTextPrimary)),
                     Text(auth.userLevel.toUpperCase(), style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500, fontSize: 10, color: desktopTextSecondary)),
                   ],
                 ),
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: desktopTextSecondary, size: 18),
               ],
             ),
           ),
@@ -2430,11 +2515,19 @@ class _HomeState extends State<Home> {
               ),
               if (items.length > 5)
                 GestureDetector(
-                  onTap: () => _openTransaction(
+                  onTap: () => _showModalPopup(
                     _PpobOverflowScreen(
                       sectionTitle: sectionTitleForOverflow,
                       items: items,
-                      onItemTap: (item, localContext) => _navigateToItem(item, customContext: localContext),
+                      onItemTap: (item, localContext) {
+                        // Tutup popup dulu, baru navigasi lewat context asli
+                        // Home — popup mem-override MediaQuery jadi ukuran
+                        // kecil sehingga isDesktop(localContext) salah deteksi
+                        // sebagai mobile dan menumpuk halaman tujuan di atas
+                        // dialog yang masih terbuka.
+                        Navigator.of(localContext).pop();
+                        _navigateToItem(item);
+                      },
                       hasPromo: _hasPromoForItem,
                       colorOffset: colorOffset,
                     ),
@@ -2565,7 +2658,7 @@ class _HomeState extends State<Home> {
                 child: Text('Riwayat Transaksi Terakhir', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 15, color: desktopTextPrimary)),
               ),
               GestureDetector(
-                onTap: () => _navigateAndRefresh(const Seealltransaction()),
+                onTap: () => _showModalPopup(const Seealltransaction()),
                 child: Text('Lihat Semua', style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w700, fontSize: 12, color: desktopAccentBlue)),
               ),
             ],
@@ -2890,7 +2983,8 @@ class _PressableMenuButtonState extends State<_PressableMenuButton> {
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) async {
         await Future.delayed(const Duration(milliseconds: 180));
-        if (mounted) setState(() => _pressed = false);
+        if (!mounted) return;
+        setState(() => _pressed = false);
         widget.onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),
@@ -3034,9 +3128,6 @@ class _PpobOverflowScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notifire = Provider.of<ColorNotifire>(context);
-    final size = MediaQuery.of(context).size;
-    final height = size.height;
-    final width = size.width;
     const iconColors = [
       Color(0xFF1E88E5), Color(0xFF43A047), Color(0xFFFF9800), Color(0xFFE53935),
       Color(0xFF8E24AA), Color(0xFF00ACC1), Color(0xFFFF7043), Color(0xFF5C6BC0),
@@ -3053,16 +3144,22 @@ class _PpobOverflowScreen extends StatelessWidget {
         )),
         title: DesktopTitleWrapper(child: Text(
           'Semua $sectionTitle',
-          style: TextStyle(fontFamily: 'Gilroy Bold', color: notifire.getdarkscolor, fontSize: height / 46),
+          style: TextStyle(fontFamily: 'Gilroy Bold', color: notifire.getdarkscolor, fontSize: 16),
         )),
       ),
+      // Padding/ukuran sel di sini sengaja nilai fixed (bukan
+      // width/height-relative) karena _PressableMenuButton punya kotak ikon
+      // fixed 52x52 — kalau dihitung relatif terhadap MediaQuery.size, layar
+      // ini bisa render di full-screen mobile ATAU di kotak modal popup
+      // berukuran kecil (lihat _showModalPopup), dan rasio yang pas untuk
+      // satu konteks akan overflow/terlalu lebar di konteks lain.
       body: GridView.builder(
-        padding: EdgeInsets.symmetric(horizontal: width / 20, vertical: width / 20),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4,
-          mainAxisExtent: height / 8.8,
-          crossAxisSpacing: 4,
-          mainAxisSpacing: 8,
+          mainAxisExtent: 100,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 14,
         ),
         itemCount: items.length,
         itemBuilder: (context, index) {
@@ -3077,7 +3174,7 @@ class _PpobOverflowScreen extends StatelessWidget {
             iconColor: iColor,
             cardColor: notifire.getdarkwhitecolor,
             textColor: notifire.getdarkscolor,
-            textSize: height / 68,
+            textSize: 11,
             showPromoBadge: hasPromo(item),
             onTap: () => onItemTap(item, context),
           );

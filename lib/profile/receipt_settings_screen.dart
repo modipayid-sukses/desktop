@@ -5,7 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:modipay/services/receipt_settings_service.dart';
 import 'package:modipay/services/wilayah_service.dart';
 import 'package:modipay/utils/colornotifire.dart';
-import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -260,15 +260,15 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: notifire.getdarkwhitecolor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value.isEmpty ? null : value,
           isExpanded: true,
-          hint: Text(hint),
+          hint: Text(hint, style: TextStyle(color: Colors.grey.shade400, fontFamily: 'Gilroy Medium', fontSize: 13)),
           items: items
               .map(
                 (item) => DropdownMenuItem<String>(
@@ -290,20 +290,20 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
     );
   }
 
-  InputDecoration _decoration(String label, {String? hint}) {
+  InputDecoration _decoration({String? hint}) {
     return InputDecoration(
-      labelText: label,
       hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontFamily: 'Gilroy Medium', fontSize: 13),
       filled: true,
-      fillColor: notifire.getdarkwhitecolor,
+      fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -312,175 +312,240 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
     );
   }
 
+  Widget _sectionCard({required String title, required List<Widget> children}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF18202A),
+            fontFamily: 'Gilroy Bold',
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _fieldGroup(String label, Widget field) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF4B5565),
+            fontFamily: 'Gilroy Medium',
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 6),
+        field,
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
+    const pageBg = Color(0xFFF3F6FB);
 
     return Scaffold(
-      backgroundColor: notifire.getprimerycolor,
-      appBar: AppBar(
-        backgroundColor: notifire.getprimerycolor,
+      backgroundColor: pageBg,
+      appBar: isDesktopPopup(context) ? null : AppBar(
+        backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: IconThemeData(color: notifire.getdarkscolor),
-        title: DesktopTitleWrapper(child: Text(
+        iconTheme: const IconThemeData(color: Color(0xFF1565C0)),
+        title: DesktopTitleWrapper(child: const Text(
           'Pengaturan Struk',
           style: TextStyle(
-            color: notifire.getdarkscolor,
+            color: Color(0xFF1565C0),
             fontFamily: 'Gilroy Bold',
-            fontSize: height / 42,
+            fontSize: 17,
           ),
         ))
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(width / 20, 12, width / 20, 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Identitas Toko',
-                    style: TextStyle(
-                      color: notifire.getdarkscolor,
-                      fontFamily: 'Gilroy Bold',
-                      fontSize: height / 50,
-                    ),
+                  _sectionCard(
+                    title: 'Identitas Toko',
+                    children: [
+                      _fieldGroup(
+                        'Nama Toko/Kedai',
+                        TextField(
+                          controller: _storeNameC,
+                          decoration: _decoration(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _fieldGroup(
+                        'Nomor HP (opsional)',
+                        TextField(
+                          controller: _phoneC,
+                          keyboardType: TextInputType.phone,
+                          decoration: _decoration(hint: '08xx xxxx xxxx'),
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: height / 60),
-                  TextField(
-                    controller: _storeNameC,
-                    decoration: _decoration('Nama Toko/Kedai'),
+                  const SizedBox(height: 20),
+                  _sectionCard(
+                    title: 'Alamat',
+                    children: [
+                      _fieldGroup(
+                        'Provinsi',
+                        _buildDropdown(
+                          hint: 'Pilih Provinsi',
+                          value: _provinceCode,
+                          items: _provinces,
+                          onChanged: (val) async {
+                            if (val == null) return;
+                            final selected = _provinces.firstWhere((p) => p['code'] == val);
+                            setState(() {
+                              _provinceCode = selected['code'] ?? '';
+                              _provinceName = selected['name'] ?? '';
+                              _regencyCode = '';
+                              _regencyName = '';
+                              _districtCode = '';
+                              _districtName = '';
+                              _villageCode = '';
+                              _villageName = '';
+                              _regencies = [];
+                              _districts = [];
+                              _villages = [];
+                            });
+                            await _loadRegencies();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _fieldGroup(
+                        'Kota/Kabupaten',
+                        _buildDropdown(
+                          hint: _provinceCode.isEmpty ? 'Pilih provinsi dulu' : 'Pilih Kota/Kabupaten',
+                          value: _regencyCode,
+                          items: _regencies,
+                          isLoading: _isLoadingRegencies,
+                          onChanged: (val) async {
+                            if (val == null) return;
+                            final selected = _regencies.firstWhere((item) => item['code'] == val);
+                            setState(() {
+                              _regencyCode = selected['code'] ?? '';
+                              _regencyName = selected['name'] ?? '';
+                              _districtCode = '';
+                              _districtName = '';
+                              _villageCode = '';
+                              _villageName = '';
+                              _districts = [];
+                              _villages = [];
+                            });
+                            await _loadDistricts();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _fieldGroup(
+                              'Kecamatan',
+                              _buildDropdown(
+                                hint: _regencyCode.isEmpty ? 'Pilih kota dulu' : 'Pilih Kecamatan',
+                                value: _districtCode,
+                                items: _districts,
+                                isLoading: _isLoadingDistricts,
+                                onChanged: (val) async {
+                                  if (val == null) return;
+                                  final selected = _districts.firstWhere((item) => item['code'] == val);
+                                  setState(() {
+                                    _districtCode = selected['code'] ?? '';
+                                    _districtName = selected['name'] ?? '';
+                                    _villageCode = '';
+                                    _villageName = '';
+                                    _villages = [];
+                                  });
+                                  await _loadVillages();
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _fieldGroup(
+                              'Kelurahan/Desa',
+                              _buildDropdown(
+                                hint: _districtCode.isEmpty ? 'Pilih kecamatan dulu' : 'Pilih Kelurahan',
+                                value: _villageCode,
+                                items: _villages,
+                                isLoading: _isLoadingVillages,
+                                onChanged: (val) {
+                                  if (val == null) return;
+                                  final selected = _villages.firstWhere((item) => item['code'] == val);
+                                  setState(() {
+                                    _villageCode = selected['code'] ?? '';
+                                    _villageName = selected['name'] ?? '';
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _fieldGroup(
+                        'Jalan',
+                        TextField(
+                          controller: _streetC,
+                          decoration: _decoration(hint: 'Nama jalan, nomor rumah, RT/RW'),
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: height / 90),
-                  TextField(
-                    controller: _phoneC,
-                    keyboardType: TextInputType.phone,
-                    decoration: _decoration('Nomor HP (opsional)'),
+                  const SizedBox(height: 20),
+                  _sectionCard(
+                    title: 'Footer Struk',
+                    children: [
+                      _fieldGroup(
+                        'Ucapan terimakasih',
+                        TextField(
+                          controller: _thanksC,
+                          maxLines: 3,
+                          decoration: _decoration(hint: 'Contoh: Terimakasih sudah berbelanja di toko kami'),
+                        ),
+                      ),
+                    ],
                   ),
-
-                  SizedBox(height: height / 35),
-                  Text(
-                    'Alamat',
-                    style: TextStyle(
-                      color: notifire.getdarkscolor,
-                      fontFamily: 'Gilroy Bold',
-                      fontSize: height / 50,
-                    ),
-                  ),
-                  SizedBox(height: height / 60),
-
-                  _buildDropdown(
-                    hint: 'Pilih Provinsi',
-                    value: _provinceCode,
-                    items: _provinces,
-                    onChanged: (val) async {
-                      if (val == null) return;
-                      final selected = _provinces.firstWhere((p) => p['code'] == val);
-                      setState(() {
-                        _provinceCode = selected['code'] ?? '';
-                        _provinceName = selected['name'] ?? '';
-                        _regencyCode = '';
-                        _regencyName = '';
-                        _districtCode = '';
-                        _districtName = '';
-                        _villageCode = '';
-                        _villageName = '';
-                        _regencies = [];
-                        _districts = [];
-                        _villages = [];
-                      });
-                      await _loadRegencies();
-                    },
-                  ),
-
-                  SizedBox(height: height / 90),
-                  _buildDropdown(
-                    hint: _provinceCode.isEmpty ? 'Pilih provinsi dulu' : 'Pilih Kota/Kabupaten',
-                    value: _regencyCode,
-                    items: _regencies,
-                    isLoading: _isLoadingRegencies,
-                    onChanged: (val) async {
-                      if (val == null) return;
-                      final selected = _regencies.firstWhere((item) => item['code'] == val);
-                      setState(() {
-                        _regencyCode = selected['code'] ?? '';
-                        _regencyName = selected['name'] ?? '';
-                        _districtCode = '';
-                        _districtName = '';
-                        _villageCode = '';
-                        _villageName = '';
-                        _districts = [];
-                        _villages = [];
-                      });
-                      await _loadDistricts();
-                    },
-                  ),
-                  SizedBox(height: height / 90),
-                  _buildDropdown(
-                    hint: _regencyCode.isEmpty ? 'Pilih kota/kabupaten dulu' : 'Pilih Kecamatan',
-                    value: _districtCode,
-                    items: _districts,
-                    isLoading: _isLoadingDistricts,
-                    onChanged: (val) async {
-                      if (val == null) return;
-                      final selected = _districts.firstWhere((item) => item['code'] == val);
-                      setState(() {
-                        _districtCode = selected['code'] ?? '';
-                        _districtName = selected['name'] ?? '';
-                        _villageCode = '';
-                        _villageName = '';
-                        _villages = [];
-                      });
-                      await _loadVillages();
-                    },
-                  ),
-                  SizedBox(height: height / 90),
-                  _buildDropdown(
-                    hint: _districtCode.isEmpty ? 'Pilih kecamatan dulu' : 'Pilih Kelurahan/Desa',
-                    value: _villageCode,
-                    items: _villages,
-                    isLoading: _isLoadingVillages,
-                    onChanged: (val) {
-                      if (val == null) return;
-                      final selected = _villages.firstWhere((item) => item['code'] == val);
-                      setState(() {
-                        _villageCode = selected['code'] ?? '';
-                        _villageName = selected['name'] ?? '';
-                      });
-                    },
-                  ),
-                  SizedBox(height: height / 90),
-                  TextField(
-                    controller: _streetC,
-                    decoration: _decoration('Jalan'),
-                  ),
-
-                  SizedBox(height: height / 35),
-                  Text(
-                    'Footer Struk',
-                    style: TextStyle(
-                      color: notifire.getdarkscolor,
-                      fontFamily: 'Gilroy Bold',
-                      fontSize: height / 50,
-                    ),
-                  ),
-                  SizedBox(height: height / 60),
-                  TextField(
-                    controller: _thanksC,
-                    maxLines: 2,
-                    decoration: _decoration('Ucapan terimakasih', hint: 'Contoh: Terimakasih sudah berbelanja di toko kami'),
-                  ),
-
-                  SizedBox(height: height / 25),
+                  const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
-                    height: 48,
+                    height: 52,
                     child: ElevatedButton(
                       onPressed: _isSaving ? null : _save,
                       style: ElevatedButton.styleFrom(
+                        elevation: 0,
                         backgroundColor: const Color(0xFF1565C0),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(26),
                         ),
                       ),
                       child: _isSaving
@@ -493,7 +558,7 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
                               ),
                             )
                           : const Text(
-                              'Simpan',
+                              'Simpan Perubahan',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontFamily: 'Gilroy Bold',

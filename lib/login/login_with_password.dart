@@ -31,6 +31,9 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
   bool _obscurePassword = true;
   bool _rememberMe = true;
 
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +77,8 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
   void dispose() {
     _phoneController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -516,10 +521,13 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
         Text('Username / Email', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
         const SizedBox(height: 8),
         desktopBorderedField(
-          icon: Icons.person_outline,
+          icon: Icons.mail_outline,
           controller: _phoneController,
           hint: 'Masukkan username atau email',
           keyboardType: TextInputType.emailAddress,
+          focusNode: _emailFocusNode,
+          textInputAction: TextInputAction.next,
+          onSubmitted: (_) => _passwordFocusNode.requestFocus(),
         ),
         const SizedBox(height: 20),
         Text('Password', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
@@ -529,6 +537,9 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
           controller: _passwordController,
           hint: 'Masukkan password',
           obscureText: _obscurePassword,
+          focusNode: _passwordFocusNode,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _loginWithPassword(),
           suffix: GestureDetector(
             onTap: () => setState(() => _obscurePassword = !_obscurePassword),
             child: Icon(
@@ -596,42 +607,7 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
                 : Text('Masuk', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
           ),
         ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(child: Divider(color: desktopBorder)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text('atau masuk dengan', style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary)),
-            ),
-            Expanded(child: Divider(color: desktopBorder)),
-          ],
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: OutlinedButton(
-            onPressed: () => Fluttertoast.showToast(msg: 'Login dengan Google belum tersedia'),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: desktopBorder),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.network(
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuAx5kM8PlCAcjMKVOQUhYDlCvefVsXd5U6uBaGJzPN3BwkpWRIQSkNlAoTzUPAnN05bdpPdFdh09nb1Cnj7mzA8Wxfv1YU64BNHXLp6kAtQd2o1ye75hiN2lSrizf0ttgyYOH8l8_pNmGoVSwYJWVFYnMgVAb4VVSm-LrylOPzd8e1lOC3ViY600nun-9F8OFAS7ghm51U3vBE2OcG6AEyHQxBtVqzNkVI76Q6U1R1AmyfjCpW2_lNfO0SAzFo9SkdNS9eHwFDR4_t_',
-                  width: 20,
-                  height: 20,
-                ),
-                const SizedBox(width: 12),
-                Text('Masuk dengan Google', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
         Center(
           child: GestureDetector(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Register())),

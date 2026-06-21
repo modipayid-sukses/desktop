@@ -470,99 +470,96 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
   Widget _buildHistorySection() {
     if (_historyItems.isEmpty) return const SizedBox.shrink();
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: width / 20),
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Riwayat Cek / Bayar Terakhir',
-              style: TextStyle(
-                color: notifire.getdarkscolor,
-                fontFamily: 'Gilroy Bold',
-                fontSize: height / 52,
-              ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Riwayat Cek / Bayar Terakhir',
+            style: TextStyle(
+              color: notifire.getdarkscolor,
+              fontFamily: 'Gilroy Bold',
+              fontSize: height / 52,
             ),
-            SizedBox(height: height / 120),
-            ..._historyItems.map((entry) {
-              final data = entry['data'] is Map
-                  ? Map<String, dynamic>.from(entry['data'])
-                  : <String, dynamic>{};
-              final status = (entry['status'] ?? 'checked').toString();
-              final isPaid = status == 'paid';
-              final customerNo = (data['customer_no'] ?? '-').toString();
-              final customerName = (data['customer_name'] ?? data['name'] ?? '-').toString();
-              final total = _formatPrice(data['selling_price'] ?? data['price'] ?? 0);
-              final periode = _formatPeriodDisplay(data['periode']);
+          ),
+          SizedBox(height: height / 120),
+          ..._historyItems.map((entry) {
+            final data = entry['data'] is Map
+                ? Map<String, dynamic>.from(entry['data'])
+                : <String, dynamic>{};
+            final status = (entry['status'] ?? 'checked').toString();
+            final isPaid = status == 'paid';
+            final customerNo = (data['customer_no'] ?? '-').toString();
+            final customerName = (data['customer_name'] ?? data['name'] ?? '-').toString();
+            final total = _formatPrice(data['selling_price'] ?? data['price'] ?? 0);
+            final periode = _formatPeriodDisplay(data['periode']);
 
-              return Container(
-                margin: EdgeInsets.only(top: height / 150),
-                padding: EdgeInsets.all(width / 35),
-                decoration: BoxDecoration(
-                  color: notifire.getprimerycolor.withOpacity(0.04),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: notifire.getIsDark ? grey600 : grey200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            customerName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: notifire.getdarkscolor,
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: height / 60,
-                            ),
+            return Container(
+              margin: EdgeInsets.only(top: height / 150),
+              padding: EdgeInsets.all(width / 35),
+              decoration: BoxDecoration(
+                color: notifire.getprimerycolor.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: notifire.getIsDark ? grey600 : grey200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          customerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: notifire.getdarkscolor,
+                            fontFamily: 'Gilroy Bold',
+                            fontSize: height / 60,
                           ),
                         ),
-                        AppBadge(
-                          label: isPaid ? 'Dibayar' : 'Dicek',
-                          tone: isPaid ? AppBadgeTone.success : AppBadgeTone.warning,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: height / 200),
-                    Text(
-                      '$customerNo • Periode: $periode • $total',
-                      style: TextStyle(
-                        color: notifire.getdarkgreycolor,
-                        fontFamily: 'Gilroy Medium',
-                        fontSize: height / 68,
                       ),
+                      AppBadge(
+                        label: isPaid ? 'Dibayar' : 'Dicek',
+                        tone: isPaid ? AppBadgeTone.success : AppBadgeTone.warning,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: height / 200),
+                  Text(
+                    '$customerNo • Periode: $periode • $total',
+                    style: TextStyle(
+                      color: notifire.getdarkgreycolor,
+                      fontFamily: 'Gilroy Medium',
+                      fontSize: height / 68,
                     ),
-                    SizedBox(height: height / 200),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          _customerIdController.text = customerNo;
-                          setState(() {
-                            _inquiryResult = data;
-                          });
-                          Fluttertoast.showToast(msg: 'Data tagihan dimuat dari riwayat lokal');
-                          final sku = data['buyer_sku_code']?.toString();
-                          if (sku != null) {
-                            final match = _providerProducts.where((e) => e['buyer_sku_code']?.toString() == sku);
-                            if (match.isNotEmpty) {
-                              setState(() => _selectedProviderProduct = match.first);
-                            }
+                  ),
+                  SizedBox(height: height / 200),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        _customerIdController.text = customerNo;
+                        setState(() {
+                          _inquiryResult = data;
+                        });
+                        Fluttertoast.showToast(msg: 'Data tagihan dimuat dari riwayat lokal');
+                        final sku = data['buyer_sku_code']?.toString();
+                        if (sku != null) {
+                          final match = _providerProducts.where((e) => e['buyer_sku_code']?.toString() == sku);
+                          if (match.isNotEmpty) {
+                            setState(() => _selectedProviderProduct = match.first);
                           }
-                        },
-                        child: const Text('Gunakan Lagi'),
-                      ),
+                        }
+                      },
+                      child: const Text('Gunakan Lagi'),
                     ),
-                  ],
-                ),
-              );
-            }),
-          ],
-        ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -596,299 +593,285 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
     return Scaffold(
-      backgroundColor: notifire.getprimerycolor,
+      backgroundColor: const Color(0xFFF8F9FD),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              if (!isDesktopPopup(context))
-              Padding(
-                padding: EdgeInsets.fromLTRB(width / 20, height / 120, width / 20, 0),
-                child: Row(
-                  children: [
-                    InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: height / 19,
-                        height: height / 19,
-                        decoration: BoxDecoration(
-                          color: notifire.gettabwhitecolor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.15)),
-                        ),
-                        child: Icon(Icons.arrow_back, color: notifire.getdarkscolor, size: height / 36),
-                      ),
-                    ),
-                    SizedBox(width: width / 35),
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: TextStyle(
-                          color: notifire.getdarkscolor,
-                          fontSize: height / 40,
-                          fontFamily: 'Gilroy Bold',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isDesktopPopup(context))
-              SizedBox(height: height / 60),
-
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: AppCard(
-                  child: Row(
-                    children: [
-                      Container(
-                        width: height / 18,
-                        height: height / 18,
-                        decoration: BoxDecoration(
-                          color: notifire.getbluecolor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                        ),
-                        child: Icon(_getInputIcon(), color: notifire.getbluecolor, size: height / 34),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Cek Tagihan Pelanggan',
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: Column(
+                children: [
+                  if (!isDesktopPopup(context))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              width: height / 19,
+                              height: height / 19,
+                              decoration: BoxDecoration(
+                                color: notifire.gettabwhitecolor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: notifire.getdarkgreycolor.withOpacity(0.15)),
+                              ),
+                              child: Icon(Icons.arrow_back, color: notifire.getdarkscolor, size: height / 36),
+                            ),
+                          ),
+                          SizedBox(width: width / 35),
+                          Expanded(
+                            child: Text(
+                              widget.title,
                               style: TextStyle(
                                 color: notifire.getdarkscolor,
+                                fontSize: height / 40,
                                 fontFamily: 'Gilroy Bold',
-                                fontSize: height / 54,
                               ),
-                            ),
-                            Text(
-                              'Masukkan ID pelanggan untuk menampilkan detail tagihan.',
-                              style: TextStyle(
-                                color: notifire.getdarkgreycolor,
-                                fontFamily: 'Gilroy Medium',
-                                fontSize: height / 68,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              SizedBox(height: height / 70),
-
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                        child: Text(
-                          widget.title,
-                          style: TextStyle(
-                            color: notifire.getdarkscolor,
-                            fontFamily: 'Gilroy Bold',
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                      const Divider(height: 0, color: Color(0xFFECEEF2)),
-                      Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F6F8),
-                            borderRadius: BorderRadius.circular(AppRadius.lg),
-                          ),
-                          child: TextField(
-                            controller: _customerIdController,
-                            style: TextStyle(
-                              color: notifire.getdarkscolor,
-                              fontFamily: 'Gilroy Medium',
-                            ),
-                            keyboardType: TextInputType.number,
-                            onChanged: (_) {
-                              if (_inquiryResult != null) {
-                                setState(() => _inquiryResult = null);
-                              }
-                            },
-                            decoration: InputDecoration(
-                              hintText: _getHintText(),
-                              hintStyle: TextStyle(
-                                color: notifire.getdarkgreycolor.withOpacity(0.6),
-                                fontFamily: 'Gilroy Medium',
-                              ),
-                              prefixIcon: Icon(_getInputIcon(), color: notifire.getbluecolor),
-                              suffixIcon: IconButton(
-                                icon: Icon(Icons.contact_page_outlined, color: notifire.getbluecolor),
-                                onPressed: _openSavedCustomers,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: width / 30,
-                                vertical: height / 60,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              if (_isLoadingProviders)
-                Padding(
-                  padding: EdgeInsets.only(top: height / 90),
-                  child: SizedBox(
-                    height: height / 50,
-                    width: height / 50,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-
-              if (_providerProducts.length > 1) ...[
-                SizedBox(height: height / 80),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width / 20),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Pilih Provider',
-                      style: TextStyle(
-                        color: notifire.getdarkgreycolor,
-                        fontFamily: 'Gilroy Medium',
-                        fontSize: height / 62,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: height / 120),
-                SizedBox(
-                  height: height / 22,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: width / 20),
-                    itemCount: _providerProducts.length,
-                    itemBuilder: (context, index) {
-                      final p = _providerProducts[index];
-                      final selected = _selectedProviderProduct?['buyer_sku_code'] == p['buyer_sku_code'];
-                      final label = (p['product_name'] ?? p['buyer_sku_code'] ?? '-').toString();
-                      return Padding(
-                        padding: EdgeInsets.only(right: width / 50),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedProviderProduct = p;
-                              _inquiryResult = null;
-                            });
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: width / 30),
-                            decoration: BoxDecoration(
-                              color: selected ? notifire.getbluecolor : notifire.gettabwhitecolor,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: selected ? notifire.getbluecolor : notifire.getdarkgreycolor.withOpacity(0.2),
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  color: selected ? Colors.white : notifire.getdarkscolor,
-                                  fontFamily: 'Gilroy Medium',
-                                  fontSize: height / 68,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-
-              SizedBox(height: height / 55),
-
-              _buildHistorySection(),
-
-              if (_historyItems.isNotEmpty) SizedBox(height: height / 55),
-
-            // Cek Tagihan button
-            if (_inquiryResult == null)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: AppButton.primary(
-                  expand: true,
-                  loading: _isInquiring,
-                  label: 'Cek Tagihan',
-                  onPressed: (_isInquiring || _isLoading) ? null : _doInquiry,
-                ),
-              ),
-
-            // Inquiry result
-            if (_inquiryResult != null) ...[
-              SizedBox(height: height / 50),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.receipt_long, color: notifire.getbluecolor, size: height / 30),
-                          const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            'Detail Tagihan',
-                            style: TextStyle(
-                              color: notifire.getdarkscolor,
-                              fontFamily: 'Gilroy Bold',
-                              fontSize: height / 42,
                             ),
                           ),
                         ],
                       ),
-                      Divider(color: notifire.getIsDark ? grey600 : grey200, height: AppSpacing.xxl),
-                      _billRow('Nama Pelanggan', (_inquiryResult!['customer_name'] ?? '-').toString()),
-                      _billRow('No. Pelanggan', (_inquiryResult!['customer_no'] ?? '-').toString()),
-                      _billRow('Produk', (_inquiryResult!['product_name'] ?? '-').toString()),
-                      if (_inquiryResult!['admin'] != null && (num.tryParse(_inquiryResult!['admin'].toString()) ?? 0) > 0)
-                        _billRow('Biaya Admin', _formatPrice(_inquiryResult!['admin'])),
-                      _billRow('Total Tagihan', _formatPrice(_inquiryResult!['selling_price'] ?? 0),
-                          isBold: true, isBlue: true),
-                      if (_inquiryResult!['desc'] != null) _buildDescDetails(),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              // Bayar button
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: width / 20),
-                child: AppButton.success(
-                  expand: true,
-                  label: 'Bayar Sekarang',
-                  onPressed: _payBill,
-                ),
-              ),
-            ],
+                    ),
 
-            SizedBox(height: height / 20),
-            ],
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF16215C).withValues(alpha: 0.06),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.title,
+                                style: TextStyle(
+                                  color: notifire.getdarkscolor,
+                                  fontFamily: 'Gilroy Bold',
+                                  fontSize: 22,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Masukkan ID pelanggan untuk menampilkan detail tagihan.',
+                                style: TextStyle(
+                                  color: notifire.getdarkgreycolor,
+                                  fontFamily: 'Gilroy Medium',
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 0, color: Color(0xFFECEEF2)),
+
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F6F8),
+                                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                                ),
+                                child: TextField(
+                                  controller: _customerIdController,
+                                  style: TextStyle(
+                                    color: notifire.getdarkscolor,
+                                    fontFamily: 'Gilroy Medium',
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (_) {
+                                    if (_inquiryResult != null) {
+                                      setState(() => _inquiryResult = null);
+                                    }
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: _getHintText(),
+                                    hintStyle: TextStyle(
+                                      color: notifire.getdarkgreycolor.withOpacity(0.6),
+                                      fontFamily: 'Gilroy Medium',
+                                    ),
+                                    prefixIcon: Icon(_getInputIcon(), color: notifire.getbluecolor),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(Icons.contact_page_outlined, color: notifire.getbluecolor),
+                                      onPressed: _openSavedCustomers,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              if (_isLoadingProviders) ...[
+                                const SizedBox(height: 16),
+                                Center(
+                                  child: SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                      valueColor: AlwaysStoppedAnimation<Color>(notifire.getbluecolor),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+                              if (_providerProducts.length > 1) ...[
+                                const SizedBox(height: 24),
+                                Text(
+                                  'Pilih Provider',
+                                  style: TextStyle(
+                                    color: notifire.getdarkgreycolor,
+                                    fontFamily: 'Gilroy Medium',
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  height: 38,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    shrinkWrap: true,
+                                    physics: const ClampingScrollPhysics(),
+                                    itemCount: _providerProducts.length,
+                                    itemBuilder: (context, index) {
+                                      final p = _providerProducts[index];
+                                      final selected = _selectedProviderProduct?['buyer_sku_code'] == p['buyer_sku_code'];
+                                      final label = (p['product_name'] ?? p['buyer_sku_code'] ?? '-').toString();
+                                      return Padding(
+                                        padding: const EdgeInsets.only(right: 8),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _selectedProviderProduct = p;
+                                              _inquiryResult = null;
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            decoration: BoxDecoration(
+                                              color: selected ? notifire.getbluecolor : notifire.gettabwhitecolor,
+                                              borderRadius: BorderRadius.circular(18),
+                                              border: Border.all(
+                                                color: selected ? notifire.getbluecolor : notifire.getdarkgreycolor.withOpacity(0.2),
+                                              ),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                label,
+                                                style: TextStyle(
+                                                  color: selected ? Colors.white : notifire.getdarkscolor,
+                                                  fontFamily: 'Gilroy Medium',
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+
+                              const SizedBox(height: 24),
+                              _buildHistorySection(),
+
+                              if (_inquiryResult != null) ...[
+                                const SizedBox(height: 24),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8F9FD),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFECEEF2)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.receipt_long, color: notifire.getbluecolor, size: 24),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Detail Tagihan',
+                                            style: TextStyle(
+                                              color: notifire.getdarkscolor,
+                                              fontFamily: 'Gilroy Bold',
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Divider(height: 24, color: Color(0xFFECEEF2)),
+                                      _billRow('Nama Pelanggan', (_inquiryResult!['customer_name'] ?? '-').toString()),
+                                      _billRow('No. Pelanggan', (_inquiryResult!['customer_no'] ?? '-').toString()),
+                                      _billRow('Produk', (_inquiryResult!['product_name'] ?? '-').toString()),
+                                      if (_inquiryResult!['admin'] != null && (num.tryParse(_inquiryResult!['admin'].toString()) ?? 0) > 0)
+                                        _billRow('Biaya Admin', _formatPrice(_inquiryResult!['admin'])),
+                                      _billRow('Total Tagihan', _formatPrice(_inquiryResult!['selling_price'] ?? 0),
+                                          isBold: true, isBlue: true),
+                                      if (_inquiryResult!['desc'] != null) _buildDescDetails(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF2F4F8),
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(16),
+                              bottomRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: _inquiryResult == null
+                                ? AppButton.primary(
+                                    expand: true,
+                                    loading: _isInquiring,
+                                    label: 'Cek Tagihan',
+                                    onPressed: (_isInquiring || _isLoading) ? null : _doInquiry,
+                                  )
+                                : AppButton.success(
+                                    expand: true,
+                                    label: 'Bayar Sekarang',
+                                    onPressed: _payBill,
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
