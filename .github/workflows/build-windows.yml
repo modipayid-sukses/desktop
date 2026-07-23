@@ -35,6 +35,10 @@ jobs:
           # cmake_minimum_required version that newer CMake (4.x) on the
           # runner rejects outright. This env var tells CMake to accept it.
           CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+          # local_auth_windows / permission_handler_windows use WinRT code
+          # generated against the old <experimental/coroutine> TS, which the
+          # runner's MSVC toolset now hard-errors on instead of just warning.
+          CL: "/D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
