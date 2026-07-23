@@ -30,6 +30,11 @@ jobs:
 
       - name: Build Windows release
         run: flutter build windows --release
+        env:
+          # firebase_cpp_sdk_windows ships a CMakeLists.txt requiring an old
+          # cmake_minimum_required version that newer CMake (4.x) on the
+          # runner rejects outright. This env var tells CMake to accept it.
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
