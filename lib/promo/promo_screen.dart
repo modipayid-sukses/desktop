@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/home/ppob/ppob_product_screen.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/colornotifire.dart';
@@ -670,7 +670,7 @@ class _PromoScreenState extends State<PromoScreen> {
   Future<void> _showDesktopReferralDialog(AuthProvider auth) async {
     final code = auth.referralCode;
     if (code == null || code.isEmpty) {
-      Fluttertoast.showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
+      showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
       return;
     }
     final copy = await AppDialog.show(
@@ -691,7 +691,7 @@ class _PromoScreenState extends State<PromoScreen> {
     );
     if (copy == true) {
       await Clipboard.setData(ClipboardData(text: code));
-      Fluttertoast.showToast(msg: 'Kode referral disalin');
+      showToast(msg: 'Kode referral disalin');
     }
   }
 

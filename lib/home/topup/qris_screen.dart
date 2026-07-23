@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
@@ -72,7 +72,7 @@ class _QrisScreenState extends State<QrisScreen> {
         } else if (status == 'failed' || status == 'expired') {
           _pollTimer?.cancel();
           if (mounted) {
-            Fluttertoast.showToast(
+            showToast(
               msg: status == 'expired' ? 'Pembayaran expired' : 'Pembayaran gagal',
             );
             Navigator.pop(context);
@@ -96,7 +96,7 @@ class _QrisScreenState extends State<QrisScreen> {
       }
     }
     if (!granted) {
-      Fluttertoast.showToast(msg: 'Izin penyimpanan diperlukan');
+      showToast(msg: 'Izin penyimpanan diperlukan');
       return;
     }
     try {
@@ -107,12 +107,12 @@ class _QrisScreenState extends State<QrisScreen> {
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
       final result = await ImageGallerySaverPlus.saveImage(pngBytes, name: 'QRIS_${widget.topupId}');
       if (result['isSuccess'] == true) {
-        Fluttertoast.showToast(msg: 'QR Code berhasil disimpan');
+        showToast(msg: 'QR Code berhasil disimpan');
       } else {
-        Fluttertoast.showToast(msg: 'Gagal menyimpan QR Code');
+        showToast(msg: 'Gagal menyimpan QR Code');
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: 'Gagal menyimpan QR Code');
+      showToast(msg: 'Gagal menyimpan QR Code');
     }
   }
 

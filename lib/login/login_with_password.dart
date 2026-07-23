@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/bottombar/bottombar.dart';
+import 'package:modipay/login/device_verification_screen.dart';
 import 'package:modipay/login/forgot_password_screen.dart';
 import 'package:modipay/login/register.dart';
 import 'package:modipay/login/setup_pin_screen.dart';
@@ -85,13 +86,15 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
   Future<void> _loginWithPassword() async {
     final input = _phoneController.text.trim();
     final password = _passwordController.text.trim();
+    // ignore: avoid_print
+    print('[LOGIN] tapped input="$input" passwordLen=${password.length}');
 
     if (input.isEmpty) {
-      Fluttertoast.showToast(msg: isDesktop(context) ? 'Masukkan username atau email' : 'Masukkan nomor HP');
+      showToast(msg: isDesktop(context) ? 'Masukkan username atau email' : 'Masukkan nomor HP');
       return;
     }
     if (password.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan password');
+      showToast(msg: 'Masukkan password');
       return;
     }
 
@@ -105,7 +108,7 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
         final phoneCandidates = _phoneCandidates(rawPhone);
         for (final candidate in phoneCandidates) {
           result = await ApiService.login(candidate, password);
-          if (_isLoginSuccess(result)) {
+          if (_isLoginSuccess(result) || result['device_verification_required'] == true) {
             break;
           }
         }
@@ -115,6 +118,19 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
 
       if (!mounted) return;
       setState(() => _isLoading = false);
+
+      if (result['device_verification_required'] == true) {
+        final pendingToken = result['pending_token']?.toString();
+        if (pendingToken != null && pendingToken.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DeviceVerificationScreen(pendingToken: pendingToken),
+            ),
+          );
+          return;
+        }
+      }
 
       if (_isLoginSuccess(result)) {
         final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -129,15 +145,19 @@ class _LoginWithPasswordState extends State<LoginWithPassword> {
             (route) => false,
           );
         } else {
-          Fluttertoast.showToast(msg: auth.error ?? 'Login gagal');
+          showToast(msg: auth.error ?? 'Login gagal');
         }
       } else {
-        Fluttertoast.showToast(msg: result['message'] ?? 'Username atau password salah');
+        showToast(msg: result['message'] ?? 'Username atau password salah');
       }
-    } catch (e) {
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[LOGIN] error type=${e.runtimeType} value=$e');
+      // ignore: avoid_print
+      print('[LOGIN] stack=$st');
       if (!mounted) return;
       setState(() => _isLoading = false);
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal login'),
       );
     }

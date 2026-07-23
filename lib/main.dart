@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -10,6 +13,10 @@ import 'package:modipay/services/device_identity_service.dart';
 import 'package:modipay/services/notification_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
+
+/// Ukuran minimum window desktop: Full HD (1920x1080).
+const Size _minDesktopWindowSize = Size(1920, 1080);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +28,18 @@ Future<void> main() async {
       statusBarBrightness: Brightness.dark,
     ),
   );
+  if (!kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      size: _minDesktopWindowSize,
+      minimumSize: _minDesktopWindowSize,
+      center: true,
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
   try {
     await Firebase.initializeApp();
   } catch (e) {

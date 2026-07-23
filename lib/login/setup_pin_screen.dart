@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/design/design.dart';
@@ -170,7 +170,7 @@ class _SetupPinScreenState extends State<SetupPinScreen>
 
   void _goToConfirm() {
     if (_pin.length != 4) {
-      Fluttertoast.showToast(msg: 'Masukkan 4 digit PIN');
+      showToast(msg: 'Masukkan 4 digit PIN');
       return;
     }
     setState(() => _step = 2);
@@ -196,11 +196,11 @@ class _SetupPinScreenState extends State<SetupPinScreen>
 
   Future<void> _submitPin() async {
     if (_confirmPin.length != 4) {
-      Fluttertoast.showToast(msg: 'Masukkan 4 digit PIN');
+      showToast(msg: 'Masukkan 4 digit PIN');
       return;
     }
     if (_pin != _confirmPin) {
-      Fluttertoast.showToast(msg: 'PIN tidak cocok, silakan ulangi');
+      showToast(msg: 'PIN tidak cocok, silakan ulangi');
       for (final c in _confirmControllers) {
         c.clear();
       }
@@ -221,7 +221,7 @@ class _SetupPinScreenState extends State<SetupPinScreen>
     if (success) {
       _showSuccessDialog();
     } else {
-      Fluttertoast.showToast(msg: 'Gagal menyimpan PIN. Coba lagi.');
+      showToast(msg: 'Gagal menyimpan PIN. Coba lagi.');
     }
   }
 

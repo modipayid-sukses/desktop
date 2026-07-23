@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
+import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/login/setup_pin_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
+import 'package:modipay/services/app_exception.dart';
 import 'package:modipay/utils/color.dart';
 import 'package:modipay/utils/responsive.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -183,19 +185,19 @@ class _RegisterState extends State<Register> {
   Future<void> _continueRegister() async {
     final rawPhone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (rawPhone.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan nomor HP');
+      showToast(msg: 'Masukkan nomor HP');
       return;
     }
     if (_referralCodeController.text.trim().isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan kode referral master');
+      showToast(msg: 'Masukkan kode referral master');
       return;
     }
     if (_passwordController.text.length < 6) {
-      Fluttertoast.showToast(msg: 'Password minimal 6 karakter');
+      showToast(msg: 'Password minimal 6 karakter');
       return;
     }
     if (_confirmPasswordController.text != _passwordController.text) {
-      Fluttertoast.showToast(msg: 'Konfirmasi password tidak sama');
+      showToast(msg: 'Konfirmasi password tidak sama');
       return;
     }
 
@@ -244,7 +246,7 @@ class _RegisterState extends State<Register> {
         final msg = (result['message'] ?? '').toString();
         if (_isRateLimitMessage(msg)) {
           activePhone = candidate;
-          Fluttertoast.showToast(msg: msg);
+          showToast(msg: msg);
           break;
         }
 
@@ -258,7 +260,7 @@ class _RegisterState extends State<Register> {
 
         if (_isRateLimitMessage(msg)) {
           activePhone = candidate;
-          Fluttertoast.showToast(msg: msg);
+          showToast(msg: msg);
           break;
         }
       }
@@ -269,7 +271,7 @@ class _RegisterState extends State<Register> {
 
     if (activePhone == null) {
       final message = lastErrorMessage ?? 'Gagal mengirim OTP';
-      Fluttertoast.showToast(msg: message);
+      showToast(msg: message);
       return;
     }
 
@@ -299,7 +301,16 @@ class _RegisterState extends State<Register> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (registerResult.containsKey('token')) {
+      final pendingToken = registerResult['pending_token']?.toString();
+      if (pendingToken != null && pendingToken.isNotEmpty) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => _RegisterVerificationScreen(pendingToken: pendingToken),
+          ),
+          (route) => false,
+        );
+      } else if (registerResult.containsKey('token')) {
         final auth = Provider.of<AuthProvider>(context, listen: false);
         final success = await auth.loginWithPasswordResult(registerResult);
         if (!mounted) return;
@@ -311,17 +322,17 @@ class _RegisterState extends State<Register> {
             (route) => false,
           );
         } else {
-          Fluttertoast.showToast(msg: auth.error ?? 'Gagal menyiapkan akun');
+          showToast(msg: auth.error ?? 'Gagal menyiapkan akun');
         }
       } else {
-        Fluttertoast.showToast(
+        showToast(
           msg: registerResult['message'] ?? 'Gagal mendaftarkan akun',
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal mendaftarkan akun'),
       );
     }
@@ -919,7 +930,7 @@ class _RegisterOtpScreenState extends State<_RegisterOtpScreen> {
 
   Future<void> _verifyOtp() async {
     if (_otpValue.length != 6) {
-      Fluttertoast.showToast(msg: 'Masukkan 6 digit kode OTP');
+      showToast(msg: 'Masukkan 6 digit kode OTP');
       return;
     }
 
@@ -942,7 +953,7 @@ class _RegisterOtpScreenState extends State<_RegisterOtpScreen> {
         Navigator.pop(context, true);
       } else {
         setState(() => _hasError = true);
-        Fluttertoast.showToast(msg: result['message'] ?? 'Kode OTP salah');
+        showToast(msg: result['message'] ?? 'Kode OTP salah');
       }
     } catch (e) {
       if (!mounted) return;
@@ -950,7 +961,7 @@ class _RegisterOtpScreenState extends State<_RegisterOtpScreen> {
         _isLoading = false;
         _hasError = true;
       });
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal memverifikasi OTP'),
       );
     }
@@ -976,14 +987,14 @@ class _RegisterOtpScreenState extends State<_RegisterOtpScreen> {
         }
         setState(() => _hasError = false);
         _startCountdown();
-        Fluttertoast.showToast(msg: 'OTP berhasil dikirim ulang');
+        showToast(msg: 'OTP berhasil dikirim ulang');
       } else {
-        Fluttertoast.showToast(msg: result['message'] ?? 'Gagal mengirim OTP');
+        showToast(msg: result['message'] ?? 'Gagal mengirim OTP');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isResending = false);
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal mengirim ulang OTP'),
       );
     }
@@ -1116,6 +1127,316 @@ class _RegisterOtpScreenState extends State<_RegisterOtpScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Menunggu verifikasi akun pasca `/register`: polling status setiap
+/// beberapa detik, lalu beralih ke input OTP bila link sudah diklik tapi
+/// OTP belum dikirim, dan mengarahkan ke halaman login setelah tuntas.
+class _RegisterVerificationScreen extends StatefulWidget {
+  const _RegisterVerificationScreen({required this.pendingToken});
+
+  final String pendingToken;
+
+  @override
+  State<_RegisterVerificationScreen> createState() =>
+      _RegisterVerificationScreenState();
+}
+
+class _RegisterVerificationScreenState
+    extends State<_RegisterVerificationScreen> {
+  final _otpController = TextEditingController();
+  Timer? _pollTimer;
+  bool _otpRequired = false;
+  bool _isVerifyingOtp = false;
+  bool _hasOtpError = false;
+  String? _statusMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _checkStatus();
+    // Backend membatasi 20 polling/menit per IP+token; interval 4 detik
+    // (15/menit) menyisakan headroom dari batas itu.
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) => _checkStatus());
+  }
+
+  Future<void> _checkStatus() async {
+    try {
+      final result =
+          await ApiService.registerVerificationStatus(widget.pendingToken);
+      if (!mounted) return;
+
+      if (result['verified'] != true) return;
+
+      final hasToken = (result['token']?.toString() ?? '').isNotEmpty;
+      if (hasToken) {
+        _pollTimer?.cancel();
+        _completeVerification(result);
+        return;
+      }
+
+      if (result['otp_required'] == true && !_otpRequired) {
+        _pollTimer?.cancel();
+        setState(() {
+          _otpRequired = true;
+          _statusMessage = result['message']?.toString();
+        });
+      }
+    } on AppException catch (e) {
+      // Backend balikin 422 + expired:true kalau pending_token tidak
+      // ditemukan atau link 15 menit sudah lewat — keduanya butuh daftar
+      // ulang, jadi hentikan polling dan arahkan balik ke form register.
+      final details = e.details;
+      final expired = details is Map && details['expired'] == true;
+      if (expired) {
+        _pollTimer?.cancel();
+        if (!mounted) return;
+        showToast(msg: e.message);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const Register()),
+          (route) => false,
+        );
+        return;
+      }
+      // Selain itu (mis. 429 rate limit) transien — coba lagi di interval berikutnya.
+    } catch (_) {
+      // Error jaringan transien — coba lagi di interval berikutnya.
+    }
+  }
+
+  Future<void> _submitOtp() async {
+    final otp = _otpController.text.trim();
+    if (otp.length != 6) {
+      showToast(msg: 'Masukkan 6 digit kode OTP');
+      return;
+    }
+
+    setState(() {
+      _isVerifyingOtp = true;
+      _hasOtpError = false;
+    });
+
+    try {
+      final result =
+          await ApiService.registerVerifyOtp(widget.pendingToken, otp);
+      if (!mounted) return;
+      setState(() => _isVerifyingOtp = false);
+
+      if (result['verified'] == true) {
+        _completeVerification(result);
+      } else {
+        setState(() => _hasOtpError = true);
+        showToast(msg: result['message'] ?? 'Kode OTP salah');
+      }
+    } on AppException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifyingOtp = false;
+        _hasOtpError = true;
+      });
+      showToast(msg: e.message);
+
+      final details = e.details;
+      if (details is Map && details['expired'] == true) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const Register()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifyingOtp = false;
+        _hasOtpError = true;
+      });
+      showToast(
+        msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal memverifikasi OTP'),
+      );
+    }
+  }
+
+  /// Verifikasi tuntas: `result` berisi `token`+`user` dari backend, jadi
+  /// langsung auto-login lalu arahkan ke home (atau setup PIN dulu kalau
+  /// akun baru belum punya PIN) — sama seperti pola login lain di app.
+  Future<void> _completeVerification(Map<String, dynamic> result) async {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final success = await auth.loginWithPasswordResult(result);
+    if (!mounted) return;
+
+    if (!success) {
+      showToast(msg: auth.error ?? 'Gagal menyiapkan akun');
+      return;
+    }
+
+    showToast(msg: 'Akun berhasil diverifikasi.');
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => auth.hasPin ? const Bottombar() : const SetupPinScreen(),
+      ),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final content = _otpRequired ? _buildOtpStep() : _buildWaitingStep();
+
+    if (isDesktop(context)) {
+      return DesktopAuthShell(child: content);
+    }
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+      ),
+      body: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.08,
+          vertical: screenHeight * 0.02,
+        ),
+        child: content,
+      ),
+    );
+  }
+
+  Widget _buildWaitingStep() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const CircularProgressIndicator(strokeWidth: 2.4),
+        const SizedBox(height: 24),
+        Text(
+          'Menunggu Verifikasi',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: grey900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Silakan cek WhatsApp/email kamu dan klik link verifikasi yang sudah dikirim.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: grey500,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOtpStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Masukkan Kode OTP',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: grey900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          _statusMessage ??
+              'Link sudah diklik. Masukkan kode OTP untuk menyelesaikan verifikasi.',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: grey500,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 32),
+        TextField(
+          controller: _otpController,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          maxLength: 6,
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: grey900,
+            letterSpacing: 8,
+          ),
+          decoration: InputDecoration(
+            counterText: '',
+            filled: true,
+            fillColor: _hasOtpError ? error50 : Colors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: _hasOtpError ? error500 : grey200,
+                width: 1.4,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: primaryBlue500, width: 1.8),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isVerifyingOtp ? null : _submitOtp,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue500,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isVerifyingOtp
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    'Verifikasi',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -47,10 +47,10 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
           _filteredAgents = _agents;
         });
       } else {
-        Fluttertoast.showToast(msg: response['message'] ?? 'Gagal memuat daftar agen');
+        showToast(msg: response['message'] ?? 'Gagal memuat daftar agen');
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+      showToast(msg: ApiService.userFriendlyMessage(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -87,19 +87,19 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
 
     final marginVal = double.tryParse(marginController.text) ?? 0.0;
     if (marginVal < 0) {
-      Fluttertoast.showToast(msg: 'Margin tidak boleh negatif');
+      showToast(msg: 'Margin tidak boleh negatif');
       return;
     }
 
     setState(() => _isLoading = true);
     try {
       final res = await ApiService.updateMargin(marginVal);
-      Fluttertoast.showToast(msg: res['message'] ?? 'Margin berhasil diperbarui');
+      showToast(msg: res['message'] ?? 'Margin berhasil diperbarui');
       if (mounted) {
         await Provider.of<AuthProvider>(context, listen: false).fetchProfile();
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+      showToast(msg: ApiService.userFriendlyMessage(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -120,10 +120,10 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
     setState(() => _isLoading = true);
     try {
       final res = await ApiService.deleteAgen(agent['id']);
-      Fluttertoast.showToast(msg: res['message'] ?? 'Agen berhasil dihapus');
+      showToast(msg: res['message'] ?? 'Agen berhasil dihapus');
       await _fetchAgents();
     } catch (e) {
-      Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+      showToast(msg: ApiService.userFriendlyMessage(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -30,7 +30,7 @@ import 'package:modipay/home/ppob/ppob_postpaid_screen.dart';
 import 'package:modipay/home/ppob/ppob_emoney_brand_screen.dart';
 import 'package:modipay/home/ppob/ppob_product_screen.dart';
 import 'package:modipay/home/topup/topup_channel_screen.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 
 import '../utils/colornotifire.dart';
 import '../utils/media.dart';
@@ -1859,7 +1859,12 @@ class _SeealltransactionState extends State<Seealltransaction> {
     );
   }
 
-  void _openTransaction(Widget screen, {String? menuKey}) {
+  // Sama seperti di home.dart: layar lama (mobile-only layout) dirender
+  // mobile-emulated 460px lebar; layar yang sudah punya layout desktop
+  // dua-kolom sendiri (mis. PPOBProductScreen) perlu ukuran window asli.
+  bool _wideDesktopActiveScreen = false;
+
+  void _openTransaction(Widget screen, {String? menuKey, bool wideDesktop = false}) {
     // Tunda ke frame berikutnya agar tidak menghapus widget yang sedang
     // di-hover mouse di tengah pemrosesan pointer event (lihat fix serupa
     // di home.dart _openTransaction untuk detail bug MouseTracker-nya).
@@ -1868,6 +1873,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
       setState(() {
         _contentNavKey = GlobalKey<NavigatorState>();
         _desktopActiveScreen = screen;
+        _wideDesktopActiveScreen = wideDesktop;
         if (menuKey != null) {
           _activeDesktopMenu = menuKey;
           _activeSubMenuName = null;
@@ -1882,6 +1888,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
       setState(() {
         _desktopActiveScreen = null;
         _contentNavKey = null;
+        _wideDesktopActiveScreen = false;
         _activeDesktopMenu = 'riwayat';
         _activeSubMenuName = null;
       });
@@ -1915,40 +1922,54 @@ class _SeealltransactionState extends State<Seealltransaction> {
           ),
           const SizedBox(height: 14),
           Expanded(
-            child: Center(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const modalWidth = 460.0;
-                  final modalHeight = constraints.maxHeight;
-                  return SizedBox(
-                    width: modalWidth,
-                    height: modalHeight,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: MediaQuery(
-                        data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            appBarTheme: Theme.of(context).appBarTheme.copyWith(
-                              elevation: 0,
-                              scrolledUnderElevation: 0,
-                              shadowColor: const Color(0xFF000007),
-                            ),
-                          ),
-                          child: Navigator(
-                            key: _contentNavKey,
-                            onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
-                          ),
-                        ),
+            child: _wideDesktopActiveScreen
+                ? Theme(
+                    data: Theme.of(context).copyWith(
+                      appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                        elevation: 0,
+                        scrolledUnderElevation: 0,
+                        shadowColor: const Color(0xFF000007),
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
+                    child: Navigator(
+                      key: _contentNavKey,
+                      onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                    ),
+                  )
+                : Center(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        const modalWidth = 460.0;
+                        final modalHeight = constraints.maxHeight;
+                        return SizedBox(
+                          width: modalWidth,
+                          height: modalHeight,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: MediaQuery(
+                              data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
+                              child: Theme(
+                                data: Theme.of(context).copyWith(
+                                  appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                                    elevation: 0,
+                                    scrolledUnderElevation: 0,
+                                    shadowColor: const Color(0xFF000007),
+                                  ),
+                                ),
+                                child: Navigator(
+                                  key: _contentNavKey,
+                                  onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -1975,7 +1996,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
   Future<void> _showDesktopReferralDialog(AuthProvider auth) async {
     final code = auth.referralCode;
     if (code == null || code.isEmpty) {
-      Fluttertoast.showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
+      showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
       return;
     }
     final copy = await AppDialog.show(
@@ -1996,7 +2017,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
     );
     if (copy == true) {
       await Clipboard.setData(ClipboardData(text: code));
-      Fluttertoast.showToast(msg: 'Kode referral disalin');
+      showToast(msg: 'Kode referral disalin');
     }
   }
 
@@ -2154,7 +2175,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
         configAutoDetectBrand: item['auto_detect_brand'] as bool?,
         configInquirySku: item['inquiry_sku'] as String?,
         configInquiryProvider: item['inquiry_provider'] as String?,
-      ));
+      ), wideDesktop: true);
     }
   }
 

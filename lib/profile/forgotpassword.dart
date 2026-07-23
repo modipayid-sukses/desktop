@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/utils/media.dart';
 import 'package:modipay/utils/string.dart';
 import 'package:provider/provider.dart';
@@ -149,10 +149,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   child: GestureDetector(
                     onTap: () {
                       if (_emailController.text.isEmpty) {
-                        Fluttertoast.showToast(msg: 'Masukkan email Anda');
+                        showToast(msg: 'Masukkan email Anda');
                         return;
                       }
-                      Fluttertoast.showToast(msg: 'Reset link sent to ${_emailController.text}');
+                      showToast(msg: 'Reset link sent to ${_emailController.text}');
                       Navigator.pop(context);
                     },
                     child: Container(

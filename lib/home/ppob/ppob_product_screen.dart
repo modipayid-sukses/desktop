@@ -9,7 +9,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -586,7 +586,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       }
     } catch (_) {
       if (mounted) {
-        Fluttertoast.showToast(msg: 'Gagal memuat brand');
+        showToast(msg: 'Gagal memuat brand');
         setState(() => _isLoadingBrands = false);
       }
     }
@@ -728,7 +728,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       setState(() => _products = products);
     } catch (_) {
       if (mounted) {
-        Fluttertoast.showToast(msg: 'Gagal memuat produk');
+        showToast(msg: 'Gagal memuat produk');
       }
     } finally {
       if (mounted) {
@@ -1188,20 +1188,20 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
               : '';
       final raw = selected.isNotEmpty ? selected : fromList;
       if (raw.isEmpty) {
-        Fluttertoast.showToast(msg: 'Kontak tidak memiliki nomor telepon');
+        showToast(msg: 'Kontak tidak memiliki nomor telepon');
         return;
       }
 
       final normalized = _normalizeMsisdn(raw);
       if (normalized.isEmpty) {
-        Fluttertoast.showToast(msg: 'Nomor dari kontak tidak valid');
+        showToast(msg: 'Nomor dari kontak tidak valid');
         return;
       }
 
       if (!mounted) return;
       _setCustomerId(normalized);
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal mengambil kontak');
+      showToast(msg: 'Gagal mengambil kontak');
     }
   }
 
@@ -1589,7 +1589,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   Future<void> _doPlnInquiry() async {
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan ID pelanggan / No meter');
+      showToast(msg: 'Masukkan ID pelanggan / No meter');
       return;
     }
 
@@ -1615,11 +1615,11 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         await _loadBrands();
         await _loadProducts();
       } else {
-        Fluttertoast.showToast(msg: result['message'] ?? 'Cek pelanggan gagal');
+        showToast(msg: result['message'] ?? 'Cek pelanggan gagal');
       }
     } catch (_) {
       if (mounted) {
-        Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+        showToast(msg: 'Kesalahan koneksi');
       }
     } finally {
       if (mounted) {
@@ -1631,7 +1631,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   Future<void> _doPlnPostpaidInquiry() async {
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan nomor pelanggan');
+      showToast(msg: 'Masukkan nomor pelanggan');
       return;
     }
 
@@ -1898,7 +1898,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   Future<void> _doBpjsInquiry() async {
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan ID Pelanggan');
+      showToast(msg: 'Masukkan ID Pelanggan');
       return;
     }
 
@@ -1949,7 +1949,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           _asDouble(data['denda']);
     }
     if (amount <= 0) {
-      Fluttertoast.showToast(
+      showToast(
           msg: 'Total tagihan tidak valid, silakan cek ulang');
       return;
     }
@@ -2006,7 +2006,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         ? computed
         : _asDouble(_plnPostpaidInquiryResult!['selling_price']);
     if (amount <= 0) {
-      Fluttertoast.showToast(
+      showToast(
           msg: 'Total tagihan tidak valid, silakan cek ulang');
       return;
     }
@@ -2905,7 +2905,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
     // Default: saldo only
     if (balance < price) {
-      Fluttertoast.showToast(msg: 'Saldo tidak mencukupi untuk transaksi ini');
+      showToast(msg: 'Saldo tidak mencukupi untuk transaksi ini');
       return;
     }
 
@@ -3070,7 +3070,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                         onPressed: () {
                           Navigator.pop(ctx);
                           if (selected == 'saldo' && balance < price) {
-                            Fluttertoast.showToast(msg: 'Saldo tidak mencukupi');
+                            showToast(msg: 'Saldo tidak mencukupi');
                             return;
                           }
                           Navigator.push(
@@ -3342,13 +3342,13 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         (lastResponse?['message'] ?? 'Nomor tidak valid').toString();
     final message = rawMessage.toLowerCase();
     if (message.contains('gagal terhubung')) {
-      Fluttertoast.showToast(msg: 'Gagal terhubung saat cek nama penerima');
+      showToast(msg: 'Gagal terhubung saat cek nama penerima');
     } else if (message.contains('pending')) {
-      Fluttertoast.showToast(
+      showToast(
         msg: 'Pengecekan masih diproses, coba lagi beberapa detik',
       );
     } else {
-      Fluttertoast.showToast(
+      showToast(
           msg: rawMessage.isEmpty ? 'Nomor tidak valid' : rawMessage);
       if (lastResponse != null) {
         await showInquiryJsonDialog('Hasil JSON Cek Nama', lastResponse!);
@@ -3369,13 +3369,13 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan nomor pelanggan / nomor HP');
+      showToast(msg: 'Masukkan nomor pelanggan / nomor HP');
       return;
     }
 
     final numberError = _validateCustomerIdByBrand(customerId);
     if (numberError != null) {
-      Fluttertoast.showToast(msg: numberError);
+      showToast(msg: numberError);
       return;
     }
 
@@ -3404,16 +3404,16 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           _inquiryResult = data;
           final name = _extractPlnCustomerName(data);
           if (name.toLowerCase().contains('tidak tersedia')) {
-            Fluttertoast.showToast(msg: 'Nama pelanggan tidak tersedia');
+            showToast(msg: 'Nama pelanggan tidak tersedia');
           } else {
             recipientName = name;
           }
         } else {
-          Fluttertoast.showToast(
+          showToast(
               msg: result['message'] ?? 'Cek pelanggan gagal');
         }
       } catch (_) {
-        Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+        showToast(msg: 'Kesalahan koneksi');
       } finally {
         if (mounted) setState(() => _isValidatingRecipient = false);
       }
@@ -3492,7 +3492,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
       if (!brandSupportsInquiry) {
         requireRecipientName = false;
-        Fluttertoast.showToast(
+        showToast(
           msg:
               'Cek nama belum tersedia untuk brand ini, lanjut tanpa verifikasi nama',
         );
@@ -3511,7 +3511,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         if (recipientName == _verifiedWithoutNameToken) {
           recipientName = null;
           requireRecipientName = false;
-          Fluttertoast.showToast(
+          showToast(
             msg:
                 'Verifikasi berhasil, namun nama penerima tidak dikirim provider',
           );
@@ -3551,13 +3551,13 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
     final product = _selectedProduct;
     if (product == null) {
-      Fluttertoast.showToast(msg: 'Pilih nominal token terlebih dahulu');
+      showToast(msg: 'Pilih nominal token terlebih dahulu');
       return;
     }
 
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan IDPEL terlebih dahulu');
+      showToast(msg: 'Masukkan IDPEL terlebih dahulu');
       return;
     }
 
@@ -3666,12 +3666,12 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
           recipientName = name;
         }
       } else {
-        Fluttertoast.showToast(msg: result['message'] ?? 'Cek pelanggan gagal');
+        showToast(msg: result['message'] ?? 'Cek pelanggan gagal');
         if (mounted) setState(() => _isValidatingRecipient = false);
         return;
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+      showToast(msg: 'Kesalahan koneksi');
       if (mounted) setState(() => _isValidatingRecipient = false);
       return;
     }
@@ -3728,6 +3728,202 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     return null;
   }
 
+  IconData get _desktopCategoryIcon {
+    final t = ('${widget.category} ${widget.title}').toLowerCase();
+    if (t.contains('pulsa')) return Icons.smartphone_rounded;
+    if (t.contains('data') || t.contains('internet')) return Icons.wifi_rounded;
+    if (t.contains('listrik') || t.contains('token') || t.contains('pln')) return Icons.bolt_rounded;
+    if (t.contains('game')) return Icons.sports_esports_rounded;
+    if (t.contains('wallet') || t.contains('money')) return Icons.account_balance_wallet_rounded;
+    return Icons.shopping_bag_rounded;
+  }
+
+  String get _desktopCategorySubtitle => 'Beli ${widget.title} dengan cepat dan mudah';
+
+  double _asAdminFee(Map<String, dynamic> product) {
+    final raw = product['admin_fee'] ?? product['admin'];
+    return _asDouble(raw);
+  }
+
+  // Layout desktop dua-kolom: kiri = input nomor + grid nominal (scroll),
+  // kanan = ringkasan transaksi sticky yang update live saat nominal
+  // dipilih. Tombol "Konfirmasi Pembayaran" memanggil _onProductSelected
+  // yang sama persis dengan alur mobile (inquiry/verifikasi + navigasi ke
+  // PpobTransactionDetailTemplatePage) — logika pembayaran tidak diduplikasi.
+  Widget _buildDesktopLayout(bool showBrandTabs) {
+    final customerId = _customerIdController.text.trim();
+    final hasCustomerInput = customerId.isNotEmpty;
+    final selected = _selectedProduct;
+    final price = selected == null
+        ? 0.0
+        : (_isPromoProduct(selected) ? _promoPrice(selected) : _originalPrice(selected));
+    final adminFee = selected == null ? 0.0 : _asAdminFee(selected);
+    final total = price + adminFee;
+    final canConfirm = selected != null && hasCustomerInput && !_isValidatingRecipient;
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: PpobDesktopTwoColumnLayout(
+        left: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(color: desktopPrimaryBtn.withValues(alpha: 0.08), shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: Icon(_desktopCategoryIcon, color: desktopPrimaryBtn, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.title, style: GoogleFonts.hankenGrotesk(fontSize: 20, fontWeight: FontWeight.w800, color: desktopTextPrimary)),
+                    Text(_desktopCategorySubtitle, style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 1, title: 'Isi Nomor Tujuan'),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: desktopBorderedField(
+                    icon: Icons.smartphone_outlined,
+                    controller: _customerIdController,
+                    focusNode: _customerIdFocusNode,
+                    keyboardType: TextInputType.phone,
+                    hint: widget.configInputHint?.trim().isNotEmpty == true ? widget.configInputHint! : 'Masukkan nomor HP',
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (_) => setState(_onCustomerInputChanged),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () => _openSavedCustomers(desktopPrimaryBtn),
+                  icon: const Icon(Icons.badge_outlined, size: 16),
+                  label: const Text('Kontak'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: desktopAccentBlue,
+                    side: const BorderSide(color: desktopBorder),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+            if (_isCellularCategory && _isPulsaPrefixDetected) ...[
+              const SizedBox(height: 14),
+              PpobDesktopBanner(
+                icon: Icons.check_circle_rounded,
+                title: 'Nomor terverifikasi',
+                trailing: Text(
+                  _selectedBrand ?? '-',
+                  style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w700, color: desktopTextPrimary),
+                ),
+              ),
+            ],
+            const SizedBox(height: 28),
+            PpobStepHeader(
+              step: 2,
+              title: 'Pilih Nominal ${widget.title}',
+              subtitle: hasCustomerInput ? 'Pilih nominal ${widget.title} untuk nomor $customerId' : null,
+            ),
+            const SizedBox(height: 14),
+            if (showBrandTabs && _brands.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _brands.map((b) {
+                    final brand = b.toString();
+                    final sel = _selectedBrand == brand;
+                    return ChoiceChip(
+                      label: Text(brand),
+                      selected: sel,
+                      onSelected: (_) => _selectBrand(brand),
+                      selectedColor: desktopPrimaryBtn.withValues(alpha: 0.12),
+                      backgroundColor: desktopSurfacePage,
+                      side: BorderSide(color: sel ? desktopAccentBlue : desktopBorder),
+                      labelStyle: GoogleFonts.hankenGrotesk(
+                        fontSize: 12,
+                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                        color: sel ? desktopAccentBlue : desktopTextPrimary,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            _buildDesktopProductGrid(),
+          ],
+        ),
+        right: PpobDesktopSummaryPanel(
+          rows: [
+            PpobDetailRow(icon: Icons.smartphone_outlined, label: 'Nomor Tujuan', value: hasCustomerInput ? customerId : '-'),
+            PpobDetailRow(icon: Icons.sim_card_outlined, label: 'Operator', value: _selectedBrand ?? '-'),
+            PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Produk', value: (selected?['product_name'] ?? widget.title).toString()),
+            PpobDetailRow(icon: Icons.confirmation_number_outlined, label: 'Nominal', value: selected != null ? _formatPrice(price) : '-'),
+            PpobDetailRow(icon: Icons.payments_outlined, label: 'Harga', value: selected != null ? _formatPrice(price) : 'Rp 0'),
+            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: _formatPrice(adminFee)),
+          ],
+          totalLabel: _formatPrice(total),
+          loading: _isValidatingRecipient,
+          onConfirm: canConfirm ? () => _onProductSelected(selected) : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopProductGrid() {
+    if (_isLoadingProducts) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_products.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: Text(
+            _customerIdController.text.trim().isEmpty ? 'Masukkan nomor tujuan terlebih dahulu' : 'Belum ada produk tersedia',
+            style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary),
+          ),
+        ),
+      );
+    }
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _products.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        mainAxisExtent: 96,
+      ),
+      itemBuilder: (_, i) {
+        final p = Map<String, dynamic>.from(_products[i] as Map);
+        final isPromo = _isPromoProduct(p);
+        final priceValue = isPromo ? _promoPrice(p) : _originalPrice(p);
+        final isSelected = _selectedProduct != null && _selectedProduct!['buyer_sku_code'] == p['buyer_sku_code'];
+        return PpobNominalCard(
+          title: (p['product_name'] ?? '-').toString(),
+          priceLabel: _formatPrice(priceValue),
+          badge: isPromo ? 'Promo' : null,
+          selected: isSelected,
+          onTap: () => setState(() => _selectedProduct = p),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
@@ -3756,6 +3952,22 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             !_isTopupGameFiltered &&
             !(_isEmoney && hasInitialBrand) &&
             !(hasInitialBrand && _brands.length <= 1));
+
+    // Layout desktop dua-kolom baru hanya untuk kategori "sederhana" (Pulsa,
+    // Paket Data/Telfon/SMS, dan kategori grid generik lain) yang cocok
+    // dengan referensi desain. Kategori dengan alur khusus (PLN, e-money,
+    // game, inject, hub) tetap pakai layout mobile lama (masih berfungsi
+    // penuh, hanya dipusatkan di window lebar alih-alih dipaksa 460px).
+    final supportsDesktopTwoColumn = !_isPln &&
+        !_isTopupGameFiltered &&
+        !_isCategoryInquiry &&
+        !_isInternetHub &&
+        !_isMultifinanceHub &&
+        !_isEmoney &&
+        !_isInject;
+    if (isDesktop(context) && supportsDesktopTwoColumn) {
+      return _buildDesktopLayout(showBrandTabs);
+    }
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -4570,7 +4782,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   Future<void> _onEwalletBrandTap(String brandName) async {
     final phone = _customerIdController.text.trim();
     if (phone.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukan Nomor HP terlebih dahulu');
+      showToast(msg: 'Masukan Nomor HP terlebih dahulu');
       _customerIdFocusNode.requestFocus();
       return;
     }
@@ -4656,11 +4868,11 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     final amountText = _customAmountController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final amount = int.tryParse(amountText) ?? 0;
     if (amount < 1000) {
-      Fluttertoast.showToast(msg: 'Minimal nominal Rp 10.000');
+      showToast(msg: 'Minimal nominal Rp 10.000');
       return;
     }
     if (amount > 10000000) {
-      Fluttertoast.showToast(msg: 'Maksimal nominal Rp 10.000.000');
+      showToast(msg: 'Maksimal nominal Rp 10.000.000');
       return;
     }
 
@@ -5198,7 +5410,7 @@ class _PlnPostpaidInlinePinScreenState
     if (_isLoading) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.pinRequired && !_usedBiometric && pin.length != 4) {
-      Fluttertoast.showToast(msg: 'Masukkan PIN 4 digit');
+      showToast(msg: 'Masukkan PIN 4 digit');
       return;
     }
 
@@ -5240,12 +5452,12 @@ class _PlnPostpaidInlinePinScreenState
           ),
         );
       } else {
-        Fluttertoast.showToast(msg: response['message'] ?? 'Pembayaran gagal');
+        showToast(msg: response['message'] ?? 'Pembayaran gagal');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Pembayaran gagal'),
       );
     }
@@ -5448,7 +5660,7 @@ class _PpobTransactionDetailTemplatePageState
   void _handleConfirm() {
     if (widget.requireRecipientName &&
         (_recipientName == null || _recipientName!.trim().isEmpty)) {
-      Fluttertoast.showToast(msg: 'Nama penerima belum terverifikasi');
+      showToast(msg: 'Nama penerima belum terverifikasi');
       return;
     }
     widget.onConfirm?.call();

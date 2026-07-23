@@ -4,7 +4,7 @@ import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:intl/intl.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
@@ -152,7 +152,7 @@ class _RequestState extends State<Request> {
       });
     } catch (_) {
       if (mounted) {
-        Fluttertoast.showToast(msg: 'Gagal memuat data rekening');
+        showToast(msg: 'Gagal memuat data rekening');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -161,7 +161,7 @@ class _RequestState extends State<Request> {
 
   Future<void> _showAddAccountDialog() async {
     if (_accounts.isNotEmpty) {
-      Fluttertoast.showToast(msg: 'Hanya 1 rekening bank yang dapat ditambahkan');
+      showToast(msg: 'Hanya 1 rekening bank yang dapat ditambahkan');
       return;
     }
 
@@ -278,7 +278,7 @@ class _RequestState extends State<Request> {
                                   final accountName = _accountNameController.text.trim();
 
                                   if (bankName.isEmpty || accountNumber.isEmpty || accountName.isEmpty) {
-                                    Fluttertoast.showToast(msg: 'Semua field wajib diisi');
+                                    showToast(msg: 'Semua field wajib diisi');
                                     return;
                                   }
 
@@ -292,13 +292,13 @@ class _RequestState extends State<Request> {
                                     );
                                     if (res.containsKey('contact')) {
                                       if (mounted) Navigator.pop(ctx);
-                                      Fluttertoast.showToast(msg: 'Rekening berhasil ditambahkan');
+                                      showToast(msg: 'Rekening berhasil ditambahkan');
                                       await _loadAccounts();
                                     } else {
-                                      Fluttertoast.showToast(msg: res['message'] ?? 'Gagal menambah rekening');
+                                      showToast(msg: res['message'] ?? 'Gagal menambah rekening');
                                     }
                                   } catch (_) {
-                                    Fluttertoast.showToast(msg: 'Gagal menambah rekening');
+                                    showToast(msg: 'Gagal menambah rekening');
                                   } finally {
                                     if (mounted) {
                                       setDialogState(() => _saving = false);
@@ -343,7 +343,7 @@ class _RequestState extends State<Request> {
 
   Future<Map<String, String>?> _showBankPicker() async {
     if (_bankOptions.isEmpty) {
-      Fluttertoast.showToast(msg: 'List bank dari JSON belum terisi');
+      showToast(msg: 'List bank dari JSON belum terisi');
       return null;
     }
 
@@ -1081,11 +1081,11 @@ class _WithdrawalAmountScreenState extends State<WithdrawalAmountScreen> {
                   onPressed: () async {
                     final amount = _parseAmount();
                     if (amount < 10000) {
-                      Fluttertoast.showToast(msg: 'Minimal penarikan Rp 10.000');
+                      showToast(msg: 'Minimal penarikan Rp 10.000');
                       return;
                     }
                     if (balance < amount) {
-                      Fluttertoast.showToast(msg: 'Saldo kurang');
+                      showToast(msg: 'Saldo kurang');
                       return;
                     }
 
@@ -1144,7 +1144,7 @@ class _WithdrawalVerificationScreenState extends State<WithdrawalVerificationScr
     if (_submitting) return;
 
     if (!useBiometric && _pinController.text.trim().length != 4) {
-      Fluttertoast.showToast(msg: 'Masukkan 4 digit PIN');
+      showToast(msg: 'Masukkan 4 digit PIN');
       return;
     }
 
@@ -1153,7 +1153,7 @@ class _WithdrawalVerificationScreenState extends State<WithdrawalVerificationScr
         reason: 'Verifikasi penarikan saldo',
       );
       if (!ok) {
-        Fluttertoast.showToast(msg: 'Verifikasi biometrik gagal');
+        showToast(msg: 'Verifikasi biometrik gagal');
         return;
       }
     }
@@ -1169,15 +1169,15 @@ class _WithdrawalVerificationScreenState extends State<WithdrawalVerificationScr
 
       if (res['status'] == 'success' || res['transaction'] != null) {
         if (!mounted) return;
-        Fluttertoast.showToast(
+        showToast(
           msg: res['message'] ?? 'Permintaan penarikan dibuat. Menunggu konfirmasi admin.',
         );
         Navigator.pop(context, true);
       } else {
-        Fluttertoast.showToast(msg: res['message'] ?? 'Gagal mengajukan penarikan');
+        showToast(msg: res['message'] ?? 'Gagal mengajukan penarikan');
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal mengajukan penarikan');
+      showToast(msg: 'Gagal mengajukan penarikan');
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

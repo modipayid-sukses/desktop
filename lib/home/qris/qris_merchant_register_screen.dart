@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -115,15 +115,15 @@ class _QrisMerchantRegisterScreenState extends State<QrisMerchantRegisterScreen>
   Future<void> _submit() async {
     final name = _businessNameController.text.trim();
     if (name.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan nama usaha');
+      showToast(msg: 'Masukkan nama usaha');
       return;
     }
     if (_photoProduct == null) {
-      Fluttertoast.showToast(msg: 'Upload foto produk');
+      showToast(msg: 'Upload foto produk');
       return;
     }
     if (_photoPlace == null) {
-      Fluttertoast.showToast(msg: 'Upload foto tempat usaha');
+      showToast(msg: 'Upload foto tempat usaha');
       return;
     }
 
@@ -142,13 +142,13 @@ class _QrisMerchantRegisterScreenState extends State<QrisMerchantRegisterScreen>
 
       if (res.containsKey('merchant')) {
         setState(() => _currentStatus = 'pending');
-        Fluttertoast.showToast(msg: 'Pengajuan berhasil dikirim');
+        showToast(msg: 'Pengajuan berhasil dikirim');
       } else {
-        Fluttertoast.showToast(msg: res['message'] ?? 'Gagal mengirim pengajuan');
+        showToast(msg: res['message'] ?? 'Gagal mengirim pengajuan');
       }
     } catch (e) {
       if (mounted) setState(() => _isSubmitting = false);
-      Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+      showToast(msg: 'Kesalahan koneksi');
     }
   }
 

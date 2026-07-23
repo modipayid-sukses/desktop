@@ -28,6 +28,10 @@
 		<true/>
 		<key>NSContactsUsageDescription</key>
 		<string>Aplikasi membutuhkan akses kontak untuk memilih nomor tujuan.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Kami memerlukan lokasi Anda untuk memverifikasi transaksi yang aman dan mencegah penipuan.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Kami memerlukan lokasi Anda untuk memverifikasi transaksi yang aman dan mencegah penipuan.</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

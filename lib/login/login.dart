@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/login/forgot_pin_screen.dart';
 import 'package:modipay/login/login_otp_screen.dart';
 import 'package:modipay/services/api_service.dart';
@@ -157,7 +157,7 @@ class _LoginState extends State<Login> {
   Future<void> _goToPinLogin() async {
     final rawPhone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (rawPhone.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan nomor HP');
+      showToast(msg: 'Masukkan nomor HP');
       return;
     }
 
@@ -179,7 +179,7 @@ class _LoginState extends State<Login> {
         });
 
         if (result.errorMessage != null) {
-          Fluttertoast.showToast(msg: result.errorMessage!);
+          showToast(msg: result.errorMessage!);
         }
         return;
       }
@@ -195,7 +195,7 @@ class _LoginState extends State<Login> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isCheckingPhone = false);
-      Fluttertoast.showToast(msg: 'Gagal memeriksa nomor HP');
+      showToast(msg: 'Gagal memeriksa nomor HP');
     }
   }
 

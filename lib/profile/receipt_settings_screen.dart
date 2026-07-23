@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/services/receipt_settings_service.dart';
 import 'package:modipay/services/wilayah_service.dart';
 import 'package:modipay/utils/colornotifire.dart';
@@ -118,7 +118,7 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
-      Fluttertoast.showToast(msg: 'Gagal memuat data provinsi');
+      showToast(msg: 'Gagal memuat data provinsi');
     }
   }
 
@@ -147,7 +147,7 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
         _villageName = '';
       });
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal memuat kota/kabupaten');
+      showToast(msg: 'Gagal memuat kota/kabupaten');
     } finally {
       if (mounted) setState(() => _isLoadingRegencies = false);
     }
@@ -175,7 +175,7 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
         _villageName = '';
       });
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal memuat kecamatan');
+      showToast(msg: 'Gagal memuat kecamatan');
     } finally {
       if (mounted) setState(() => _isLoadingDistricts = false);
     }
@@ -200,7 +200,7 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
         _villageName = nextName;
       });
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal memuat kelurahan/desa');
+      showToast(msg: 'Gagal memuat kelurahan/desa');
     } finally {
       if (mounted) setState(() => _isLoadingVillages = false);
     }
@@ -209,7 +209,7 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
   Future<void> _save() async {
     if (_isSaving) return;
     if (_storeNameC.text.trim().isEmpty) {
-      Fluttertoast.showToast(msg: 'Nama toko/kedai wajib diisi');
+      showToast(msg: 'Nama toko/kedai wajib diisi');
       return;
     }
 
@@ -232,10 +232,10 @@ class _ReceiptSettingsScreenState extends State<ReceiptSettingsScreen> {
             : _thanksC.text,
       );
       if (!mounted) return;
-      Fluttertoast.showToast(msg: 'Pengaturan struk disimpan');
+      showToast(msg: 'Pengaturan struk disimpan');
       Navigator.pop(context);
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal menyimpan pengaturan');
+      showToast(msg: 'Gagal menyimpan pengaturan');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

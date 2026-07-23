@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:modipay/utils/color.dart';
 
-import '../utils/color.dart';
+class _FeatureIconData {
+  final IconData icon;
+  final String label;
+  final Color color;
 
-/// Shell desktop bergaya split-panel (navy kiri + form putih kanan) yang
-/// dipakai di semua layar auth (login password, login OTP, verifikasi OTP,
-/// input PIN), mengikuti design system "Vivid Enterprise"
-/// (desktop_app_design_system/login_moditekh2h).
+  const _FeatureIconData(this.icon, this.label, this.color);
+}
+
+const List<_FeatureIconData> _authFeatureIcons = [
+  _FeatureIconData(Icons.smartphone_rounded, 'PULSA', Color(0xff2f6fed)),
+  _FeatureIconData(Icons.wifi_rounded, 'PAKET DATA', Color(0xff22b573)),
+  _FeatureIconData(Icons.bolt_rounded, 'TOKEN LISTRIK', desktopWarningAmber),
+  _FeatureIconData(Icons.sports_esports_rounded, 'GAME', Color(0xff9b59f6)),
+  _FeatureIconData(Icons.account_balance_wallet_rounded, 'E-WALLET', Color(0xff22c1e0)),
+];
+
 class DesktopAuthShell extends StatelessWidget {
   final Widget child;
 
@@ -16,111 +30,95 @@ class DesktopAuthShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: desktopSurfacePage,
-      body: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Container(
-                margin: const EdgeInsets.all(24),
-                constraints: const BoxConstraints(maxWidth: 1280, maxHeight: 760),
-                decoration: BoxDecoration(
-                  color: desktopSurfaceCard,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 48,
-                      offset: const Offset(0, 24),
-                    ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Expanded(flex: 3, child: DesktopAuthBrandPanel()),
-                    Expanded(
-                      flex: 2,
-                      child: Center(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 32),
-                          child: child,
-                        ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 1180),
+                  margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: desktopSurfaceCard,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.10),
+                        blurRadius: 40,
+                        offset: const Offset(0, 20),
                       ),
+                    ],
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(flex: 5, child: _buildBrandingPanel()),
+                        Expanded(
+                          flex: 6,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 32),
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 420),
+                                child: child,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              '© 2024 MODITEKH2H. All rights reserved.',
-              style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Text(
+                '© ${DateTime.now().year} MODITEKH2H. All rights reserved.',
+                style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary.withValues(alpha: 0.8)),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
 
-/// Panel navy kiri (brand, value-prop, ikon layanan, status banner) sesuai
-/// design system "Vivid Enterprise".
-class DesktopAuthBrandPanel extends StatelessWidget {
-  const DesktopAuthBrandPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final services = [
-      {'icon': Icons.smartphone_rounded, 'label': 'Pulsa', 'color': const Color(0xff2563eb)},
-      {'icon': Icons.wifi_rounded, 'label': 'Paket Data', 'color': const Color(0xff22c55e)},
-      {'icon': Icons.bolt_rounded, 'label': 'Token Listrik', 'color': const Color(0xfffbbf24)},
-      {'icon': Icons.sports_esports_rounded, 'label': 'Game', 'color': const Color(0xffa855f7)},
-      {'icon': Icons.account_balance_wallet_rounded, 'label': 'E-Wallet', 'color': const Color(0xff0ea5e9)},
-    ];
-
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [desktopNavyStart, desktopNavyEnd],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+  Widget _buildBrandingPanel() {
+    return ClipRRect(
+      borderRadius: const BorderRadius.horizontal(left: Radius.circular(28)),
       child: Stack(
         children: [
-          // Illustration sitting behind the status pill and service icon grid
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.16,
-              child: Image.network(
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuBQdt6tQHKUwtPmQh5PrrpEx7tR5yH8v3FeH3rvgSRa4pFFaWLiyJB6eu8xIN253pbAwDYVInuj_U8GFqV9RrOME-Q9cXjqws82x4lDbE1TIKCXkquIulmvMzuEXTxgi__RBo0wC4R078i_ryLiU32dB8fHS7oF6CGNYrBlNlAq3wY8Gj8_gIz2fo_dzN7uAo9DGlolnPvuxs6qUxjcjL4ZPAFjHeauvI2MKfTAo6UHdAKxqqiRNZfIyN15bwMia3zVEbiT3YrmlZKC',
-                fit: BoxFit.cover,
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [desktopNavyStart, desktopNavyEnd],
               ),
             ),
           ),
-          // Decorative glow circle
           Positioned(
-            top: -100,
-            right: -100,
-            width: 250,
-            height: 250,
+            top: -70,
+            right: -70,
             child: Container(
+              width: 220,
+              height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.06),
               ),
             ),
           ),
-          // Main content column
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+            padding: const EdgeInsets.fromLTRB(44, 44, 40, 40),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo
                 Row(
                   children: [
                     Container(
@@ -131,11 +129,7 @@ class DesktopAuthBrandPanel extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.account_balance_wallet_rounded,
-                        color: desktopPrimaryBtn,
-                        size: 30,
-                      ),
+                      child: const Icon(Icons.account_balance_wallet_rounded, color: desktopPrimaryBtn, size: 26),
                     ),
                     const SizedBox(width: 12),
                     Column(
@@ -143,172 +137,127 @@ class DesktopAuthBrandPanel extends StatelessWidget {
                       children: [
                         Text(
                           'MODITEKH2H',
-                          style: GoogleFonts.hankenGrotesk(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                            height: 1,
-                          ),
+                          style: GoogleFonts.hankenGrotesk(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
                         ),
-                        const SizedBox(height: 2),
                         Text(
                           'PPOB SOLUTION',
                           style: GoogleFonts.hankenGrotesk(
-                            color: Colors.white.withOpacity(0.8),
                             fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white.withValues(alpha: 0.6),
+                            letterSpacing: 1.4,
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 48),
-                // Headline
+                const SizedBox(height: 40),
                 Text.rich(
                   TextSpan(
-                    style: GoogleFonts.hankenGrotesk(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.15,
-                      letterSpacing: -0.64,
-                    ),
-                    children: [
-                      const TextSpan(text: 'Solusi Transaksi PPOB Terlengkap & '),
-                      TextSpan(
-                        text: 'Terpercaya',
-                        style: TextStyle(color: desktopNavyHighlight),
-                      ),
+                    style: GoogleFonts.hankenGrotesk(fontSize: 32, fontWeight: FontWeight.w800, height: 1.25, color: Colors.white),
+                    children: const [
+                      TextSpan(text: 'Solusi Transaksi PPOB\nTerlengkap & '),
+                      TextSpan(text: 'Terpercaya', style: TextStyle(color: desktopNavyHighlight)),
                     ],
                   ),
                 ),
-                const SizedBox(height: 14, width: 80),
-                // Subtitle
+                const SizedBox(height: 16),
                 Text(
                   'Top up lebih mudah, bayar tagihan lebih cepat, semua dalam satu platform yang aman dan handal untuk bisnis Anda.',
-                  style: GoogleFonts.hankenGrotesk(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
+                  style: GoogleFonts.hankenGrotesk(fontSize: 14, color: Colors.white.withValues(alpha: 0.7), height: 1.5),
                 ),
                 const SizedBox(height: 32),
-                // Service Grid
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
                   child: Row(
-                    children: services.map((s) {
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: s['color'] as Color,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  s['icon'] as IconData,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (final feature in _authFeatureIcons)
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(color: feature.color, borderRadius: BorderRadius.circular(14)),
+                              alignment: Alignment.center,
+                              child: Icon(feature.icon, color: Colors.white, size: 22),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              feature.label,
+                              style: GoogleFonts.hankenGrotesk(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white.withValues(alpha: 0.85),
+                                letterSpacing: 0.3,
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                (s['label'] as String).toUpperCase(),
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.hankenGrotesk(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      );
-                    }).toList(),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                // Status Pill
+                const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: Color(0xff0e3cbc),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.verified_user_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(color: desktopPrimaryBtn, shape: BoxShape.circle),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.shield_rounded, color: Colors.white, size: 20),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'Transaksi Sedang Lancar',
-                              style: GoogleFonts.hankenGrotesk(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                height: 1,
-                              ),
+                              style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Semua layanan tersedia dan normal.',
-                              style: GoogleFonts.hankenGrotesk(
-                                color: Colors.white.withOpacity(0.6),
-                                fontSize: 11,
-                              ),
+                              style: GoogleFonts.hankenGrotesk(fontSize: 12, color: Colors.white.withValues(alpha: 0.6)),
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: desktopSuccessFg.withOpacity(0.15),
-                          border: Border.all(color: desktopSuccessFg.withOpacity(0.3)),
+                          color: desktopSuccessFg.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.circle, size: 6, color: desktopSuccessFg),
-                            const SizedBox(width: 5),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(color: Color(0xff4ade80), shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 6),
                             Text(
                               'Normal',
-                              style: GoogleFonts.hankenGrotesk(
-                                color: desktopSuccessFg,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: GoogleFonts.hankenGrotesk(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xff4ade80)),
                             ),
                           ],
                         ),
@@ -325,119 +274,453 @@ class DesktopAuthBrandPanel extends StatelessWidget {
   }
 }
 
-/// Input field bordered icon-prefixed yang dipakai di semua form auth desktop.
-/// Border dan ikon menyorot warna biru saat field sedang difokus.
-Widget desktopBorderedField({
-  required IconData icon,
-  required TextEditingController controller,
-  required String hint,
-  TextInputType? keyboardType,
-  bool obscureText = false,
-  Widget? suffix,
-  FocusNode? focusNode,
-  TextInputAction? textInputAction,
-  ValueChanged<String>? onSubmitted,
-}) {
-  return _DesktopBorderedField(
-    icon: icon,
-    controller: controller,
-    hint: hint,
-    keyboardType: keyboardType,
-    obscureText: obscureText,
-    suffix: suffix,
-    focusNode: focusNode,
-    textInputAction: textInputAction,
-    onSubmitted: onSubmitted,
-  );
-}
+class DesktopAuthPanel extends StatefulWidget {
+  final bool showBranding;
+  final VoidCallback? onSignUp;
+  final ValueChanged<LoginCredentials>? onLogin;
+  final VoidCallback? onForgotPassword;
 
-class _DesktopBorderedField extends StatefulWidget {
-  final IconData icon;
-  final TextEditingController controller;
-  final String hint;
-  final TextInputType? keyboardType;
-  final bool obscureText;
-  final Widget? suffix;
-  final FocusNode? focusNode;
-  final TextInputAction? textInputAction;
-  final ValueChanged<String>? onSubmitted;
-
-  const _DesktopBorderedField({
-    required this.icon,
-    required this.controller,
-    required this.hint,
-    this.keyboardType,
-    this.obscureText = false,
-    this.suffix,
-    this.focusNode,
-    this.textInputAction,
-    this.onSubmitted,
+  const DesktopAuthPanel({
+    this.showBranding = true,
+    this.onSignUp,
+    this.onLogin,
+    this.onForgotPassword,
   });
 
   @override
-  State<_DesktopBorderedField> createState() => _DesktopBorderedFieldState();
+  State<DesktopAuthPanel> createState() => _DesktopAuthPanelState();
 }
 
-class _DesktopBorderedFieldState extends State<_DesktopBorderedField> {
-  late final FocusNode _focusNode = widget.focusNode ?? FocusNode();
-  late final bool _ownsFocusNode = widget.focusNode == null;
-  bool _isFocused = false;
+class LoginCredentials {
+  final String email;
+  final String password;
+
+  LoginCredentials({required this.email, required this.password});
+}
+
+class _DesktopAuthPanelState extends State<DesktopAuthPanel> {
+  late TextEditingController _emailController;
+  late TextEditingController _passwordController;
+  late FocusNode _emailFocus;
+  late FocusNode _passwordFocus;
+  late FocusNode _rememberFocus;
+  late FocusNode _loginFocus;
+
+  bool _rememberDevice = false;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  String? _errorMessage;
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(_handleFocusChange);
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
+    _emailFocus = FocusNode();
+    _passwordFocus = FocusNode();
+    _rememberFocus = FocusNode();
+    _loginFocus = FocusNode();
+    _loadRememberedDevice();
   }
 
-  void _handleFocusChange() {
-    if (_isFocused != _focusNode.hasFocus) {
-      setState(() => _isFocused = _focusNode.hasFocus);
+  Future<void> _loadRememberedDevice() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final email = prefs.getString('remembered_email');
+      if (email != null) {
+        setState(() {
+          _emailController.text = email;
+          _rememberDevice = true;
+        });
+      }
+    } catch (e) {
+      // Silently fail
     }
   }
 
-  @override
-  void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
-    if (_ownsFocusNode) {
-      _focusNode.dispose();
+  Future<void> _handleLogin() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Validate inputs
+      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+        throw Exception('Email and password are required');
+      }
+
+      // Simulate API call
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // Save email if remember device is checked
+      if (_rememberDevice) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('remembered_email', _emailController.text);
+      }
+
+      // Call callback
+      widget.onLogin?.call(LoginCredentials(
+        email: _emailController.text,
+        password: _passwordController.text,
+      ));
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    } finally {
+      setState(() => _isLoading = false);
     }
-    super.dispose();
+  }
+
+  Future<void> _handleBiometricLogin() async {
+    try {
+      final canCheckBiometrics = await _localAuth.canCheckBiometrics;
+      final isDeviceSupported = await _localAuth.isDeviceSupported();
+
+      if (!canCheckBiometrics || !isDeviceSupported) {
+        throw Exception('Biometric authentication not available');
+      }
+
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Authenticate to log in',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: true,
+        ),
+      );
+
+      if (authenticated) {
+        // Biometric successful, trigger login with stored credentials
+        widget.onLogin?.call(LoginCredentials(
+          email: _emailController.text,
+          password: 'biometric_auth',
+        ));
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Biometric authentication failed: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: desktopSurfacePage,
-      ),
-      child: Row(
-        children: [
-          Icon(widget.icon, color: _isFocused ? desktopAccentBlue : desktopTextSecondary.withOpacity(0.6), size: 20),
-          const SizedBox(width: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth > 1024) {
+          return _buildWideLayout(context);
+        } else if (constraints.maxWidth > 768) {
+          return _buildTabletLayout(context);
+        } else {
+          return _buildMobileLayout(context);
+        }
+      },
+    );
+  }
+
+  Widget _buildWideLayout(BuildContext context) {
+    return Row(
+      children: [
+        if (widget.showBranding)
           Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              obscureText: widget.obscureText,
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              onSubmitted: widget.onSubmitted,
-              style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w500, color: desktopTextPrimary),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: widget.hint,
-                hintStyle: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopBorder),
-              ),
-            ),
+            flex: 1,
+            child: _buildBrandingSide(context),
           ),
-          if (widget.suffix != null) Padding(padding: const EdgeInsets.only(left: 8), child: widget.suffix!),
+        Expanded(
+          flex: 1,
+          child: _buildLoginSide(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletLayout(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          if (widget.showBranding) _buildCompactBranding(context),
+          SizedBox(height: 32),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: _buildLoginSide(context),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            SizedBox(height: 32),
+            _buildCompactBranding(context),
+            SizedBox(height: 32),
+            _buildLoginSide(context),
+            SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrandingSide(BuildContext context) {
+    return Container(
+      color: Theme.of(context).primaryColor,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(48),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.payment, size: 120, color: Colors.white),
+              SizedBox(height: 32),
+              Text(
+                'Modipay',
+                style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Digital Payment Platform',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white70,
+                    ),
+              ),
+              SizedBox(height: 48),
+              Text(
+                'Fast, secure, and easy payments for everyone',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.white70,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactBranding(BuildContext context) {
+    return Column(
+      children: [
+        Icon(Icons.payment, size: 80, color: Theme.of(context).primaryColor),
+        SizedBox(height: 16),
+        Text(
+          'Modipay',
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoginSide(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 400,
+        child: Focus(
+          onKey: (node, event) {
+            // Tab navigation
+            if (event.isKeyPressed(LogicalKeyboardKey.tab)) {
+              if (_emailFocus.hasFocus) {
+                FocusScope.of(context).requestFocus(_passwordFocus);
+              } else if (_passwordFocus.hasFocus) {
+                FocusScope.of(context).requestFocus(_rememberFocus);
+              } else if (_rememberFocus.hasFocus) {
+                FocusScope.of(context).requestFocus(_loginFocus);
+              } else {
+                FocusScope.of(context).requestFocus(_emailFocus);
+              }
+              return KeyEventResult.handled;
+            }
+            // Enter to login
+            if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+              _handleLogin();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Sign In',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              SizedBox(height: 32),
+
+              // Email field
+              TextField(
+                controller: _emailController,
+                focusNode: _emailFocus,
+                decoration: InputDecoration(
+                  labelText: 'Email or Phone',
+                  hintText: 'user@example.com',
+                  prefixIcon: Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => FocusScope.of(context).requestFocus(_passwordFocus),
+              ),
+              SizedBox(height: 16),
+
+              // Password field
+              TextField(
+                controller: _passwordController,
+                focusNode: _passwordFocus,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _handleLogin(),
+              ),
+              SizedBox(height: 16),
+
+              // Remember device
+              Row(
+                children: [
+                  Checkbox(
+                    focusNode: _rememberFocus,
+                    value: _rememberDevice,
+                    onChanged: (value) {
+                      setState(() => _rememberDevice = value ?? false);
+                    },
+                  ),
+                  Text('Remember this device'),
+                  Spacer(),
+                  TextButton(
+                    onPressed: widget.onForgotPassword,
+                    child: Text('Forgot password?'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 24),
+
+              // Error message
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error, color: Colors.red, size: 20),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(color: Colors.red[900], fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Login button
+              ElevatedButton(
+                focusNode: _loginFocus,
+                onPressed: _isLoading ? null : _handleLogin,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoading
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text('Sign In'),
+              ),
+              SizedBox(height: 16),
+
+              // Sign up
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Don\'t have an account? '),
+                  TextButton(
+                    onPressed: widget.onSignUp,
+                    child: Text('Sign Up'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 32),
+
+              // Divider
+              Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('Or'),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              SizedBox(height: 16),
+
+              // Alternative login methods
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _handleBiometricLogin,
+                    icon: Icon(Icons.fingerprint),
+                    label: Text('Biometric'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      // Show OTP dialog
+                    },
+                    icon: Icon(Icons.sms),
+                    label: Text('OTP'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _rememberFocus.dispose();
+    _loginFocus.dispose();
+    super.dispose();
   }
 }

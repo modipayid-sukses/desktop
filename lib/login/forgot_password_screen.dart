@@ -4,7 +4,7 @@ import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../services/api_service.dart';
@@ -175,7 +175,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       final msg = response['message']?.toString();
       if (msg != null && msg.isNotEmpty) {
-        Fluttertoast.showToast(msg: msg);
+        showToast(msg: msg);
       }
     } catch (e) {
       setState(() => _errorMessage = ApiService.userFriendlyMessage(e));
@@ -218,7 +218,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
       if (!mounted) return;
       _otpTimer?.cancel();
-      Fluttertoast.showToast(
+      showToast(
         msg: response['message']?.toString() ?? 'Password berhasil diubah.',
       );
       Navigator.pop(context);

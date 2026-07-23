@@ -3,6 +3,10 @@ platform :osx, '10.15'
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
+# Silence warnings coming from third-party pods (mobile_scanner, flutter_tts,
+# firebase_core, etc.) so only warnings from our own code show up in the build log.
+inhibit_all_warnings!
+
 project 'Runner', {
   'Debug' => :debug,
   'Profile' => :release,

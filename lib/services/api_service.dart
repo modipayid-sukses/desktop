@@ -47,6 +47,18 @@ class ApiService {
     return '$base/storage/$path';
   }
 
+  // dart:io's HttpHeaders.set() only accepts Latin-1/ASCII bytes in header
+  // values. Device names can contain smart quotes/emoji (e.g. macOS
+  // "Work’s Mac mini"), which throws a FormatException before the request
+  // is even sent — replace anything outside printable ASCII with '?'.
+  static String _sanitizeHeaderValue(String value) {
+    final buffer = StringBuffer();
+    for (final codeUnit in value.codeUnits) {
+      buffer.writeCharCode(codeUnit >= 0x20 && codeUnit <= 0x7E ? codeUnit : 0x3F);
+    }
+    return buffer.toString();
+  }
+
   static Map<String, String> _headers({bool auth = false}) {
     final headers = {
       'Content-Type': 'application/json',
@@ -62,7 +74,7 @@ class ApiService {
     }
     final deviceName = DeviceIdentityService.currentDeviceName;
     if (deviceName != null && deviceName.isNotEmpty) {
-      headers['X-Device-Name'] = deviceName;
+      headers['X-Device-Name'] = _sanitizeHeaderValue(deviceName);
     }
     final devicePlatform = DeviceIdentityService.currentDevicePlatform;
     if (devicePlatform != null && devicePlatform.isNotEmpty) {
@@ -242,7 +254,6 @@ class ApiService {
       final stopwatch = Stopwatch()..start();
       final response = await request().timeout(_requestTimeout);
       stopwatch.stop();
-      final decoded = _decodeBody(response.body);
 
       if (_httpDebug) {
         final label = debugLabel ?? 'HTTP';
@@ -255,10 +266,14 @@ class ApiService {
         }
         // ignore: avoid_print
         print('[API] $label response=${response.body}');
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          // ignore: avoid_print
-          print('[API] $label error=$decoded');
-        }
+      }
+
+      final decoded = _decodeBody(response.body);
+
+      if (_httpDebug && (response.statusCode < 200 || response.statusCode >= 300)) {
+        final label = debugLabel ?? 'HTTP';
+        // ignore: avoid_print
+        print('[API] $label error=$decoded');
       }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -336,7 +351,21 @@ class ApiService {
           await for (final chunk in ioResp) {
             responseBytes.addAll(chunk);
           }
-          final responseBody = utf8.decode(responseBytes);
+          // ignore: avoid_print
+          print('[API][POST] $url status=${ioResp.statusCode} bytes=${responseBytes.length} '
+              'contentEncoding=${ioResp.headers.value('content-encoding')} '
+              'contentType=${ioResp.headers.value('content-type')} '
+              'first32Hex=${responseBytes.take(32).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+          String responseBody;
+          try {
+            responseBody = utf8.decode(responseBytes);
+          } catch (decodeError) {
+            // ignore: avoid_print
+            print('[API][POST] $url utf8.decode FAILED: $decodeError');
+            responseBody = utf8.decode(responseBytes, allowMalformed: true);
+            // ignore: avoid_print
+            print('[API][POST] $url malformed-decoded body=$responseBody');
+          }
           // Debug: log status dan awal response
           if (ioResp.statusCode != 200 && ioResp.statusCode != 201) {
             // ignore: avoid_print
@@ -425,16 +454,16 @@ class ApiService {
   }
 
   /// Cek setting `is_otp_required` dari `/api/app-config`.
-  /// Default ke `true` (flow OTP) bila config gagal dimuat.
+  /// Default ke `false` (tanpa OTP) bila config gagal dimuat.
   static Future<bool> isOtpRequired() async {
     try {
       final config = await getAppConfig();
       final data = config['data'];
       final raw = config['is_otp_required'] ??
           (data is Map ? data['is_otp_required'] : null);
-      return _parseConfigBool(raw, defaultValue: true);
+      return _parseConfigBool(raw, defaultValue: false);
     } catch (_) {
-      return true;
+      return false;
     }
   }
 
@@ -492,6 +521,17 @@ class ApiService {
     );
   }
 
+  /// Poll status verifikasi perangkat baru pasca `login`/`login-pin` yang
+  /// membalas `device_verification_required: true` + `pending_token`.
+  static Future<Map<String, dynamic>> deviceVerificationStatus(
+    String pendingToken,
+  ) async {
+    return _getJson(
+      '$_baseUrl/device-verification/$pendingToken/status',
+      fallbackMessage: 'Gagal memeriksa status verifikasi perangkat.',
+    );
+  }
+
   static Future<void> updateFcmToken(String fcmToken) async {
     await _postJson(
       '$_baseUrl/notifications/fcm-token',
@@ -521,6 +561,29 @@ class ApiService {
         if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
       })),
       fallbackMessage: 'Gagal mendaftar akun.',
+    );
+  }
+
+  /// Poll status verifikasi akun pasca `/register` menggunakan `pendingToken`.
+  /// `verified: false` selama link/OTP belum dituntaskan pengguna.
+  static Future<Map<String, dynamic>> registerVerificationStatus(
+    String pendingToken,
+  ) async {
+    return _getJson(
+      '$_baseUrl/register-verification/$pendingToken/status',
+      fallbackMessage: 'Gagal memeriksa status verifikasi.',
+    );
+  }
+
+  /// Submit OTP untuk melengkapi verifikasi registrasi setelah link diklik.
+  static Future<Map<String, dynamic>> registerVerifyOtp(
+    String pendingToken,
+    String otp,
+  ) async {
+    return _postJson(
+      '$_baseUrl/register-verification/$pendingToken/verify-otp',
+      body: jsonEncode({'otp': otp}),
+      fallbackMessage: 'Gagal memverifikasi OTP.',
     );
   }
 

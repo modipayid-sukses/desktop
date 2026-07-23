@@ -6,7 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -224,7 +224,7 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
                 onPressed: () async {
                   final amount = int.tryParse(amountController.text) ?? 0;
                   if (amount < 1000) {
-                    Fluttertoast.showToast(msg: 'Minimal Rp 1.000');
+                    showToast(msg: 'Minimal Rp 1.000');
                     return;
                   }
                   Navigator.pop(ctx);
@@ -260,11 +260,11 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
         final data = res['data'];
         _showQrisDialog(data);
       } else {
-        Fluttertoast.showToast(msg: res['message'] ?? 'Gagal membuat QRIS');
+        showToast(msg: res['message'] ?? 'Gagal membuat QRIS');
       }
     } catch (_) {
       if (mounted) Navigator.pop(context);
-      Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+      showToast(msg: 'Kesalahan koneksi');
     }
   }
 
@@ -408,11 +408,11 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
                     onPressed: () {
                       final amount = double.tryParse(amountController.text) ?? 0;
                       if (amount < 1000) {
-                        Fluttertoast.showToast(msg: 'Minimal Rp 1.000');
+                        showToast(msg: 'Minimal Rp 1.000');
                         return;
                       }
                       if (amount > qrisBalance) {
-                        Fluttertoast.showToast(msg: 'Saldo QRIS tidak mencukupi');
+                        showToast(msg: 'Saldo QRIS tidak mencukupi');
                         return;
                       }
                       if (!auth.pinRequired) {
@@ -422,13 +422,13 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
                           if (res.containsKey('balance')) {
                             Provider.of<AuthProvider>(context, listen: false).fetchProfile();
                             _loadData();
-                            Fluttertoast.showToast(msg: 'Penarikan berhasil');
+                            showToast(msg: 'Penarikan berhasil');
                           } else {
-                            Fluttertoast.showToast(msg: res['message'] ?? 'Penarikan gagal');
+                            showToast(msg: res['message'] ?? 'Penarikan gagal');
                           }
                         }).catchError((_) {
                           Navigator.pop(ctx);
-                          Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+                          showToast(msg: 'Kesalahan koneksi');
                         });
                         return;
                       }
@@ -484,13 +484,13 @@ class _QrisMerchantScreenState extends State<QrisMerchantScreen> {
                             if (res.containsKey('balance')) {
                               Provider.of<AuthProvider>(context, listen: false).fetchProfile();
                               _loadData();
-                              Fluttertoast.showToast(msg: 'Penarikan berhasil');
+                              showToast(msg: 'Penarikan berhasil');
                             } else {
-                              Fluttertoast.showToast(msg: res['message'] ?? 'Penarikan gagal');
+                              showToast(msg: res['message'] ?? 'Penarikan gagal');
                             }
                           }).catchError((_) {
                             Navigator.pop(ctx);
-                            Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+                            showToast(msg: 'Kesalahan koneksi');
                           });
                         }
                       },
@@ -1062,10 +1062,10 @@ class _QrisReceiptScreenState extends State<_QrisReceiptScreen> {
           _note = note.trim().isEmpty ? null : note.trim();
           widget.tx['note'] = _note;
         });
-        Fluttertoast.showToast(msg: 'Note disimpan');
+        showToast(msg: 'Note disimpan');
       }
     } catch (_) {
-      if (mounted) Fluttertoast.showToast(msg: 'Gagal menyimpan note');
+      if (mounted) showToast(msg: 'Gagal menyimpan note');
     } finally {
       if (mounted) setState(() => _savingNote = false);
     }
@@ -1129,11 +1129,11 @@ class _QrisReceiptScreenState extends State<_QrisReceiptScreen> {
       final file = File('${dir.path}/qris_receipt_${DateTime.now().millisecondsSinceEpoch}.png');
       await file.writeAsBytes(bytes);
       if (mounted) {
-        Fluttertoast.showToast(msg: 'Struk disimpan');
+        showToast(msg: 'Struk disimpan');
         await Share.shareXFiles([XFile(file.path)]);
       }
     } catch (_) {
-      if (mounted) Fluttertoast.showToast(msg: 'Gagal menyimpan struk');
+      if (mounted) showToast(msg: 'Gagal menyimpan struk');
     } finally {
       if (mounted) setState(() => _sharing = false);
     }

@@ -3,7 +3,7 @@ import 'package:modipay/widgets/desktop_title_wrapper.dart';
 import '../../utils/responsive.dart';
 
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -247,7 +247,7 @@ class PdamInquiryResultScreen extends StatelessWidget {
                           final total = _toDouble(
                               data['total'] ?? data['selling_price']);
                           if (total <= 0) {
-                            Fluttertoast.showToast(
+                            showToast(
                               msg: 'Total tagihan tidak valid',
                             );
                             return;
@@ -255,7 +255,7 @@ class PdamInquiryResultScreen extends StatelessWidget {
                           final refId =
                               (data['ref_id'] ?? '').toString().trim();
                           if (refId.isEmpty) {
-                            Fluttertoast.showToast(
+                            showToast(
                               msg:
                                   'Ref ID tidak ditemukan, silakan cek tagihan ulang',
                             );
@@ -460,7 +460,7 @@ class _PdamPayPinScreenState extends State<_PdamPayPinScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final pin = _pinCtrl.text.trim();
     if (!bypassPin && auth.pinRequired && pin.length != 4) {
-      Fluttertoast.showToast(msg: 'Masukkan PIN 4 digit');
+      showToast(msg: 'Masukkan PIN 4 digit');
       return;
     }
 
@@ -506,14 +506,14 @@ class _PdamPayPinScreenState extends State<_PdamPayPinScreen> {
           ),
         );
       } else {
-        Fluttertoast.showToast(
+        showToast(
           msg: response['message']?.toString() ?? 'Pembayaran gagal',
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isPaying = false);
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Pembayaran gagal'),
       );
     }

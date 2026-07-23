@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:provider/provider.dart';
 
 import '../../../services/api_service.dart';
@@ -82,7 +82,7 @@ class _SavedCustomersBottomSheetState extends State<SavedCustomersBottomSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        Fluttertoast.showToast(
+        showToast(
           msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal memuat daftar pelanggan'),
         );
       }
@@ -115,10 +115,10 @@ class _SavedCustomersBottomSheetState extends State<SavedCustomersBottomSheet> {
 
     try {
       await ApiService.deleteSavedCustomer(id);
-      Fluttertoast.showToast(msg: 'Pelanggan berhasil dihapus');
+      showToast(msg: 'Pelanggan berhasil dihapus');
       _loadCustomers();
     } catch (e) {
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal menghapus pelanggan'),
       );
     }
@@ -136,7 +136,7 @@ class _SavedCustomersBottomSheetState extends State<SavedCustomersBottomSheet> {
         notes: _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
       );
 
-      Fluttertoast.showToast(msg: 'Pelanggan berhasil disimpan');
+      showToast(msg: 'Pelanggan berhasil disimpan');
       if (mounted) {
         setState(() {
           _isAddingNew = false;
@@ -147,7 +147,7 @@ class _SavedCustomersBottomSheetState extends State<SavedCustomersBottomSheet> {
         _loadCustomers();
       }
     } catch (e) {
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e, fallback: 'Gagal menyimpan pelanggan'),
       );
     } finally {

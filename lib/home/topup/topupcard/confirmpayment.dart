@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/app_exception.dart';
 import 'package:modipay/services/api_service.dart';
@@ -153,11 +153,11 @@ class _ConfirmPaymentState extends State<ConfirmPayment> {
   Future<void> _handleConfirm({bool bypassPin = false}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!bypassPin && auth.pinRequired && _pin.length != 4) {
-      Fluttertoast.showToast(msg: 'Masukkan PIN 4 digit');
+      showToast(msg: 'Masukkan PIN 4 digit');
       return;
     }
     if (widget.amount <= 0) {
-      Fluttertoast.showToast(msg: 'Masukkan jumlah yang valid');
+      showToast(msg: 'Masukkan jumlah yang valid');
       return;
     }
 

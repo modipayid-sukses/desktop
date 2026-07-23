@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/services/biometric_service.dart';
@@ -114,7 +114,7 @@ class _TransferConfirmState extends State<TransferConfirm> {
           setState(() {
             _pin = ''; // Clear PIN on error
           });
-          Fluttertoast.showToast(msg: response['message'] ?? 'Transfer gagal');
+          showToast(msg: response['message'] ?? 'Transfer gagal');
         }
       }
     } catch (e) {
@@ -123,7 +123,7 @@ class _TransferConfirmState extends State<TransferConfirm> {
           _isLoading = false;
           _pin = '';
         });
-        Fluttertoast.showToast(msg: 'Kesalahan koneksi');
+        showToast(msg: 'Kesalahan koneksi');
       }
     }
   }

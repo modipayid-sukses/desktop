@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/utils/media.dart';
 import 'package:modipay/utils/string.dart';
@@ -65,11 +65,11 @@ class _ChangePasswordState extends State<ChangePassword> {
 
   Future<void> _changePassword() async {
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      Fluttertoast.showToast(msg: 'Passwords do not match');
+      showToast(msg: 'Passwords do not match');
       return;
     }
     if (_newPasswordController.text.length < 6) {
-      Fluttertoast.showToast(msg: 'Password must be at least 6 characters');
+      showToast(msg: 'Password must be at least 6 characters');
       return;
     }
     setState(() => _isSaving = true);
@@ -80,13 +80,13 @@ class _ChangePasswordState extends State<ChangePassword> {
         _confirmPasswordController.text,
       );
       if (result['message']?.toString().contains('successfully') == true) {
-        Fluttertoast.showToast(msg: 'Kata sandi berhasil diubah');
+        showToast(msg: 'Kata sandi berhasil diubah');
         if (mounted) Navigator.pop(context);
       } else {
-        Fluttertoast.showToast(msg: result['message'] ?? 'Gagal mengubah kata sandi');
+        showToast(msg: result['message'] ?? 'Gagal mengubah kata sandi');
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: 'Kesalahan jaringan');
+      showToast(msg: 'Kesalahan jaringan');
     }
     if (mounted) setState(() => _isSaving = false);
   }

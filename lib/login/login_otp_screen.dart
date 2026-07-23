@@ -4,7 +4,7 @@ import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../services/api_service.dart';
@@ -88,7 +88,7 @@ class _LoginOtpScreenState extends State<LoginOtpScreen> {
       if (!mounted) return;
       _startCountdown(300); // 5 menit
       if (!initial) {
-        Fluttertoast.showToast(msg: 'Kode OTP baru sudah dikirim ke WhatsApp.');
+        showToast(msg: 'Kode OTP baru sudah dikirim ke WhatsApp.');
       }
     } catch (e) {
       if (!mounted) return;

@@ -4,7 +4,7 @@ import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
@@ -90,7 +90,7 @@ class _EditProfileState extends State<EditProfile> {
       if (result.containsKey('user')) {
         final auth = Provider.of<AuthProvider>(context, listen: false);
         await auth.fetchProfile();
-        Fluttertoast.showToast(msg: 'Profil berhasil diperbarui');
+        showToast(msg: 'Profil berhasil diperbarui');
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -98,10 +98,10 @@ class _EditProfileState extends State<EditProfile> {
           );
         }
       } else {
-        Fluttertoast.showToast(msg: result['message'] ?? 'Gagal memperbarui profil');
+        showToast(msg: result['message'] ?? 'Gagal memperbarui profil');
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Kesalahan jaringan');
+      showToast(msg: 'Kesalahan jaringan');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -137,7 +137,7 @@ class _EditProfileState extends State<EditProfile> {
         await _loadRegencies();
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal memuat wilayah');
+      showToast(msg: 'Gagal memuat wilayah');
     } finally {
       if (mounted) setState(() => _isLoadingRegions = false);
     }
@@ -175,7 +175,7 @@ class _EditProfileState extends State<EditProfile> {
         }
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal memuat kota/kabupaten');
+      showToast(msg: 'Gagal memuat kota/kabupaten');
     } finally {
       if (mounted) setState(() => _isLoadingRegencies = false);
     }
@@ -210,7 +210,7 @@ class _EditProfileState extends State<EditProfile> {
         }
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal memuat kecamatan');
+      showToast(msg: 'Gagal memuat kecamatan');
     } finally {
       if (mounted) setState(() => _isLoadingDistricts = false);
     }
@@ -245,7 +245,7 @@ class _EditProfileState extends State<EditProfile> {
         }
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal memuat desa/kelurahan');
+      showToast(msg: 'Gagal memuat desa/kelurahan');
     } finally {
       if (mounted) setState(() => _isLoadingVillages = false);
     }
@@ -336,12 +336,12 @@ class _EditProfileState extends State<EditProfile> {
         await auth.fetchProfile();
         // Reset local file preview agar pakai gambar dari server
         if (mounted) setState(() => _selectedAvatar = null);
-        Fluttertoast.showToast(msg: 'Foto profil berhasil diperbarui');
+        showToast(msg: 'Foto profil berhasil diperbarui');
       } else {
-        Fluttertoast.showToast(msg: result['message'] ?? 'Gagal upload foto profil');
+        showToast(msg: result['message'] ?? 'Gagal upload foto profil');
       }
     } catch (_) {
-      Fluttertoast.showToast(msg: 'Gagal upload foto profil');
+      showToast(msg: 'Gagal upload foto profil');
     } finally {
       if (mounted) setState(() => _isUploadingAvatar = false);
     }

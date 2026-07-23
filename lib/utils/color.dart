@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Palette (from provided color plate)
 const Color primaryBlue50 = Color(0xffebf1f7);
@@ -126,3 +128,50 @@ const Color desktopTextSecondary = Color(0xff444654);
 // Input/card borders (outline-variant).
 const Color desktopBorder = Color(0xffc4c5d6);
 const Color desktopDividerSubtle = Color(0x4da9a9a9);
+
+Widget desktopBorderedField({
+  required IconData icon,
+  required TextEditingController controller,
+  required String hint,
+  TextInputType? keyboardType,
+  FocusNode? focusNode,
+  TextInputAction? textInputAction,
+  ValueChanged<String>? onSubmitted,
+  ValueChanged<String>? onChanged,
+  List<TextInputFormatter>? inputFormatters,
+  bool obscureText = false,
+  Widget? suffix,
+}) {
+  return TextField(
+    controller: controller,
+    focusNode: focusNode,
+    keyboardType: keyboardType,
+    textInputAction: textInputAction,
+    onSubmitted: onSubmitted,
+    onChanged: onChanged,
+    inputFormatters: inputFormatters,
+    obscureText: obscureText,
+    style: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextPrimary),
+    decoration: InputDecoration(
+      hintText: hint,
+      hintStyle: GoogleFonts.hankenGrotesk(fontSize: 14, color: desktopTextSecondary.withOpacity(0.6)),
+      prefixIcon: Icon(icon, size: 20, color: desktopTextSecondary),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: desktopSurfaceCard,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: desktopBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: desktopBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: desktopAccentBlue, width: 1.5),
+      ),
+    ),
+  );
+}

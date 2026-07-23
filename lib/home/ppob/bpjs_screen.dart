@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -110,7 +110,7 @@ class _BpjsScreenState extends State<BpjsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingProducts = false);
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e,
             fallback: 'Gagal memuat daftar produk BPJS'),
       );
@@ -132,11 +132,11 @@ class _BpjsScreenState extends State<BpjsScreen> {
 
   void _showProductPicker() {
     if (_isLoadingProducts) {
-      Fluttertoast.showToast(msg: 'Sedang memuat daftar produk...');
+      showToast(msg: 'Sedang memuat daftar produk...');
       return;
     }
     if (_products.isEmpty) {
-      Fluttertoast.showToast(msg: 'Produk BPJS belum tersedia');
+      showToast(msg: 'Produk BPJS belum tersedia');
       _loadProducts();
       return;
     }
@@ -361,12 +361,12 @@ class _BpjsScreenState extends State<BpjsScreen> {
   Future<void> _doInquiry() async {
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan Nomor BPJS');
+      showToast(msg: 'Masukkan Nomor BPJS');
       _customerIdFocus.requestFocus();
       return;
     }
     if (_selectedProduct == null) {
-      Fluttertoast.showToast(msg: 'Pilih jenis BPJS terlebih dahulu');
+      showToast(msg: 'Pilih jenis BPJS terlebih dahulu');
       return;
     }
 

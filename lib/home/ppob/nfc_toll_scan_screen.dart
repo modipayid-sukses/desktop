@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager/src/platform_tags/iso_dep.dart';
 import 'package:nfc_manager/src/platform_tags/mifare.dart';
@@ -1025,7 +1025,7 @@ class _NfcTollScanScreenState extends State<NfcTollScanScreen> {
 
   Future<void> _startScan() async {
     if (!_isAvailable) {
-      Fluttertoast.showToast(msg: 'NFC tidak tersedia di perangkat ini');
+      showToast(msg: 'NFC tidak tersedia di perangkat ini');
       return;
     }
 
@@ -1076,7 +1076,7 @@ class _NfcTollScanScreenState extends State<NfcTollScanScreen> {
             _sessionError = 'Gagal scan NFC: ${error.message}';
             _sessionMessage = null;
           });
-          Fluttertoast.showToast(msg: 'Gagal scan NFC: ${error.message}');
+          showToast(msg: 'Gagal scan NFC: ${error.message}');
         },
       );
     } catch (error) {
@@ -1086,7 +1086,7 @@ class _NfcTollScanScreenState extends State<NfcTollScanScreen> {
         _sessionError = 'Gagal memulai sesi NFC: $error';
         _sessionMessage = null;
       });
-      Fluttertoast.showToast(msg: 'Gagal memulai sesi NFC');
+      showToast(msg: 'Gagal memulai sesi NFC');
     }
   }
 

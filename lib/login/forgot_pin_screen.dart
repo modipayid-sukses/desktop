@@ -4,7 +4,7 @@ import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../services/api_service.dart';
@@ -142,7 +142,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         _otpController.clear();
         _isOtpValid = false;
       });
-      Fluttertoast.showToast(
+      showToast(
         msg: response['message']?.toString() ??
             'Kode OTP telah dikirim ke WhatsApp.',
       );
@@ -209,7 +209,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         pin: pin,
       );
       if (!mounted) return;
-      Fluttertoast.showToast(
+      showToast(
         msg: response['message']?.toString() ?? 'PIN berhasil diubah.',
       );
       Navigator.pop(context);

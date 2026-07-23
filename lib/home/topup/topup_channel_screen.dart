@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:provider/provider.dart';
 
 import '../../utils/colornotifire.dart';
@@ -86,7 +86,7 @@ class _TopupChannelScreenState extends State<TopupChannelScreen> {
     if (_isSubmitting) return;
     final amount = _currentAmount;
     if (amount < _minAmount) {
-      Fluttertoast.showToast(msg: 'Minimum top up Rp ${_formatRupiah(_minAmount).replaceFirst('Rp ', '')}');
+      showToast(msg: 'Minimum top up Rp ${_formatRupiah(_minAmount).replaceFirst('Rp ', '')}');
       return;
     }
 

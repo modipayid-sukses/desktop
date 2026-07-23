@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/colornotifire.dart';
@@ -79,13 +79,13 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
       );
 
       if (response['status'] == 'success') {
-        Fluttertoast.showToast(msg: 'Pengaduan berhasil dikirim');
+        showToast(msg: 'Pengaduan berhasil dikirim');
         if (mounted) Navigator.pop(context, true);
       } else {
-        Fluttertoast.showToast(msg: response['message'] ?? 'Gagal mengirim pengaduan');
+        showToast(msg: response['message'] ?? 'Gagal mengirim pengaduan');
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+      showToast(msg: ApiService.userFriendlyMessage(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

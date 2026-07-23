@@ -3,7 +3,7 @@ import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:otp_text_field/otp_field.dart';
@@ -269,7 +269,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
   Future<void> _doInquiry() async {
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan nomor pelanggan');
+      showToast(msg: 'Masukkan nomor pelanggan');
       return;
     }
 
@@ -282,7 +282,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
       final sku = _buyerSkuCodeForBrand();
       if (sku == null) {
         if (mounted) setState(() => _isInquiring = false);
-        Fluttertoast.showToast(msg: 'Layanan belum tersedia untuk brand ini');
+        showToast(msg: 'Layanan belum tersedia untuk brand ini');
         return;
       }
 
@@ -300,16 +300,16 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
         } else {
           final msg = result['message']?.toString() ?? 'Cek tagihan gagal';
           if (widget.brand.toLowerCase().contains('internet') && _providerProducts.length > 1) {
-            Fluttertoast.showToast(msg: '$msg. Coba pilih provider lain.');
+            showToast(msg: '$msg. Coba pilih provider lain.');
           } else {
-            Fluttertoast.showToast(msg: msg);
+            showToast(msg: msg);
           }
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isInquiring = false);
-        Fluttertoast.showToast(
+        showToast(
           msg: ApiService.userFriendlyMessage(e, fallback: 'Cek tagihan gagal'),
         );
       }
@@ -322,13 +322,13 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
     final amount = _toDouble(_inquiryResult!['selling_price']);
     final admin = _toDouble(_inquiryResult!['admin']);
     if (amount <= 0) {
-      Fluttertoast.showToast(msg: 'Total tagihan tidak valid, silakan cek ulang');
+      showToast(msg: 'Total tagihan tidak valid, silakan cek ulang');
       return;
     }
 
     final buyerSkuCode = _inquiryResult!['buyer_sku_code']?.toString() ?? _buyerSkuCodeForBrand();
     if (buyerSkuCode == null || buyerSkuCode.isEmpty) {
-      Fluttertoast.showToast(msg: 'Kode produk tidak ditemukan, silakan cek tagihan ulang');
+      showToast(msg: 'Kode produk tidak ditemukan, silakan cek tagihan ulang');
       return;
     }
 
@@ -543,7 +543,7 @@ class _PPOBPostpaidScreenState extends State<PPOBPostpaidScreen> {
                         setState(() {
                           _inquiryResult = data;
                         });
-                        Fluttertoast.showToast(msg: 'Data tagihan dimuat dari riwayat lokal');
+                        showToast(msg: 'Data tagihan dimuat dari riwayat lokal');
                         final sku = data['buyer_sku_code']?.toString();
                         if (sku != null) {
                           final match = _providerProducts.where((e) => e['buyer_sku_code']?.toString() == sku);
@@ -977,7 +977,7 @@ class _PostpaidPinScreenState extends State<_PostpaidPinScreen> {
   Future<void> _handlePay({bool bypassPin = false}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!bypassPin && auth.pinRequired && _pin.length != 4) {
-      Fluttertoast.showToast(msg: 'Masukkan PIN 4 digit');
+      showToast(msg: 'Masukkan PIN 4 digit');
       return;
     }
 
@@ -1023,12 +1023,12 @@ class _PostpaidPinScreenState extends State<_PostpaidPinScreen> {
           ),
         );
       } else {
-        Fluttertoast.showToast(msg: response['message'] ?? 'Pembayaran gagal');
+        showToast(msg: response['message'] ?? 'Pembayaran gagal');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        Fluttertoast.showToast(
+        showToast(
           msg: ApiService.userFriendlyMessage(e, fallback: 'Pembayaran gagal'),
         );
       }

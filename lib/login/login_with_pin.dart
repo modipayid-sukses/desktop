@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:modipay/bottombar/bottombar.dart';
+import 'package:modipay/login/device_verification_screen.dart';
 import 'package:modipay/login/setup_pin_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/api_service.dart';
@@ -144,12 +145,18 @@ class _LoginWithPinState extends State<LoginWithPin> {
       }.toList();
       String? lastErrorMessage;
       String? fallbackErrorMessage;
+      String? deviceVerificationPendingToken;
 
       for (final candidate in candidates) {
         try {
           final response = await ApiService.loginWithPin(candidate, pin);
           if (_isLoginSuccess(response)) {
             result = response;
+            break;
+          }
+
+          if (response['device_verification_required'] == true) {
+            deviceVerificationPendingToken = response['pending_token']?.toString();
             break;
           }
 
@@ -199,6 +206,19 @@ class _LoginWithPinState extends State<LoginWithPin> {
 
       if (!mounted) return;
       setState(() => _isLoading = false);
+
+      if (deviceVerificationPendingToken != null &&
+          deviceVerificationPendingToken.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DeviceVerificationScreen(
+              pendingToken: deviceVerificationPendingToken!,
+            ),
+          ),
+        );
+        return;
+      }
 
       if (result != null && _isLoginSuccess(result)) {
         final auth = Provider.of<AuthProvider>(context, listen: false);

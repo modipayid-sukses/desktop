@@ -9,8 +9,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// enforcement and for showing the active device on the admin panel.
 class DeviceIdentityService {
   static const String _prefKey = 'device_identity_v1';
-  static const String _prefName = 'device_identity_name_v1';
-  static const String _prefPlatform = 'device_identity_platform_v1';
+  // v2: versi lama menyimpan device_name kosong & device_platform='web' untuk
+  // SEMUA desktop (Windows/macOS/Linux) karena belum ada deteksi platform
+  // desktop di initialize(). Naikkan versi supaya install lama memaksa
+  // deteksi ulang name/platform yang benar, TANPA mengubah _prefKey (device_id
+  // tetap sama, jadi backend tidak menganggap ini "perangkat baru").
+  static const String _prefName = 'device_identity_name_v2';
+  static const String _prefPlatform = 'device_identity_platform_v2';
 
   static const String appVersion = '1.0.1';
 
@@ -54,6 +59,24 @@ class DeviceIdentityService {
         _deviceName = iosInfo.name.isNotEmpty ? iosInfo.name : iosInfo.utsname.machine;
         _devicePlatform = 'ios ${iosInfo.systemVersion}';
         debugPrint('[DeviceIdentity] iOS identifierForVendor: $resolved');
+      } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+        final winInfo = await _deviceInfo.windowsInfo;
+        resolved = winInfo.deviceId;
+        _deviceName = winInfo.computerName.isNotEmpty ? winInfo.computerName : 'Windows PC';
+        _devicePlatform = 'windows ${winInfo.productName}'.trim();
+        debugPrint('[DeviceIdentity] Windows deviceId: $resolved');
+      } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
+        final macInfo = await _deviceInfo.macOsInfo;
+        resolved = macInfo.systemGUID;
+        _deviceName = macInfo.computerName.isNotEmpty ? macInfo.computerName : (macInfo.model.isNotEmpty ? macInfo.model : 'Mac');
+        _devicePlatform = 'macos ${macInfo.osRelease}'.trim();
+        debugPrint('[DeviceIdentity] macOS systemGUID: $resolved');
+      } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+        final linuxInfo = await _deviceInfo.linuxInfo;
+        resolved = linuxInfo.machineId;
+        _deviceName = linuxInfo.prettyName.isNotEmpty ? linuxInfo.prettyName : 'Linux PC';
+        _devicePlatform = 'linux ${linuxInfo.versionId ?? ''}'.trim();
+        debugPrint('[DeviceIdentity] Linux machineId: $resolved');
       } else {
         _devicePlatform = 'web';
       }
@@ -87,6 +110,18 @@ class DeviceIdentityService {
         final iosInfo = await _deviceInfo.iosInfo;
         _deviceName ??= iosInfo.name.isNotEmpty ? iosInfo.name : iosInfo.utsname.machine;
         _devicePlatform ??= 'ios ${iosInfo.systemVersion}';
+      } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+        final winInfo = await _deviceInfo.windowsInfo;
+        _deviceName ??= winInfo.computerName.isNotEmpty ? winInfo.computerName : 'Windows PC';
+        _devicePlatform ??= 'windows ${winInfo.productName}'.trim();
+      } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
+        final macInfo = await _deviceInfo.macOsInfo;
+        _deviceName ??= macInfo.computerName.isNotEmpty ? macInfo.computerName : (macInfo.model.isNotEmpty ? macInfo.model : 'Mac');
+        _devicePlatform ??= 'macos ${macInfo.osRelease}'.trim();
+      } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+        final linuxInfo = await _deviceInfo.linuxInfo;
+        _deviceName ??= linuxInfo.prettyName.isNotEmpty ? linuxInfo.prettyName : 'Linux PC';
+        _devicePlatform ??= 'linux ${linuxInfo.versionId ?? ''}'.trim();
       }
       if (_deviceName != null && _deviceName!.isNotEmpty) {
         await prefs.setString(_prefName, _deviceName!);

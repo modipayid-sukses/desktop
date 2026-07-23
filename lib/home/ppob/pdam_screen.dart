@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -110,7 +110,7 @@ class _PdamScreenState extends State<PdamScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingCities = false);
-      Fluttertoast.showToast(
+      showToast(
         msg: ApiService.userFriendlyMessage(e,
             fallback: 'Gagal memuat daftar kota PDAM'),
       );
@@ -131,11 +131,11 @@ class _PdamScreenState extends State<PdamScreen> {
 
   void _showCityPicker() {
     if (_isLoadingCities) {
-      Fluttertoast.showToast(msg: 'Sedang memuat daftar kota...');
+      showToast(msg: 'Sedang memuat daftar kota...');
       return;
     }
     if (_cities.isEmpty) {
-      Fluttertoast.showToast(msg: 'Daftar kota PDAM belum tersedia');
+      showToast(msg: 'Daftar kota PDAM belum tersedia');
       _loadCities();
       return;
     }
@@ -359,12 +359,12 @@ class _PdamScreenState extends State<PdamScreen> {
   Future<void> _doInquiry() async {
     final customerId = _customerIdController.text.trim();
     if (customerId.isEmpty) {
-      Fluttertoast.showToast(msg: 'Masukkan ID Pelanggan PDAM');
+      showToast(msg: 'Masukkan ID Pelanggan PDAM');
       _customerIdFocus.requestFocus();
       return;
     }
     if (_selectedCity == null) {
-      Fluttertoast.showToast(msg: 'Pilih kota terlebih dahulu');
+      showToast(msg: 'Pilih kota terlebih dahulu');
       return;
     }
 

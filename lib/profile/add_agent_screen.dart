@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../utils/colornotifire.dart';
@@ -37,17 +37,17 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
 
     if (_isExistingMode) {
       if (phone.isEmpty) {
-        Fluttertoast.showToast(msg: 'No. HP wajib diisi');
+        showToast(msg: 'No. HP wajib diisi');
         return;
       }
 
       setState(() => _isSaving = true);
       try {
         final res = await ApiService.addExistingAgen(phone: phone);
-        Fluttertoast.showToast(msg: res['message'] ?? 'Agen berhasil ditambahkan');
+        showToast(msg: res['message'] ?? 'Agen berhasil ditambahkan');
         if (mounted) Navigator.pop(context, true);
       } catch (e) {
-        Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+        showToast(msg: ApiService.userFriendlyMessage(e));
       } finally {
         if (mounted) setState(() => _isSaving = false);
       }
@@ -59,11 +59,11 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
     final password = _passwordController.text;
 
     if (name.isEmpty || phone.isEmpty || password.isEmpty) {
-      Fluttertoast.showToast(msg: 'Nama, No. HP, dan Password wajib diisi');
+      showToast(msg: 'Nama, No. HP, dan Password wajib diisi');
       return;
     }
     if (password.length < 6) {
-      Fluttertoast.showToast(msg: 'Password minimal 6 karakter');
+      showToast(msg: 'Password minimal 6 karakter');
       return;
     }
 
@@ -77,10 +77,10 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
         email: email.isEmpty ? null : email,
         referralCode: auth.referralCode,
       );
-      Fluttertoast.showToast(msg: res['message'] ?? 'Agen berhasil ditambahkan');
+      showToast(msg: res['message'] ?? 'Agen berhasil ditambahkan');
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      Fluttertoast.showToast(msg: ApiService.userFriendlyMessage(e));
+      showToast(msg: ApiService.userFriendlyMessage(e));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
 import 'package:modipay/promo/promo_screen.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:modipay/utils/toast.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -376,7 +376,17 @@ class _HomeState extends State<Home> {
   /// dipakai 100% tanpa modifikasi, hanya dibungkus MediaQuery berukuran
   /// ponsel agar proporsi layout (yang dihitung dari screenWidth/screenHeight)
   /// tetap benar.
-  void _openTransaction(Widget screen, {BuildContext? customContext, String? menuKey}) {
+  // `wideDesktop`: layar transaksi lama (mobile-only layout) dirender di
+  // content pane sebagai mobile-emulated box 460px lebar (lihat
+  // _buildDesktopContentPane). Layar yang sudah punya layout desktop
+  // dua-kolom sendiri (mis. PPOBProductScreen) perlu ukuran window asli,
+  // bukan di-fake jadi 460px, supaya isDesktop(context) di dalamnya
+  // bernilai true dan dua-kolomnya benar-benar render. Default false supaya
+  // seluruh alur transaksi lain (transfer, topup saldo, qris, dll) tidak
+  // terpengaruh.
+  bool _wideDesktopActiveScreen = false;
+
+  void _openTransaction(Widget screen, {BuildContext? customContext, String? menuKey, bool wideDesktop = false}) {
     final ctx = customContext ?? context;
     if (!isDesktop(ctx)) {
       _navigateAndRefresh(screen);
@@ -399,6 +409,7 @@ class _HomeState extends State<Home> {
       setState(() {
         _contentNavKey = GlobalKey<NavigatorState>();
         _desktopActiveScreen = screen;
+        _wideDesktopActiveScreen = wideDesktop;
         if (menuKey != null) {
           _activeDesktopMenu = menuKey;
           _activeSubMenuName = null;
@@ -413,6 +424,7 @@ class _HomeState extends State<Home> {
       setState(() {
         _desktopActiveScreen = null;
         _contentNavKey = null;
+        _wideDesktopActiveScreen = false;
         _activeDesktopMenu = 'beranda';
         _activeSubMenuName = null;
       });
@@ -515,40 +527,54 @@ class _HomeState extends State<Home> {
           ),
           const SizedBox(height: 14),
           Expanded(
-            child: Center(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const modalWidth = 460.0;
-                  final modalHeight = constraints.maxHeight;
-                  return SizedBox(
-                    width: modalWidth,
-                    height: modalHeight,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: MediaQuery(
-                        data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            appBarTheme: Theme.of(context).appBarTheme.copyWith(
-                              elevation: 0,
-                              scrolledUnderElevation: 0,
-                              shadowColor: const Color(0xFF000007),
-                            ),
-                          ),
-                          child: Navigator(
-                            key: _contentNavKey,
-                            onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
-                          ),
-                        ),
+            child: _wideDesktopActiveScreen
+                ? Theme(
+                    data: Theme.of(context).copyWith(
+                      appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                        elevation: 0,
+                        scrolledUnderElevation: 0,
+                        shadowColor: const Color(0xFF000007),
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
+                    child: Navigator(
+                      key: _contentNavKey,
+                      onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                    ),
+                  )
+                : Center(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        const modalWidth = 460.0;
+                        final modalHeight = constraints.maxHeight;
+                        return SizedBox(
+                          width: modalWidth,
+                          height: modalHeight,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: MediaQuery(
+                              data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
+                              child: Theme(
+                                data: Theme.of(context).copyWith(
+                                  appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                                    elevation: 0,
+                                    scrolledUnderElevation: 0,
+                                    shadowColor: const Color(0xFF000007),
+                                  ),
+                                ),
+                                child: Navigator(
+                                  key: _contentNavKey,
+                                  onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -1785,7 +1811,7 @@ class _HomeState extends State<Home> {
         configAutoDetectBrand: item['auto_detect_brand'] as bool?,
         configInquirySku: item['inquiry_sku'] as String?,
         configInquiryProvider: item['inquiry_provider'] as String?,
-      ), customContext: customContext);
+      ), customContext: customContext, wideDesktop: true);
     }
   }
 
@@ -2885,7 +2911,7 @@ class _HomeState extends State<Home> {
   Future<void> _showDesktopReferralDialog(AuthProvider auth) async {
     final code = auth.referralCode;
     if (code == null || code.isEmpty) {
-      Fluttertoast.showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
+      showToast(msg: 'Kode referral belum tersedia untuk akun Anda');
       return;
     }
     final copy = await AppDialog.show(
@@ -2906,7 +2932,7 @@ class _HomeState extends State<Home> {
     );
     if (copy == true) {
       await Clipboard.setData(ClipboardData(text: code));
-      Fluttertoast.showToast(msg: 'Kode referral disalin');
+      showToast(msg: 'Kode referral disalin');
     }
   }
 
