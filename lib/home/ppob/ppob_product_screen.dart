@@ -22,6 +22,7 @@ import '../../services/biometric_service.dart';
 import '../../utils/colornotifire.dart';
 import '../../utils/color.dart';
 import '../../widgets/transaction_receipt.dart';
+import '../transaction_detail.dart';
 import '../topup/topupcard/confirmpayment.dart';
 import 'components/ppob_numpad.dart';
 import 'components/ppob_cellular_form.dart';
@@ -141,6 +142,17 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   // Pesan error inline untuk panel cek tagihan (mengganti dialog/toast).
   String? _plnPostpaidError;
 
+  // Desktop Token Listrik: verifikasi ID Pelanggan otomatis (debounced) saat
+  // user mengetik, independen dari pemilihan nominal — meniru referensi
+  // desain desktop (banner "ID Pelanggan terverifikasi" muncul di step 1).
+  bool _isPlnCustomerVerifying = false;
+  Timer? _plnVerifyDebounce;
+
+  // Desktop PLN Pasca: cek tagihan otomatis (debounced) saat user mengetik
+  // ID Pelanggan, plus toggle rincian tagihan tambahan (admin/denda/meter).
+  Timer? _plnPascaVerifyDebounce;
+  bool _showPlnPascaDetail = false;
+
   Timer? _inputDebounce;
 
   // ── E-Wallet: Nominal custom (produk dinamis Loket Bayar) ──────────
@@ -221,6 +233,20 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         '${widget.category.toLowerCase()} ${widget.title.toLowerCase()} ${(widget.initialBrand ?? '').toLowerCase()}';
     return hay.contains('e-toll') || hay.contains('etoll') || hay.contains('toll') || hay.contains('tol');
   }
+
+  // Layout desktop dua-kolom baru hanya untuk kategori "sederhana" (Pulsa,
+  // Paket Data/Telfon/SMS, dan kategori grid generik lain) yang cocok
+  // dengan referensi desain. Kategori dengan alur khusus (PLN, e-money,
+  // game, inject, hub) tetap pakai layout mobile lama (masih berfungsi
+  // penuh, hanya dipusatkan di window lebar alih-alih dipaksa 460px).
+  bool get _supportsDesktopTwoColumn =>
+      !_isPln &&
+      !_isTopupGameFiltered &&
+      !_isCategoryInquiry &&
+      !_isInternetHub &&
+      !_isMultifinanceHub &&
+      !_isEmoney &&
+      !_isInject;
 
   // Input merepresentasikan nomor HP (Pulsa, Data, E-Wallet, dll) sehingga
   // bisa diisi dari kontak handphone pengguna.
@@ -312,6 +338,21 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
   Map<String, dynamic>? _bpjsInquiryResult;
   String? _bpjsInquiryError;
 
+  // ── Desktop hub "Internet & TV": provider dipilih di halaman yang sama
+  // (bukan navigasi ke instance PPOBProductScreen baru seperti alur mobile
+  // _onPickInternetProvider), jadi butuh state cek-tagihan sendiri.
+  String? _selectedInternetProvider;
+  bool _isInternetInquiring = false;
+  Map<String, dynamic>? _internetInquiryResult;
+  String? _internetInquiryError;
+
+  // ── Desktop hub "Multifinance": sama seperti Internet & TV, provider
+  // dipilih di halaman yang sama (bukan navigasi ke instance baru).
+  String? _selectedMultifinanceBrand;
+  bool _isMultifinanceInquiring = false;
+  Map<String, dynamic>? _multifinanceInquiryResult;
+  String? _multifinanceInquiryError;
+
   // Pencarian di halaman hub (Multifinance/Internet)
   final TextEditingController _hubSearchCtrl = TextEditingController();
   String _hubSearchQuery = '';
@@ -359,6 +400,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     _customerIdFocusNode.dispose();
     _hubSearchCtrl.dispose();
     _customAmountController.dispose();
+    _plnVerifyDebounce?.cancel();
+    _plnPascaVerifyDebounce?.cancel();
     super.dispose();
   }
 
@@ -1982,6 +2025,161 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     );
   }
 
+  // ── Hub "Internet & TV" (desktop): cek tagihan per-provider yang dipilih
+  // di halaman yang sama — sama seperti _doBpjsInquiry (endpoint generik
+  // /ppob/inquiry berbasis `category`), hanya categorynya dinamis mengikuti
+  // _selectedInternetProvider, bukan widget.category yang tetap.
+  Future<void> _doInternetInquiry() async {
+    final provider = _selectedInternetProvider;
+    if (provider == null) {
+      showToast(msg: 'Pilih penyedia terlebih dahulu');
+      return;
+    }
+    final customerId = _customerIdController.text.trim();
+    if (customerId.isEmpty) {
+      showToast(msg: 'Masukkan ID Pelanggan');
+      return;
+    }
+
+    setState(() {
+      _isInternetInquiring = true;
+      _internetInquiryResult = null;
+      _internetInquiryError = null;
+    });
+
+    try {
+      final result = await ApiService.ppobInquiry(
+        customerNo: customerId,
+        category: provider,
+      );
+      if (!mounted) return;
+      final status = (result['status'] ?? '').toString().toLowerCase();
+      final isSuccess = status == 'success' || status == 'sukses';
+      if (isSuccess && result['data'] is Map) {
+        setState(() {
+          _internetInquiryResult = Map<String, dynamic>.from(result['data'] as Map);
+        });
+      } else {
+        final msg = (result['message'] ?? 'Cek tagihan gagal').toString();
+        setState(() => _internetInquiryError = msg);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _internetInquiryError = ApiService.userFriendlyMessage(e, fallback: 'Cek tagihan gagal'));
+    } finally {
+      if (mounted) setState(() => _isInternetInquiring = false);
+    }
+  }
+
+  void _payInternetBill() {
+    final data = _internetInquiryResult;
+    if (data == null) return;
+    // Backend kadang meneruskan response mentah Loket Bayar (selling_price belum
+    // dihitung / 0) — fallback ke total provider lalu tagihan+admin+denda.
+    double amount = _asDouble(data['selling_price']);
+    if (amount <= 0) amount = _asDouble(data['total']);
+    if (amount <= 0) {
+      amount = _asDouble(data['tagihan']) + _asDouble(data['admin']) + _asDouble(data['ppn'] ?? data['pajak']) + _asDouble(data['denda']);
+    }
+    if (amount <= 0) {
+      showToast(msg: 'Total tagihan tidak valid, silakan cek ulang');
+      return;
+    }
+    final buyerSkuCode = (data['buyer_sku_code'] ?? data['inquiry_sku'] ?? data['kodeProduk'] ?? '').toString();
+    final customerNo = (data['customer_no'] ?? data['noVA'] ?? data['no_va'] ?? _customerIdController.text.trim()).toString();
+    final productName = (data['product_name'] ?? _selectedInternetProvider ?? widget.title).toString();
+    final customerName = (data['customer_name'] ?? data['nama'] ?? '-').toString();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _PlnPostpaidInlinePinScreen(
+          buyerSkuCode: buyerSkuCode,
+          customerNo: customerNo,
+          productName: productName,
+          customerName: customerName,
+          amount: amount,
+        ),
+      ),
+    );
+  }
+
+  // ── Hub "Multifinance" (desktop): sama polanya dengan hub Internet & TV —
+  // cek tagihan generik (/ppob/inquiry berbasis `category`) dengan brand
+  // yang dipilih di halaman yang sama, bukan navigasi ke instance baru.
+  Future<void> _doMultifinanceInquiry() async {
+    final brand = _selectedMultifinanceBrand;
+    if (brand == null) {
+      showToast(msg: 'Pilih provider terlebih dahulu');
+      return;
+    }
+    final customerId = _customerIdController.text.trim();
+    if (customerId.isEmpty) {
+      showToast(msg: 'Masukkan nomor kontrak / ID pelanggan');
+      return;
+    }
+
+    setState(() {
+      _isMultifinanceInquiring = true;
+      _multifinanceInquiryResult = null;
+      _multifinanceInquiryError = null;
+    });
+
+    try {
+      final result = await ApiService.ppobInquiry(
+        customerNo: customerId,
+        category: brand,
+      );
+      if (!mounted) return;
+      final status = (result['status'] ?? '').toString().toLowerCase();
+      final isSuccess = status == 'success' || status == 'sukses';
+      if (isSuccess && result['data'] is Map) {
+        setState(() {
+          _multifinanceInquiryResult = Map<String, dynamic>.from(result['data'] as Map);
+        });
+      } else {
+        final msg = (result['message'] ?? 'Cek tagihan gagal').toString();
+        setState(() => _multifinanceInquiryError = msg);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _multifinanceInquiryError = ApiService.userFriendlyMessage(e, fallback: 'Cek tagihan gagal'));
+    } finally {
+      if (mounted) setState(() => _isMultifinanceInquiring = false);
+    }
+  }
+
+  void _payMultifinanceBill() {
+    final data = _multifinanceInquiryResult;
+    if (data == null) return;
+    double amount = _asDouble(data['selling_price']);
+    if (amount <= 0) amount = _asDouble(data['total']);
+    if (amount <= 0) {
+      amount = _asDouble(data['tagihan']) + _asDouble(data['admin']) + _asDouble(data['denda']);
+    }
+    if (amount <= 0) {
+      showToast(msg: 'Total tagihan tidak valid, silakan cek ulang');
+      return;
+    }
+    final buyerSkuCode = (data['buyer_sku_code'] ?? data['inquiry_sku'] ?? data['kodeProduk'] ?? '').toString();
+    final customerNo = (data['customer_no'] ?? data['noVA'] ?? data['no_va'] ?? _customerIdController.text.trim()).toString();
+    final productName = (data['product_name'] ?? _selectedMultifinanceBrand ?? widget.title).toString();
+    final customerName = (data['customer_name'] ?? data['nama'] ?? '-').toString();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _PlnPostpaidInlinePinScreen(
+          buyerSkuCode: buyerSkuCode,
+          customerNo: customerNo,
+          productName: productName,
+          customerName: customerName,
+          amount: amount,
+        ),
+      ),
+    );
+  }
+
   void _payPlnPostpaidBill() {
     if (_plnPostpaidInquiryResult == null) return;
 
@@ -2909,6 +3107,16 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       return;
     }
 
+    if (isDesktop(context)) {
+      _showTransactionPinDialog(
+        product: product,
+        customerId: customerId,
+        price: price,
+        paymentSource: 'saldo',
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -2932,6 +3140,119 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
               : null,
         ),
       ),
+    );
+  }
+
+  /// Desktop-only PIN authentication popup (replaces the mobile numpad
+  /// ConfirmPayment page for wide layouts): collects "Nama Kasir" + PIN,
+  /// then submits the purchase directly and routes to the receipt page.
+  void _showTransactionPinDialog({
+    required Map<String, dynamic> product,
+    required String customerId,
+    required double price,
+    required String paymentSource,
+  }) {
+    TransactionPinAuthDialog.show(
+      context: context,
+      onConfirm: (kasirCode, kasirPin) => _purchaseWithPin(
+        product: product,
+        customerId: customerId,
+        price: price,
+        paymentSource: paymentSource,
+        kasirCode: kasirCode,
+        kasirPin: kasirPin,
+      ),
+    );
+  }
+
+  Future<void> _purchaseWithPin({
+    required Map<String, dynamic> product,
+    required String customerId,
+    required double price,
+    required String paymentSource,
+    required String kasirCode,
+    required String kasirPin,
+  }) async {
+    final isLoketbayar = product['provider'] == 'loketbayar';
+    // Kirim ketiga field sekaligus: backend yang menentukan mode mana yang
+    // dipakai (PIN akun toko vs kode+PIN kasir) tergantung apakah toko ini
+    // sudah punya kasir terdaftar — lihat ValidatesKasir::validateKasirOrPin
+    // di backend. Tidak ada percabangan di sisi client.
+    final Map<String, dynamic> response = isLoketbayar
+        ? await ApiService.purchaseLoketbayar(
+            kodeProduk: (_lastInquiryKodeProduk ??
+                    product['inquiry_sku'] ??
+                    product['buyer_sku_code'] ??
+                    '')
+                .toString(),
+            customerNo: customerId,
+            nominal: _lastInquiryNominal ?? price.toInt(),
+            refId: _lastInquiryRefId ?? '',
+            pin: kasirPin,
+            kasirCode: kasirCode,
+            kasirPin: kasirPin,
+            paymentSource: paymentSource,
+            productName: (product['product_name'] ?? widget.title).toString(),
+          )
+        : await ApiService.purchasePpob(
+            buyerSkuCode: (product['buyer_sku_code'] ?? '').toString(),
+            customerNo: customerId,
+            pin: kasirPin,
+            kasirCode: kasirCode,
+            kasirPin: kasirPin,
+            provider: (product['provider'] ?? '').toString(),
+            category: widget.category.isEmpty ? widget.title : widget.category,
+            paymentSource: paymentSource,
+            amount: price,
+          );
+
+    if (!response.containsKey('transaction')) {
+      throw AppException((response['message'] ?? 'Pembelian gagal').toString());
+    }
+
+    if (!mounted) return;
+    Provider.of<AuthProvider>(context, listen: false).updateBalance();
+    final tx = response['transaction'] as Map<String, dynamic>? ?? {};
+    final meta = response['meta'] is Map
+        ? Map<String, dynamic>.from(response['meta'] as Map)
+        : null;
+    final hasTxNote = tx['note'] != null && tx['note'].toString().isNotEmpty;
+    final data = <String, dynamic>{
+      ...tx,
+      'amount': tx['amount'] ?? price,
+      'phone_number': customerId,
+      'customer_no': customerId,
+      'cashier_name': kasirCode,
+      if (meta != null && meta.isNotEmpty) 'meta': meta,
+      if (!hasTxNote && meta != null && meta.isNotEmpty) 'note': jsonEncode(meta),
+    };
+
+    // Close the PIN dialog before showing the result.
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (isDesktop(context)) {
+      final adminFee = _asAdminFee(product);
+      final destinationLabel = _isPln ? 'ID Pelanggan' : 'Nomor Tujuan';
+      TransactionSuccessDialog.show(
+        context: context,
+        subtitle: '${widget.title} berhasil dikirim',
+        orderId: (tx['order_id'] ?? '-').toString(),
+        rows: [
+          MapEntry(destinationLabel, customerId),
+          if ((_selectedBrand ?? '').trim().isNotEmpty) MapEntry('Operator', _selectedBrand!),
+          MapEntry('Produk', (product['product_name'] ?? widget.title).toString()),
+          MapEntry('Nominal', _formatPrice(price)),
+          MapEntry('Harga', _formatPrice(price)),
+          MapEntry('Admin', _formatPrice(adminFee)),
+        ],
+        totalLabel: _formatPrice(price + adminFee),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => TransactionDetail(data: data)),
     );
   }
 
@@ -3071,6 +3392,15 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                           Navigator.pop(ctx);
                           if (selected == 'saldo' && balance < price) {
                             showToast(msg: 'Saldo tidak mencukupi');
+                            return;
+                          }
+                          if (isDesktop(context)) {
+                            _showTransactionPinDialog(
+                              product: product,
+                              customerId: customerId,
+                              price: price,
+                              paymentSource: selected,
+                            );
                             return;
                           }
                           Navigator.push(
@@ -3526,6 +3856,14 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
       }
     }
 
+    // Desktop two-column layout (Pulsa, Paket Data, dll) sudah menampilkan
+    // ringkasan "Detail Transaksi" di sidebar kanan, jadi halaman detail
+    // terpisah ini redundan — langsung ke popup autentikasi PIN.
+    if (isDesktop(context) && _supportsDesktopTwoColumn) {
+      _goToPin(product);
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -3593,6 +3931,15 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
 
       if (!mounted) return;
       setState(() => _isValidatingRecipient = false);
+      if (inquiryData != null) _inquiryResult = inquiryData;
+
+      // Layout desktop Token Listrik sudah menampilkan ringkasan "Detail
+      // Transaksi" di sidebar kanan, jadi halaman detail terpisah ini
+      // redundan — langsung ke popup autentikasi PIN.
+      if (isDesktop(context) && _isPln && _plnTabIndex == 0) {
+        _goToPin(product);
+        return;
+      }
 
       Navigator.push(
         context,
@@ -3679,6 +4026,14 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     if (!mounted) return;
     setState(() => _isValidatingRecipient = false);
 
+    // Layout desktop Token Listrik sudah menampilkan ringkasan "Detail
+    // Transaksi" di sidebar kanan, jadi halaman detail terpisah ini
+    // redundan — langsung ke popup autentikasi PIN.
+    if (isDesktop(context) && _isPln && _plnTabIndex == 0) {
+      _goToPin(product);
+      return;
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -3745,6 +4100,1885 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     return _asDouble(raw);
   }
 
+  // Header kategori dipakai di semua layout desktop dua-kolom (Pulsa, Token
+  // Listrik, dll): avatar bulat + judul + subjudul.
+  Widget _buildDesktopCategoryHeader({String? titleOverride, String? subtitleOverride, Widget? trailing}) {
+    return Row(
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(color: desktopPrimaryBtn.withValues(alpha: 0.08), shape: BoxShape.circle),
+          alignment: Alignment.center,
+          child: Icon(_desktopCategoryIcon, color: desktopPrimaryBtn, size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(titleOverride ?? widget.title, style: GoogleFonts.hankenGrotesk(fontSize: 20, fontWeight: FontWeight.w800, color: desktopTextPrimary)),
+              Text(subtitleOverride ?? _desktopCategorySubtitle, style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary)),
+            ],
+          ),
+        ),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
+  // ── Token Listrik (desktop): verifikasi ID Pelanggan otomatis ──────────
+  void _onPlnCustomerIdChangedDesktop(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (value != digitsOnly) {
+      _setCustomerId(digitsOnly);
+      return;
+    }
+    if (_inquiryResult != null) {
+      setState(() => _inquiryResult = null);
+    } else {
+      setState(() {});
+    }
+    _plnVerifyDebounce?.cancel();
+    if (digitsOnly.length < 8) return;
+    _plnVerifyDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      unawaited(_verifyPlnCustomerId(digitsOnly));
+    });
+  }
+
+  Future<void> _verifyPlnCustomerId(String customerId) async {
+    if (!mounted) return;
+    setState(() => _isPlnCustomerVerifying = true);
+    try {
+      final result = await ApiService.ppobInquiryPln(customerNo: customerId);
+      final status = (result['status'] ?? '').toString().toLowerCase();
+      final isSuccess = status == 'success' || status == 'sukses';
+      // Buang hasil kalau user sudah lanjut mengetik ID lain sebelum request selesai.
+      if (!mounted || _customerIdController.text.trim() != customerId) return;
+      if (isSuccess && result['data'] != null) {
+        final data = Map<String, dynamic>.from(result['data'] as Map);
+        final name = (data['name'] ?? data['customer_name'] ?? '').toString().trim();
+        setState(() {
+          _inquiryResult = {
+            'customer_name': name,
+            'customer_no': data['customer_no'] ?? data['subscriber_id'] ?? customerId,
+            'subscriber_id': data['subscriber_id'] ?? data['customer_no'] ?? customerId,
+            'meter_no': data['meter_no'] ?? '',
+            'tariff_daya': data['segment_power'] ?? data['tariff_daya'] ?? '',
+          };
+        });
+      } else {
+        setState(() => _inquiryResult = null);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _inquiryResult = null);
+    } finally {
+      if (mounted) setState(() => _isPlnCustomerVerifying = false);
+    }
+  }
+
+  Future<void> _pastePlnCustomerId() async {
+    final data = await Clipboard.getData('text/plain');
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty) {
+      showToast(msg: 'Clipboard kosong');
+      return;
+    }
+    _onPlnCustomerIdChangedDesktop(text);
+  }
+
+  Future<void> _openPlnHistoryDesktop() async {
+    await _openSavedCustomers(desktopAccentBlue);
+    final id = _customerIdController.text.trim();
+    if (id.length >= 8) {
+      unawaited(_verifyPlnCustomerId(id));
+    }
+  }
+
+  Widget _inlineFieldAction({required IconData icon, required String label, required VoidCallback onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: desktopAccentBlue),
+              const SizedBox(width: 4),
+              Text(label, style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopAccentBlue)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _verifiedInfoChip(String label, String value) {
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary),
+        children: [
+          TextSpan(text: '$label : '),
+          TextSpan(
+            text: value,
+            style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w700, color: desktopTextPrimary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopTrustBadge(IconData icon, String title, String subtitle) {
+    return Expanded(
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: desktopAccentBlue),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title, style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+                Text(subtitle, style: GoogleFonts.hankenGrotesk(fontSize: 10.5, color: desktopTextSecondary)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Layout desktop dua-kolom khusus Token Listrik (PLN Prabayar): kiri =
+  // input ID Pelanggan (dengan verifikasi otomatis) + grid nominal, kanan =
+  // ringkasan transaksi sticky. Tombol "Beli Sekarang" memanggil
+  // _continuePlnPrabayar yang sama dengan alur mobile (inquiry SKU +
+  // navigasi ke PIN) — logika pembayaran tidak diduplikasi.
+  Widget _buildDesktopPlnLayout() {
+    final customerId = _customerIdController.text.trim();
+    final hasCustomerInput = customerId.isNotEmpty;
+    final selected = _selectedProduct;
+    final price = selected == null
+        ? 0.0
+        : (_isPromoProduct(selected) ? _promoPrice(selected) : _originalPrice(selected));
+    final adminFee = selected == null ? 0.0 : _asAdminFee(selected);
+    final total = price + adminFee;
+    final canConfirm = selected != null && hasCustomerInput && !_isValidatingRecipient;
+
+    final verified = _inquiryResult;
+    final verifiedName = (verified?['customer_name'] ?? '').toString().trim();
+    final verifiedDaya = (verified?['tariff_daya'] ?? '').toString().trim();
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: PpobDesktopTwoColumnLayout(
+        left: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDesktopCategoryHeader(
+              titleOverride: 'Token Listrik',
+              subtitleOverride: 'Beli token listrik prabayar dengan mudah dan cepat',
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 1, title: 'Masukkan ID Pelanggan / Nomor Meter'),
+            const SizedBox(height: 12),
+            desktopBorderedField(
+              icon: Icons.bolt_rounded,
+              controller: _customerIdController,
+              focusNode: _customerIdFocusNode,
+              keyboardType: TextInputType.number,
+              hint: 'Contoh: 1234 5678 9012',
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: _onPlnCustomerIdChangedDesktop,
+              suffix: Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isPlnCustomerVerifying)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(desktopAccentBlue)),
+                        ),
+                      ),
+                    _inlineFieldAction(icon: Icons.content_paste_rounded, label: 'Tempel', onTap: _pastePlnCustomerId),
+                    Container(height: 18, width: 1, color: desktopBorder, margin: const EdgeInsets.symmetric(horizontal: 4)),
+                    _inlineFieldAction(icon: Icons.history_rounded, label: 'Riwayat', onTap: _openPlnHistoryDesktop),
+                  ],
+                ),
+              ),
+            ),
+            if (verified != null && verifiedName.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              PpobDesktopBanner(
+                icon: Icons.check_circle_rounded,
+                title: 'ID Pelanggan terverifikasi',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _verifiedInfoChip('Nama', verifiedName),
+                    if (verifiedDaya.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      _verifiedInfoChip('Daya', verifiedDaya),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 2, title: 'Pilih Nominal Token'),
+            const SizedBox(height: 14),
+            _buildDesktopProductGrid(emptyMessage: 'Belum ada nominal token tersedia'),
+            const SizedBox(height: 16),
+            PpobDesktopBanner(
+              icon: Icons.info_outline_rounded,
+              title: 'Pastikan ID Pelanggan / Nomor Meter sudah benar. Token yang sudah dibeli tidak dapat dikembalikan.',
+              tone: PpobBannerTone.info,
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: desktopBorder.withValues(alpha: 0.5))),
+              ),
+              child: Row(
+                children: [
+                  _desktopTrustBadge(Icons.verified_rounded, 'Token Resmi', 'langsung dari PLN'),
+                  _desktopTrustBadge(Icons.bolt_rounded, 'Proses Cepat', '1-3 detik'),
+                  _desktopTrustBadge(Icons.shield_outlined, 'Aman & Terpercaya', 'Transaksi terenkripsi'),
+                  _desktopTrustBadge(Icons.access_time_rounded, '24/7', 'Layanan selalu tersedia'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        right: PpobDesktopSummaryPanel(
+          rows: [
+            PpobDetailRow(icon: Icons.badge_outlined, label: 'ID Pelanggan', value: hasCustomerInput ? customerId : '-'),
+            PpobDetailRow(icon: Icons.person_outline, label: 'Nama', value: verifiedName.isNotEmpty ? verifiedName : '-'),
+            PpobDetailRow(icon: Icons.bolt_outlined, label: 'Daya', value: verifiedDaya.isNotEmpty ? verifiedDaya : '-'),
+            const PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Produk', value: 'Token Listrik'),
+            PpobDetailRow(icon: Icons.confirmation_number_outlined, label: 'Nominal', value: (selected?['product_name'] ?? '-').toString()),
+            PpobDetailRow(icon: Icons.sell_outlined, label: 'Harga', value: selected != null ? _formatPrice(price) : 'Rp 0'),
+            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: _formatPrice(adminFee)),
+          ],
+          totalLabel: _formatPrice(total),
+          confirmLabel: 'Beli Sekarang',
+          loading: _isValidatingRecipient,
+          onConfirm: canConfirm ? _continuePlnPrabayar : null,
+        ),
+      ),
+    );
+  }
+
+  // ── E-Wallet (desktop): daftar penyedia yang ditampilkan di layout ─────
+  // dua-kolom, urutan disesuaikan dengan referensi desain (DANA lebih dulu)
+  // tapi tetap mencakup semua brand yang didukung mobile (`_buildEwalletList`).
+  // LinkAja, DOKU, KasPro, dan iSaku disembunyikan dari grid — brand-brand
+  // itu tidak ada di `_ewalletSkuInfo` (cuma DANA/GoPay/OVO/ShopeePay yang
+  // punya SKU Loket Bayar terdaftar), jadi tidak bisa benar-benar dibeli.
+  static const List<Map<String, dynamic>> _ewalletBrandsDesktop = [
+    {'name': 'DANA', 'logo': 'images/ewallet_logos/dana.svg', 'icon': Icons.account_balance_wallet_rounded, 'color': Color(0xFF118EEA)},
+    {'name': 'ShopeePay', 'logo': 'images/ewallet_logos/shopeepay.svg', 'icon': Icons.shopping_bag_rounded, 'color': Color(0xFFEE4D2D)},
+    {'name': 'GoPay', 'logo': 'images/ewallet_logos/gopay.svg', 'icon': Icons.account_balance_wallet_rounded, 'color': Color(0xFF00AED6)},
+    {'name': 'OVO', 'logo': 'images/ewallet_logos/ovo.svg', 'icon': Icons.circle_outlined, 'color': Color(0xFF4C3494)},
+  ];
+
+  static const List<int> _ewalletPresetAmounts = [
+    10000, 20000, 50000, 100000, 200000, 300000, 500000, 1000000, 2000000,
+  ];
+
+  /// Map brand → SKU Loket Bayar. Diekstrak dari `_onCustomAmountSubmit`
+  /// (alur mobile lama) supaya logikanya tidak diduplikasi.
+  Map<String, String> _ewalletSkuInfo(String brandName) {
+    const brandSkuMap = <String, Map<String, String>>{
+      'dana': {'inquiry_sku': 'DANA', 'buyer_sku_code': 'DANA'},
+      'gopay': {'inquiry_sku': 'GOPAYP', 'buyer_sku_code': 'GOPAYP'},
+      'ovo': {'inquiry_sku': 'OVO', 'buyer_sku_code': 'OVOP'},
+      'shopeepay': {'inquiry_sku': 'SHOPEEP', 'buyer_sku_code': 'SHOPEEP'},
+    };
+    final brandKey = brandName.toLowerCase().replaceAll(RegExp(r'\s+'), '');
+    return brandSkuMap[brandKey] ??
+        {'inquiry_sku': brandName.toUpperCase(), 'buyer_sku_code': '${brandName.toUpperCase()}P'};
+  }
+
+  /// admin_fee produk dinamis (nominal bebas) milik brand yang sedang
+  /// dipilih — dipakai untuk menghitung Harga semua nominal preset/custom.
+  double _ewalletAdminFeeForBrand() {
+    final dyn = _products.firstWhere(
+      (p) => _isDynamicProduct(Map<String, dynamic>.from(p as Map)),
+      orElse: () => null,
+    );
+    if (dyn == null) return 0.0;
+    return _asAdminFee(Map<String, dynamic>.from(dyn as Map));
+  }
+
+  Map<String, dynamic> _buildEwalletVirtualProduct({
+    required String brandName,
+    required int amount,
+    required double adminFee,
+    required bool isCustom,
+    double apiPrice = 0.0,
+  }) {
+    final skuInfo = _ewalletSkuInfo(brandName);
+    return {
+      'buyer_sku_code': skuInfo['buyer_sku_code'],
+      'inquiry_sku': skuInfo['inquiry_sku'],
+      'product_name': _currencyFormat.format(amount),
+      // `nominal` = preset amount murni; `price` = harga retail final
+      // (nominal + margin dari response API) — dipisah supaya UI bisa
+      // menampilkan keduanya tanpa saling menimpa.
+      'nominal': amount,
+      'price': amount + apiPrice,
+      'admin_fee': adminFee,
+      if (isCustom) 'custom_amount': amount else 'simulated_amount': amount,
+      'brand': brandName,
+      'provider': 'loketbayar',
+      'category': widget.category,
+      'is_dynamic': true,
+    };
+  }
+
+  bool _isEwalletAmountSelected(int amount, {bool custom = false}) {
+    final sel = _selectedProduct;
+    if (sel == null) return false;
+    final key = custom ? sel['custom_amount'] : sel['simulated_amount'];
+    return key is num && key.toInt() == amount;
+  }
+
+  Future<void> _onEwalletProviderTapDesktop(String brandName) async {
+    if (_selectedBrand == brandName) return;
+    setState(() {
+      _ewalletBrandPicked = true;
+      _selectedBrand = brandName;
+      _selectedProduct = null;
+      _products = [];
+      _customAmountController.clear();
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_selectedBrandCacheKey, brandName);
+    await _loadProducts(showLoading: true);
+  }
+
+  /// Alur konfirmasi Top Up E-Wallet desktop: cek nama penerima (sama
+  /// persis dengan blok `_isEmoney` di `_onProductSelected`, dipindah ke
+  /// tombol "Top Up Sekarang" alih-alih dieksekusi otomatis saat kartu
+  /// nominal disentuh) lalu langsung ke popup PIN — panel "Detail
+  /// Transaksi" di sidebar kanan sudah menggantikan halaman detail terpisah.
+  Future<void> _continueEwalletTopUp() async {
+    _dismissInputAndNumpad();
+
+    final product = _selectedProduct;
+    if (product == null) {
+      showToast(msg: 'Pilih nominal top up terlebih dahulu');
+      return;
+    }
+    final customerId = _customerIdController.text.trim();
+    if (customerId.isEmpty) {
+      showToast(msg: 'Masukkan nomor tujuan terlebih dahulu');
+      return;
+    }
+    if (_isValidatingRecipient) return;
+
+    setState(() => _isValidatingRecipient = true);
+
+    final isEmoneyDynamic =
+        !(widget.initialBrand != null && widget.initialBrand!.trim().isNotEmpty);
+    final categoryOverride = isEmoneyDynamic ? _selectedBrand : null;
+    final brandForInquiry = (widget.initialBrand != null && widget.initialBrand!.trim().isNotEmpty)
+        ? widget.initialBrand
+        : _selectedBrand;
+
+    const supportedInquiryBrands = {'gopay', 'dana', 'ovo', 'shopeepay'};
+    final brandKey = (brandForInquiry ?? '').toLowerCase().replaceAll(RegExp(r'\s+'), '');
+    final brandSupportsInquiry = supportedInquiryBrands.contains(brandKey);
+
+    String? recipientName;
+    bool requireRecipientName = true;
+    if (!brandSupportsInquiry) {
+      requireRecipientName = false;
+      showToast(msg: 'Cek nama belum tersedia untuk brand ini, lanjut tanpa verifikasi nama');
+    } else {
+      final checkSku = (product['inquiry_sku'] ?? product['buyer_sku_code'] ?? '').toString();
+      final simulatedAmount = product['simulated_amount'];
+      final customAmount = product['custom_amount'];
+      final finalAmount = simulatedAmount ?? customAmount;
+      recipientName = await _validateEmoneyRecipient(
+        customerId,
+        checkSku,
+        categoryOverride: categoryOverride,
+        brand: brandForInquiry,
+        amount: finalAmount is num ? finalAmount.toDouble() : null,
+      );
+      if (recipientName == _verifiedWithoutNameToken) {
+        recipientName = null;
+        requireRecipientName = false;
+        showToast(msg: 'Verifikasi berhasil, namun nama penerima tidak dikirim provider');
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isValidatingRecipient = false);
+
+    if (requireRecipientName && recipientName == null) {
+      return;
+    }
+
+    _goToPin(product);
+  }
+
+  Widget _buildEwalletProviderCard(Map<String, dynamic> brand) {
+    final name = brand['name'] as String;
+    final icon = brand['icon'] as IconData;
+    final color = brand['color'] as Color;
+    final logo = brand['logo'] as String?;
+    final selected = _selectedBrand == name;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => unawaited(_onEwalletProviderTapDesktop(name)),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+          decoration: BoxDecoration(
+            color: desktopSurfaceCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: selected ? desktopAccentBlue : desktopBorder, width: selected ? 1.5 : 1),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 52,
+                    height: 52,
+                    child: (logo != null && logo.isNotEmpty)
+                        ? (logo.toLowerCase().endsWith('.svg')
+                            ? SvgPicture.asset(
+                                logo,
+                                fit: BoxFit.contain,
+                                placeholderBuilder: (_) => Icon(icon, color: color, size: 36),
+                                errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 36),
+                              )
+                            : Image.asset(
+                                logo,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 36),
+                              ))
+                        : Icon(icon, color: color, size: 36),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    name,
+                    style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopTextPrimary),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              if (selected)
+                Positioned(
+                  top: -8,
+                  right: -8,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(color: desktopAccentBlue, shape: BoxShape.circle),
+                    child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Margin (field `retail` di response API) untuk brand yang sedang
+  /// dipilih. Berbeda dari dugaan awal: API e-wallet TIDAK mengembalikan
+  /// satu produk per nominal preset — cuma satu SKU "Nominal Bebas" per
+  /// brand (lihat log `[EWALLET][DEBUG]`), dan `retail`-nya itu satu angka
+  /// tetap yang berlaku untuk nominal berapa pun (preset maupun custom).
+  /// Diambil dari produk dinamis brand ini, sama seperti
+  /// `_ewalletAdminFeeForBrand`.
+  double _ewalletRetailMarginForBrand() {
+    final dyn = _products.firstWhere(
+      (p) => _isDynamicProduct(Map<String, dynamic>.from(p as Map)),
+      orElse: () => null,
+    );
+    if (dyn == null) return 0.0;
+    return _asDouble(Map<String, dynamic>.from(dyn as Map)['retail']);
+  }
+
+  Widget _buildEwalletNominalTile(int amount, double adminFee, double retailMargin) {
+    final selected = _isEwalletAmountSelected(amount);
+    // Harga retail e-wallet = nominal (preset amount) + retail dari response
+    // API (margin flat per brand) — biaya admin baru ditambahkan belakangan
+    // di ringkasan/konfirmasi, bukan digabung di sini.
+    final harga = amount + retailMargin;
+    return PpobNominalCard(
+      title: _currencyFormat.format(amount),
+      priceLabel: _formatPrice(harga),
+      selected: selected,
+      onTap: () {
+        setState(() {
+          _selectedProduct = _buildEwalletVirtualProduct(
+            brandName: _selectedBrand ?? widget.initialBrand ?? 'DANA',
+            amount: amount,
+            adminFee: adminFee,
+            isCustom: false,
+            apiPrice: retailMargin,
+          );
+          _customAmountController.clear();
+        });
+      },
+    );
+  }
+
+  // Layout desktop dua-kolom khusus Top Up E-Wallet: kiri = pilih penyedia
+  // + nomor tujuan + grid nominal (dengan opsi nominal custom), kanan =
+  // ringkasan transaksi sticky. Tombol "Top Up Sekarang" memanggil
+  // _continueEwalletTopUp (cek nama penerima via Loket Bayar, lalu ke PIN).
+  Widget _buildDesktopEwalletLayout() {
+    // Default provider begitu halaman ini dibuka tanpa brand terpilih
+    // (mis. pertama kali masuk dari menu "E-Wallet"), meniru referensi
+    // desain yang langsung menampilkan grid nominal DANA. Dijadwalkan
+    // setelah frame pertama supaya tidak memicu setState() saat build().
+    if (_selectedBrand == null && !_isLoadingBrands) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _selectedBrand != null) return;
+        unawaited(_onEwalletProviderTapDesktop('DANA'));
+      });
+    }
+
+    final customerId = _customerIdController.text.trim();
+    final hasCustomerInput = customerId.isNotEmpty;
+    final brandName = _selectedBrand ?? 'DANA';
+    final adminFee = _ewalletAdminFeeForBrand();
+    final retailMargin = _ewalletRetailMarginForBrand();
+    final selected = _selectedProduct;
+    // `nominal` = preset amount murni (face value). `harga` = harga retail
+    // final yang sudah disimpan di `_buildEwalletVirtualProduct` sebagai
+    // `price` (nominal + margin dari response API) — bukan `selected['price']`
+    // dianggap nominal seperti sebelumnya. `total` baru menambahkan admin.
+    final nominal = selected == null ? 0.0 : _asDouble(selected['nominal']);
+    final harga = selected == null ? 0.0 : _asDouble(selected['price']);
+    final total = selected == null ? 0.0 : harga + _asAdminFee(selected);
+    final numberValid = hasCustomerInput && _validateCustomerIdByBrand(customerId) == null;
+    final canConfirm = selected != null && numberValid && !_isValidatingRecipient;
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: PpobDesktopTwoColumnLayout(
+        left: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDesktopCategoryHeader(
+              titleOverride: 'Top Up E-Wallet',
+              subtitleOverride: 'Isi saldo e-wallet favoritmu dengan mudah dan cepat',
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 1, title: 'Pilih Penyedia E-Wallet'),
+            const SizedBox(height: 14),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _ewalletBrandsDesktop.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                mainAxisExtent: 116,
+              ),
+              itemBuilder: (_, i) => _buildEwalletProviderCard(_ewalletBrandsDesktop[i]),
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 2, title: 'Masukkan Nomor / ID'),
+            const SizedBox(height: 12),
+            desktopBorderedField(
+              icon: Icons.smartphone_outlined,
+              controller: _customerIdController,
+              focusNode: _customerIdFocusNode,
+              keyboardType: TextInputType.phone,
+              hint: 'Masukkan nomor $brandName',
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (_) => setState(() {}),
+              suffix: _inlineFieldAction(icon: Icons.contacts_rounded, label: 'Kontak', onTap: _pickNumberFromContact),
+            ),
+            if (numberValid) ...[
+              const SizedBox(height: 14),
+              PpobDesktopBanner(
+                icon: Icons.check_circle_rounded,
+                title: 'Nomor terverifikasi',
+                trailing: _verifiedInfoChip('Akun $brandName', customerId),
+              ),
+            ],
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 3, title: 'Pilih Nominal Top Up'),
+            const SizedBox(height: 14),
+            if (_isLoadingProducts)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _ewalletPresetAmounts.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  mainAxisExtent: 100,
+                ),
+                itemBuilder: (_, i) => _buildEwalletNominalTile(_ewalletPresetAmounts[i], adminFee, retailMargin),
+              ),
+            const SizedBox(height: 16),
+            PpobDesktopBanner(
+              icon: Icons.info_outline_rounded,
+              title: 'Pastikan nomor e-wallet sudah benar. Saldo yang sudah diisi tidak dapat dikembalikan.',
+              tone: PpobBannerTone.info,
+            ),
+          ],
+        ),
+        right: PpobDesktopSummaryPanel(
+          rows: [
+            PpobDetailRow(icon: Icons.account_balance_wallet_outlined, label: 'Penyedia', value: brandName),
+            PpobDetailRow(icon: Icons.smartphone_outlined, label: 'Nomor', value: hasCustomerInput ? customerId : '-'),
+            const PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Produk', value: 'Top Up E-Wallet'),
+            PpobDetailRow(icon: Icons.confirmation_number_outlined, label: 'Nominal', value: selected != null ? _formatPrice(nominal) : '-'),
+            // "Harga" = harga retail = nominal + price dari response API,
+            // belum termasuk admin — admin ditambahkan terpisah di baris di
+            // bawah, dan digabung ke "Total Pembayaran" (`totalLabel`).
+            PpobDetailRow(icon: Icons.sell_outlined, label: 'Harga', value: selected != null ? _formatPrice(harga) : 'Rp 0'),
+            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: _formatPrice(adminFee)),
+          ],
+          totalLabel: _formatPrice(total),
+          confirmLabel: 'Top Up Sekarang',
+          loading: _isValidatingRecipient,
+          onConfirm: canConfirm ? _continueEwalletTopUp : null,
+        ),
+      ),
+    );
+  }
+
+  // ── PLN Pasca (desktop): cek tagihan otomatis (debounced) ──────────────
+  void _onPlnPascaCustomerIdChangedDesktop(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (value != digitsOnly) {
+      _setCustomerId(digitsOnly);
+      return;
+    }
+    if (_plnPostpaidInquiryResult != null || _plnPostpaidError != null) {
+      setState(() {
+        _plnPostpaidInquiryResult = null;
+        _plnPostpaidError = null;
+        _showPlnPascaDetail = false;
+      });
+    } else {
+      setState(() {});
+    }
+    _plnPascaVerifyDebounce?.cancel();
+    if (digitsOnly.length < 8) return;
+    _plnPascaVerifyDebounce = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      unawaited(_doPlnPostpaidInquiry());
+    });
+  }
+
+  Future<void> _pastePlnPascaCustomerId() async {
+    final data = await Clipboard.getData('text/plain');
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty) {
+      showToast(msg: 'Clipboard kosong');
+      return;
+    }
+    _onPlnPascaCustomerIdChangedDesktop(text);
+  }
+
+  Future<void> _openPlnPascaHistoryDesktop() async {
+    await _openSavedCustomers(desktopAccentBlue);
+    final id = _customerIdController.text.trim();
+    if (id.length >= 8) {
+      unawaited(_doPlnPostpaidInquiry());
+    }
+  }
+
+  /// Ekstrak field tampilan dari `_plnPostpaidInquiryResult`, sama persis
+  /// dengan komputasi di `_buildPlnPostpaidSection` (alur mobile) supaya
+  /// nilai yang ditampilkan konsisten — plus alamat/nomor meter/batas bayar
+  /// yang tidak dipakai di kartu mobile.
+  Map<String, dynamic> _plnPascaSummary() {
+    final plnData = _plnPostpaidInquiryResult;
+    final desc = plnData == null ? const <String, dynamic>{} : _plnDescMap(plnData);
+    Map<String, dynamic> firstBill = const <String, dynamic>{};
+    if (plnData != null) {
+      final tagihan = plnData['tagihan'];
+      if (tagihan is List && tagihan.isNotEmpty && tagihan.first is Map) {
+        firstBill = Map<String, dynamic>.from(tagihan.first as Map);
+      } else {
+        firstBill = _plnFirstDetailMap(plnData);
+      }
+    }
+
+    final idpel = (plnData?['customer_no'] ?? plnData?['subscriberID'] ?? '-').toString();
+    final nama = (plnData?['customer_name'] ?? plnData?['nama'] ?? '-').toString();
+    final alamat =
+        (plnData?['alamat'] ?? plnData?['address'] ?? desc['alamat'] ?? desc['address'] ?? '-').toString();
+
+    String tarifDaya = (plnData?['tariff_daya'] ?? plnData?['tarifDaya'] ?? '').toString().trim();
+    if (tarifDaya.isEmpty) {
+      final tarif = (desc['tarif'] ?? '').toString().trim();
+      final daya = (desc['daya'] ?? '').toString().trim();
+      tarifDaya = '${tarif.isEmpty ? '-' : tarif}/${daya.isEmpty ? '-' : daya}';
+    }
+
+    final meterNo =
+        (plnData?['meter_no'] ?? plnData?['no_meter'] ?? plnData?['nometer'] ?? firstBill['meter_no'] ?? '-')
+            .toString();
+
+    final periodRaw = firstBill['periode'] ?? plnData?['periode'];
+    final periode = _formatPlnBillingPeriod(periodRaw);
+
+    final dueDate = (plnData?['due_date'] ??
+            plnData?['tgl_jatuh_tempo'] ??
+            plnData?['jatuh_tempo'] ??
+            desc['due_date'] ??
+            firstBill['due_date'] ??
+            '-')
+        .toString();
+
+    final rpTagPln = _asMoney(firstBill['nominal'] ?? plnData?['nominal'] ?? plnData?['selling_price']);
+    final adminBank = _asMoney(firstBill['admin'] ?? plnData?['admin']);
+    final denda = _asMoney(firstBill['denda'] ?? desc['denda']);
+    final meterAwal = (firstBill['meterAwal'] ?? firstBill['meter_awal'] ?? '-').toString();
+    final meterAkhir = (firstBill['meterAkhir'] ?? firstBill['meter_akhir'] ?? '-').toString();
+    final computedTotal = rpTagPln + adminBank + denda;
+    final sellingPrice = _asMoney(plnData?['selling_price']);
+    double totalBayar;
+    if (computedTotal > 0) {
+      totalBayar = computedTotal;
+    } else if (sellingPrice > 0) {
+      totalBayar = sellingPrice;
+    } else {
+      totalBayar = _asMoney(plnData?['total']);
+    }
+    final tagihanList = plnData?['tagihan'];
+    final int lembar = () {
+      final fromField = plnData?['lembar_tagihan'] ?? plnData?['lembarTagihan'];
+      if (fromField is num) return fromField.toInt();
+      final parsed = int.tryParse('${fromField ?? ''}');
+      if (parsed != null && parsed > 0) return parsed;
+      if (tagihanList is List) return tagihanList.length;
+      return plnData == null ? 0 : 1;
+    }();
+
+    return {
+      'idpel': idpel,
+      'nama': nama,
+      'alamat': alamat,
+      'tarifDaya': tarifDaya,
+      'meterNo': meterNo,
+      'periode': periode,
+      'dueDate': dueDate,
+      'rpTagPln': rpTagPln,
+      'adminBank': adminBank,
+      'denda': denda,
+      'meterAwal': meterAwal,
+      'meterAkhir': meterAkhir,
+      'totalBayar': totalBayar,
+      'lembar': lembar,
+    };
+  }
+
+  Widget _plnPascaInfoPair(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: GoogleFonts.hankenGrotesk(fontSize: 11.5, color: desktopTextSecondary)),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopTextPrimary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _plnPascaBillTile(IconData icon, String label, String value, {Color? valueColor}) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: desktopSurfaceCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: desktopBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: desktopAccentBlue),
+            const SizedBox(height: 8),
+            Text(label, style: GoogleFonts.hankenGrotesk(fontSize: 11, color: desktopTextSecondary)),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: valueColor ?? desktopTextPrimary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Layout desktop dua-kolom khusus Pembayaran PLN Pasca: kiri = input ID
+  // Pelanggan (cek tagihan otomatis, debounced) + kartu info pelanggan +
+  // rincian tagihan + metode pembayaran, kanan = ringkasan transaksi
+  // sticky. Tombol "Bayar Sekarang" memanggil _payPlnPostpaidBill yang
+  // sudah ada (alur mobile) — API pembayaran PLN Pasca (purchasePpobPostpaid)
+  // beda dari alur PPOB lain, jadi tidak dialihkan ke TransactionPinAuthDialog.
+  Widget _buildDesktopPlnPascaLayout() {
+    final customerId = _customerIdController.text.trim();
+    final hasCustomerInput = customerId.isNotEmpty;
+    final summary = _plnPascaSummary();
+    final hasBill = _plnPostpaidInquiryResult != null;
+    final canConfirm = hasBill && !_isPlnPostpaidInquiring;
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: PpobDesktopTwoColumnLayout(
+        left: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDesktopCategoryHeader(
+              titleOverride: 'Pembayaran PLN Pasca',
+              subtitleOverride: 'Bayar tagihan listrik pascabayar lebih mudah dan cepat',
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: desktopSurfacePage,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: desktopBorder),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(color: const Color(0xFFFFC728), borderRadius: BorderRadius.circular(6)),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.bolt_rounded, size: 16, color: Color(0xFF1A1A1A)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('PLN\nPascabayar', style: GoogleFonts.hankenGrotesk(fontSize: 10.5, fontWeight: FontWeight.w800, color: desktopTextPrimary, height: 1.1)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 1, title: 'Masukkan ID Pelanggan / Nomor Meter'),
+            const SizedBox(height: 12),
+            desktopBorderedField(
+              icon: Icons.badge_outlined,
+              controller: _customerIdController,
+              focusNode: _customerIdFocusNode,
+              keyboardType: TextInputType.number,
+              hint: 'Masukkan ID Pelanggan / Nomor Meter',
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: _onPlnPascaCustomerIdChangedDesktop,
+              suffix: Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isPlnPostpaidInquiring)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(desktopAccentBlue)),
+                        ),
+                      ),
+                    _inlineFieldAction(icon: Icons.content_paste_rounded, label: 'Tempel', onTap: _pastePlnPascaCustomerId),
+                    Container(height: 18, width: 1, color: desktopBorder, margin: const EdgeInsets.symmetric(horizontal: 4)),
+                    _inlineFieldAction(icon: Icons.history_rounded, label: 'Riwayat', onTap: _openPlnPascaHistoryDesktop),
+                  ],
+                ),
+              ),
+            ),
+            if (_plnPostpaidError != null && !_isPlnPostpaidInquiring) ...[
+              const SizedBox(height: 14),
+              AppAlert(
+                tone: AppAlertTone.error,
+                title: 'Tidak dapat memeriksa tagihan',
+                description: _plnPostpaidError!,
+              ),
+            ],
+            if (hasBill) ...[
+              const SizedBox(height: 14),
+              const PpobDesktopBanner(icon: Icons.check_circle_rounded, title: 'ID Pelanggan ditemukan'),
+              const SizedBox(height: 14),
+              // ── Informasi Pelanggan ──────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: desktopSurfacePage,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(color: desktopAccentBlue.withValues(alpha: 0.1), shape: BoxShape.circle),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.person_outline_rounded, size: 16, color: desktopAccentBlue),
+                        ),
+                        const SizedBox(width: 10),
+                        Text('Informasi Pelanggan', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _plnPascaInfoPair('Nama', summary['nama'] as String),
+                        _plnPascaInfoPair('ID Pelanggan', summary['idpel'] as String),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _plnPascaInfoPair('Alamat', summary['alamat'] as String),
+                        _plnPascaInfoPair('Tarif / Daya', summary['tarifDaya'] as String),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Expanded(child: SizedBox.shrink()),
+                        _plnPascaInfoPair('Nomor Meter', summary['meterNo'] as String),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const PpobStepHeader(step: 2, title: 'Detail Tagihan'),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _plnPascaBillTile(Icons.calendar_month_outlined, 'Bulan Tagihan', summary['periode'] as String),
+                  const SizedBox(width: 10),
+                  _plnPascaBillTile(Icons.description_outlined, 'Jumlah Tagihan', _formatPrice(summary['rpTagPln'] as double)),
+                  const SizedBox(width: 10),
+                  _plnPascaBillTile(Icons.schedule_outlined, 'Batas Bayar', summary['dueDate'] as String),
+                  const SizedBox(width: 10),
+                  _plnPascaBillTile(Icons.info_outline_rounded, 'Status', 'Belum Dibayar', valueColor: desktopErrorRed),
+                ],
+              ),
+              const SizedBox(height: 10),
+              InkWell(
+                onTap: () => setState(() => _showPlnPascaDetail = !_showPlnPascaDetail),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _showPlnPascaDetail ? 'Sembunyikan Rincian Tagihan' : 'Lihat Rincian Tagihan',
+                        style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopAccentBlue),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(_showPlnPascaDetail ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded, size: 18, color: desktopAccentBlue),
+                    ],
+                  ),
+                ),
+              ),
+              if (_showPlnPascaDetail) ...[
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: desktopSurfacePage,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      PpobDetailRow(icon: Icons.speed_outlined, label: 'Meter Awal', value: summary['meterAwal'] as String),
+                      PpobDetailRow(icon: Icons.speed_outlined, label: 'Meter Akhir', value: summary['meterAkhir'] as String),
+                      PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin Bank', value: _formatPrice(summary['adminBank'] as double)),
+                      PpobDetailRow(icon: Icons.report_gmailerrorred_outlined, label: 'Denda', value: _formatPrice(summary['denda'] as double)),
+                      PpobDetailRow(icon: Icons.description_outlined, label: 'Lembar Tagihan', value: '${summary['lembar']} lembar'),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              const PpobStepHeader(step: 3, title: 'Metode Pembayaran'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: desktopSurfaceCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: desktopAccentBlue, width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.radio_button_checked_rounded, color: desktopAccentBlue, size: 20),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(color: desktopAccentBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.account_balance_wallet_rounded, size: 17, color: desktopAccentBlue),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Saldo Modipay', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+                          Text(
+                            'Saldo tersedia ${_formatPrice(_parseBalanceValue(Provider.of<AuthProvider>(context, listen: false).userBalance))}',
+                            style: GoogleFonts.hankenGrotesk(fontSize: 11.5, color: desktopTextSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: desktopSuccessBg, borderRadius: BorderRadius.circular(20)),
+                      child: Text('Disarankan', style: GoogleFonts.hankenGrotesk(fontSize: 10.5, fontWeight: FontWeight.w700, color: desktopSuccessFg)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            PpobDesktopBanner(
+              icon: Icons.info_outline_rounded,
+              title: 'Pastikan ID Pelanggan sudah benar. Pembayaran yang sudah berhasil tidak dapat dibatalkan.',
+              tone: PpobBannerTone.info,
+            ),
+          ],
+        ),
+        right: PpobDesktopSummaryPanel(
+          rows: [
+            const PpobDetailRow(icon: Icons.bolt_outlined, label: 'Penyedia', value: 'PLN Pasca'),
+            PpobDetailRow(icon: Icons.badge_outlined, label: 'ID Pelanggan', value: hasCustomerInput ? customerId : '-'),
+            PpobDetailRow(icon: Icons.person_outline, label: 'Nama', value: hasBill ? summary['nama'] as String : '-'),
+            PpobDetailRow(icon: Icons.flash_on_outlined, label: 'Tarif / Daya', value: hasBill ? summary['tarifDaya'] as String : '-'),
+            PpobDetailRow(icon: Icons.calendar_month_outlined, label: 'Bulan Tagihan', value: hasBill ? summary['periode'] as String : '-'),
+            PpobDetailRow(icon: Icons.description_outlined, label: 'Jumlah Tagihan', value: hasBill ? _formatPrice(summary['rpTagPln'] as double) : 'Rp 0'),
+            PpobDetailRow(
+              icon: Icons.receipt_long_outlined,
+              label: 'Admin',
+              value: hasBill ? _formatPrice((summary['adminBank'] as double) + (summary['denda'] as double)) : 'Rp 0',
+            ),
+          ],
+          totalLabel: hasBill ? _formatPrice(summary['totalBayar'] as double) : 'Rp 0',
+          confirmLabel: 'Bayar Sekarang',
+          loading: _isPlnPostpaidInquiring,
+          onConfirm: canConfirm ? _payPlnPostpaidBill : null,
+        ),
+      ),
+    );
+  }
+
+  // ── Hub "Internet & TV" (desktop) ───────────────────────────────────────
+  static const List<Map<String, String>> _internetProvidersDesktop = [
+    {'name': 'IndiHome', 'logo': 'images/provider_logos/indihome.png'},
+    {'name': 'ICONNET', 'logo': ''},
+    {'name': 'CBN', 'logo': 'images/provider_logos/cbn.png'},
+    {'name': 'MyRepublic', 'logo': 'images/provider_logos/myrep.png'},
+    {'name': 'Biznet', 'logo': 'images/provider_logos/biznet.png'},
+  ];
+
+  void _onInternetCustomerIdChangedDesktop(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (value != digitsOnly) {
+      _setCustomerId(digitsOnly);
+      return;
+    }
+    if (_internetInquiryResult != null || _internetInquiryError != null) {
+      setState(() {
+        _internetInquiryResult = null;
+        _internetInquiryError = null;
+      });
+    } else {
+      setState(() {});
+    }
+  }
+
+  void _onSelectInternetProvider(String provider) {
+    if (_selectedInternetProvider == provider) return;
+    setState(() {
+      _selectedInternetProvider = provider;
+      _internetInquiryResult = null;
+      _internetInquiryError = null;
+    });
+  }
+
+  Widget _internetProviderCard(Map<String, String> provider) {
+    final name = provider['name']!;
+    final logo = provider['logo'] ?? '';
+    final selected = _selectedInternetProvider == name;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _onSelectInternetProvider(name),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+          decoration: BoxDecoration(
+            color: desktopSurfaceCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: selected ? desktopAccentBlue : desktopBorder, width: selected ? 1.5 : 1),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: logo.isEmpty
+                        ? Icon(Icons.wifi_rounded, color: desktopAccentBlue, size: 28)
+                        : Image.asset(
+                            logo,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(Icons.wifi_rounded, color: desktopAccentBlue, size: 28),
+                          ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    name,
+                    style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w700, color: desktopTextPrimary),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              if (selected)
+                Positioned(
+                  top: -8,
+                  right: -8,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(color: desktopAccentBlue, shape: BoxShape.circle),
+                    child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _internetInfoPair(String label, Widget value) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.hankenGrotesk(fontSize: 11.5, color: desktopTextSecondary)),
+            const SizedBox(height: 3),
+            value,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _internetInfoPairText(String label, String value) {
+    return _internetInfoPair(
+      label,
+      Text(value, style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+    );
+  }
+
+  Widget _internetRincianRow(String label, String value, {bool highlight = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.hankenGrotesk(
+                fontSize: highlight ? 13.5 : 12.5,
+                fontWeight: highlight ? FontWeight.w800 : FontWeight.w500,
+                color: highlight ? desktopTextPrimary : desktopTextSecondary,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.hankenGrotesk(
+              fontSize: highlight ? 16 : 12.5,
+              fontWeight: FontWeight.w800,
+              color: highlight ? desktopAccentBlue : desktopTextPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopInternetBillInfo() {
+    final data = _internetInquiryResult;
+    if (data == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        decoration: BoxDecoration(
+          color: desktopSurfacePage,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: desktopBorder.withValues(alpha: 0.6)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(color: desktopSurfaceCard, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: const Icon(Icons.receipt_long_outlined, size: 26, color: desktopTextSecondary),
+            ),
+            const SizedBox(height: 14),
+            Text('Informasi tagihan akan muncul di sini', style: GoogleFonts.hankenGrotesk(fontSize: 13.5, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+            const SizedBox(height: 4),
+            Text(
+              'Lengkapi langkah 1 dan 2, lalu klik "Cek Tagihan" untuk melihat detail tagihan.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final customerId = _customerIdController.text.trim();
+    final periode = (data['periode'] ?? '-').toString();
+    final paket = (data['product_name'] ?? _selectedInternetProvider ?? '-').toString();
+    final alamat = (data['alamat'] ?? data['address'] ?? '').toString();
+    final tagihanAmount = _asDouble(data['nominal'] ?? data['tagihan']);
+    final admin = _asDouble(data['admin']);
+    final ppn = _asDouble(data['ppn'] ?? data['pajak'] ?? data['tax']);
+    var total = _asDouble(data['total'] ?? data['selling_price']);
+    if (total <= 0) total = tagihanAmount + admin + ppn;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: desktopSurfaceCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: desktopBorder.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(color: desktopAccentBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                alignment: Alignment.center,
+                child: const Icon(Icons.wifi_rounded, color: desktopAccentBlue, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _internetInfoPairText('Nama Pelanggan', (data['nama'] ?? data['customer_name'] ?? '-').toString()),
+                        _internetInfoPairText('Periode', periode),
+                      ],
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _internetInfoPairText('ID Pelanggan', (data['idpel'] ?? data['customer_no'] ?? customerId).toString()),
+                        _internetInfoPairText('Tagihan Bulan', periode),
+                      ],
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _internetInfoPairText('Paket', paket),
+                        _internetInfoPair('Status', _statusBadgeChip('Belum Dibayar', desktopErrorRed)),
+                      ],
+                    ),
+                    if (alamat.isNotEmpty) _internetInfoPairText('Alamat', alamat),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text('Rincian Tagihan', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopAccentBlue)),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(color: desktopSurfacePage, borderRadius: BorderRadius.circular(10)),
+            child: Column(
+              children: [
+                _internetRincianRow('Tagihan Paket${paket != '-' ? ' ($paket)' : ''}', _formatPrice(tagihanAmount)),
+                if (ppn > 0) _internetRincianRow('PPN 11%', _formatPrice(ppn)),
+                _internetRincianRow('Admin', _formatPrice(admin)),
+                const SizedBox(height: 6),
+                Divider(color: desktopBorder.withValues(alpha: 0.6), height: 1),
+                const SizedBox(height: 6),
+                _internetRincianRow('Total Tagihan', _formatPrice(total), highlight: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusBadgeChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+      child: Text(text, style: GoogleFonts.hankenGrotesk(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+    );
+  }
+
+  // Layout desktop dua-kolom khusus hub Internet & TV: kiri = pilih
+  // penyedia + ID Pelanggan + tombol "Cek Tagihan" + informasi tagihan
+  // inline, kanan = ringkasan transaksi sticky. Tombol "Bayar Sekarang"
+  // memanggil _payInternetBill (alur PIN yang sama dengan BPJS/PLN Pasca).
+  Widget _buildDesktopInternetLayout() {
+    final data = _internetInquiryResult;
+    final customerId = _customerIdController.text.trim();
+    final periode = data != null ? (data['periode'] ?? '-').toString() : '-';
+    final paket = data != null ? (data['product_name'] ?? _selectedInternetProvider ?? '-').toString() : '-';
+    final tagihanAmount = data != null ? _asDouble(data['nominal'] ?? data['tagihan']) : 0.0;
+    final admin = data != null ? _asDouble(data['admin']) : 0.0;
+    final ppn = data != null ? _asDouble(data['ppn'] ?? data['pajak'] ?? data['tax']) : 0.0;
+    var total = data != null ? _asDouble(data['total'] ?? data['selling_price']) : 0.0;
+    if (data != null && total <= 0) total = tagihanAmount + admin + ppn;
+    final canConfirm = data != null && !_isInternetInquiring;
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: PpobDesktopTwoColumnLayout(
+        left: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDesktopCategoryHeader(
+              titleOverride: 'Pembayaran Internet & TV',
+              subtitleOverride: 'Bayar tagihan internet & TV IndiHome, Iconnet, CBN, MyRepublic, Biznet dengan mudah',
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 1, title: 'Pilih Penyedia'),
+            const SizedBox(height: 14),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _internetProvidersDesktop.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                mainAxisExtent: 108,
+              ),
+              itemBuilder: (_, i) => _internetProviderCard(_internetProvidersDesktop[i]),
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(
+              step: 2,
+              title: 'Masukkan ID Pelanggan',
+              subtitle: 'ID Pelanggan / Nomor Internet',
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: desktopBorderedField(
+                    icon: Icons.person_outline_rounded,
+                    controller: _customerIdController,
+                    focusNode: _customerIdFocusNode,
+                    keyboardType: TextInputType.number,
+                    hint: 'Contoh: 123456789012',
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: _onInternetCustomerIdChangedDesktop,
+                    onSubmitted: (_) => _isInternetInquiring ? null : _doInternetInquiry(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: _isInternetInquiring ? null : _doInternetInquiry,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: desktopPrimaryBtn,
+                      disabledBackgroundColor: desktopPrimaryBtn.withValues(alpha: 0.5),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: _isInternetInquiring
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2.2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                          )
+                        : const Icon(Icons.search_rounded, size: 18, color: Colors.white),
+                    label: Text('Cek Tagihan', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+            if (_internetInquiryError != null && !_isInternetInquiring) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF4F4),
+                  border: Border.all(color: const Color(0xFFF5C2C2)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(_internetInquiryError!, style: GoogleFonts.hankenGrotesk(fontSize: 12.5, color: const Color(0xFFB00020))),
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              const PpobDesktopBanner(
+                icon: Icons.info_outline_rounded,
+                title: 'Pastikan ID Pelanggan / Nomor Internet sesuai dengan tagihan Anda.',
+                tone: PpobBannerTone.info,
+              ),
+            ],
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 3, title: 'Informasi Tagihan'),
+            const SizedBox(height: 12),
+            _buildDesktopInternetBillInfo(),
+            if (data != null) ...[
+              const SizedBox(height: 12),
+              const PpobDesktopBanner(
+                icon: Icons.info_outline_rounded,
+                title: 'Tagihan akan dibayarkan secara real-time dan langsung tercatat.',
+                tone: PpobBannerTone.info,
+              ),
+            ],
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: desktopBorder.withValues(alpha: 0.5)))),
+              child: Row(
+                children: [
+                  _desktopTrustBadge(Icons.bolt_rounded, 'Pembayaran Instan', 'Langsung diproses'),
+                  _desktopTrustBadge(Icons.shield_outlined, 'Aman & Terpercaya', 'Data terenkripsi & aman'),
+                  _desktopTrustBadge(Icons.sync_rounded, 'Update Real-time', 'Tagihan selalu terupdate'),
+                  _desktopTrustBadge(Icons.support_agent_rounded, '24/7 Support', 'Kami siap membantu'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        right: PpobDesktopSummaryPanel(
+          rows: [
+            PpobDetailRow(icon: Icons.wifi_outlined, label: 'Penyedia', value: _selectedInternetProvider ?? '-'),
+            PpobDetailRow(icon: Icons.badge_outlined, label: 'ID Pelanggan', value: data != null ? (data['idpel'] ?? data['customer_no'] ?? customerId).toString() : '-'),
+            PpobDetailRow(icon: Icons.person_outline, label: 'Nama Pelanggan', value: data != null ? (data['nama'] ?? data['customer_name'] ?? '-').toString() : '-'),
+            PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Paket', value: paket),
+            PpobDetailRow(icon: Icons.calendar_month_outlined, label: 'Periode', value: periode),
+            PpobDetailRow(icon: Icons.description_outlined, label: 'Tagihan', value: data != null ? _formatPrice(tagihanAmount) : '-'),
+            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: data != null ? _formatPrice(admin) : '-'),
+          ],
+          totalLabel: data != null ? _formatPrice(total) : 'Rp 0',
+          confirmLabel: 'Bayar Sekarang',
+          loading: _isInternetInquiring,
+          onConfirm: canConfirm ? _payInternetBill : null,
+        ),
+      ),
+    );
+  }
+
+  // ── Hub "Multifinance" (desktop) ────────────────────────────────────────
+  void _onSelectMultifinanceBrand(String brand) {
+    if (_selectedMultifinanceBrand == brand) return;
+    setState(() {
+      _selectedMultifinanceBrand = brand;
+      _multifinanceInquiryResult = null;
+      _multifinanceInquiryError = null;
+    });
+  }
+
+  Widget _multifinanceBrandRow(String brand) {
+    final selected = _selectedMultifinanceBrand == brand;
+    return InkWell(
+      onTap: () => _onSelectMultifinanceBrand(brand),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: selected ? desktopAccentBlue.withValues(alpha: 0.06) : desktopSurfaceCard,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: selected ? desktopAccentBlue : desktopBorder, width: selected ? 1.5 : 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(color: desktopAccentBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+              alignment: Alignment.center,
+              child: const Icon(Icons.account_balance_outlined, color: desktopAccentBlue, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                brand,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopTextPrimary),
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_circle_rounded, color: desktopAccentBlue, size: 18)
+            else
+              Icon(Icons.chevron_right_rounded, color: desktopTextSecondary.withValues(alpha: 0.5), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Layout desktop dua-kolom khusus hub Multifinance: kiri = cari & pilih
+  // provider (33 brand, jadi pakai list+search alih-alih grid ikon seperti
+  // Internet & TV) + ID Pelanggan/Kontrak + tombol "Cek Tagihan" +
+  // informasi tagihan inline, kanan = ringkasan transaksi sticky.
+  Widget _buildDesktopMultifinanceLayout() {
+    final q = _hubSearchQuery.toLowerCase();
+    final filteredBrands = q.isEmpty
+        ? _multifinanceBrands
+        : _multifinanceBrands.where((b) => b.toLowerCase().contains(q)).toList();
+
+    final data = _multifinanceInquiryResult;
+    final customerId = _customerIdController.text.trim();
+    final periode = data != null ? (data['periode'] ?? '-').toString() : '-';
+    final produk = data != null ? (data['product_name'] ?? _selectedMultifinanceBrand ?? '-').toString() : '-';
+    final tagihanAmount = data != null ? _asDouble(data['nominal'] ?? data['tagihan']) : 0.0;
+    final admin = data != null ? _asDouble(data['admin']) : 0.0;
+    final denda = data != null ? _asDouble(data['denda']) : 0.0;
+    var total = data != null ? _asDouble(data['total'] ?? data['selling_price']) : 0.0;
+    if (data != null && total <= 0) total = tagihanAmount + admin + denda;
+    final canConfirm = data != null && !_isMultifinanceInquiring;
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: PpobDesktopTwoColumnLayout(
+        left: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDesktopCategoryHeader(
+              titleOverride: 'Pembayaran Multifinance',
+              subtitleOverride: 'Bayar cicilan/kredit multifinance dari berbagai provider dengan mudah',
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 1, title: 'Pilih Provider Multifinance'),
+            const SizedBox(height: 12),
+            desktopBorderedField(
+              icon: Icons.search_rounded,
+              controller: _hubSearchCtrl,
+              hint: 'Cari provider multifinance…',
+              onChanged: (v) => setState(() => _hubSearchQuery = v.trim()),
+              suffix: _hubSearchQuery.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18, color: desktopTextSecondary),
+                      onPressed: () {
+                        _hubSearchCtrl.clear();
+                        setState(() => _hubSearchQuery = '');
+                      },
+                    ),
+            ),
+            const SizedBox(height: 12),
+            if (filteredBrands.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text('Provider tidak ditemukan', style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary)),
+                ),
+              )
+            else
+              Container(
+                constraints: const BoxConstraints(maxHeight: 280),
+                decoration: BoxDecoration(
+                  border: Border.all(color: desktopBorder.withValues(alpha: 0.6)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(8),
+                child: Scrollbar(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: filteredBrands.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 6),
+                    itemBuilder: (_, i) => _multifinanceBrandRow(filteredBrands[i]),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(
+              step: 2,
+              title: 'Masukkan ID Pelanggan',
+              subtitle: 'Nomor Kontrak / ID Pelanggan',
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: desktopBorderedField(
+                    icon: Icons.badge_outlined,
+                    controller: _customerIdController,
+                    focusNode: _customerIdFocusNode,
+                    keyboardType: TextInputType.number,
+                    hint: 'Contoh: 1234567890',
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (_) => setState(() {
+                      _multifinanceInquiryResult = null;
+                      _multifinanceInquiryError = null;
+                    }),
+                    onSubmitted: (_) => _isMultifinanceInquiring ? null : _doMultifinanceInquiry(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: _isMultifinanceInquiring ? null : _doMultifinanceInquiry,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: desktopPrimaryBtn,
+                      disabledBackgroundColor: desktopPrimaryBtn.withValues(alpha: 0.5),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: _isMultifinanceInquiring
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2.2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                          )
+                        : const Icon(Icons.search_rounded, size: 18, color: Colors.white),
+                    label: Text('Cek Tagihan', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+            if (_multifinanceInquiryError != null && !_isMultifinanceInquiring) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF4F4),
+                  border: Border.all(color: const Color(0xFFF5C2C2)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(_multifinanceInquiryError!, style: GoogleFonts.hankenGrotesk(fontSize: 12.5, color: const Color(0xFFB00020))),
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              const PpobDesktopBanner(
+                icon: Icons.info_outline_rounded,
+                title: 'Pastikan nomor kontrak / ID pelanggan sesuai dengan tagihan Anda.',
+                tone: PpobBannerTone.info,
+              ),
+            ],
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 3, title: 'Informasi Tagihan'),
+            const SizedBox(height: 12),
+            if (data == null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                decoration: BoxDecoration(
+                  color: desktopSurfacePage,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: desktopBorder.withValues(alpha: 0.6)),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(color: desktopSurfaceCard, shape: BoxShape.circle),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.receipt_long_outlined, size: 26, color: desktopTextSecondary),
+                    ),
+                    const SizedBox(height: 14),
+                    Text('Informasi tagihan akan muncul di sini', style: GoogleFonts.hankenGrotesk(fontSize: 13.5, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Lengkapi langkah 1 dan 2, lalu klik "Cek Tagihan" untuk melihat detail tagihan.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: desktopSurfaceCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: desktopBorder.withValues(alpha: 0.6)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(color: desktopAccentBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.account_balance_outlined, color: desktopAccentBlue, size: 28),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _internetInfoPairText('Nama Pelanggan', (data['nama'] ?? data['customer_name'] ?? '-').toString()),
+                                  _internetInfoPairText('Periode', periode),
+                                ],
+                              ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _internetInfoPairText('ID Pelanggan', (data['idpel'] ?? data['customer_no'] ?? customerId).toString()),
+                                  _internetInfoPairText('Provider', _selectedMultifinanceBrand ?? '-'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Rincian Tagihan', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopAccentBlue)),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(color: desktopSurfacePage, borderRadius: BorderRadius.circular(10)),
+                      child: Column(
+                        children: [
+                          _internetRincianRow('Angsuran${produk != '-' ? ' ($produk)' : ''}', _formatPrice(tagihanAmount)),
+                          if (denda > 0) _internetRincianRow('Denda Keterlambatan', _formatPrice(denda)),
+                          _internetRincianRow('Admin', _formatPrice(admin)),
+                          const SizedBox(height: 6),
+                          Divider(color: desktopBorder.withValues(alpha: 0.6), height: 1),
+                          const SizedBox(height: 6),
+                          _internetRincianRow('Total Tagihan', _formatPrice(total), highlight: true),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (data != null) ...[
+              const SizedBox(height: 12),
+              const PpobDesktopBanner(
+                icon: Icons.info_outline_rounded,
+                title: 'Tagihan akan dibayarkan secara real-time dan langsung tercatat.',
+                tone: PpobBannerTone.info,
+              ),
+            ],
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: desktopBorder.withValues(alpha: 0.5)))),
+              child: Row(
+                children: [
+                  _desktopTrustBadge(Icons.bolt_rounded, 'Pembayaran Instan', 'Langsung diproses'),
+                  _desktopTrustBadge(Icons.shield_outlined, 'Aman & Terpercaya', 'Data terenkripsi & aman'),
+                  _desktopTrustBadge(Icons.sync_rounded, 'Update Real-time', 'Tagihan selalu terupdate'),
+                  _desktopTrustBadge(Icons.support_agent_rounded, '24/7 Support', 'Kami siap membantu'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        right: PpobDesktopSummaryPanel(
+          rows: [
+            PpobDetailRow(icon: Icons.account_balance_outlined, label: 'Penyedia', value: _selectedMultifinanceBrand ?? '-'),
+            PpobDetailRow(icon: Icons.badge_outlined, label: 'ID Pelanggan', value: data != null ? (data['idpel'] ?? data['customer_no'] ?? customerId).toString() : '-'),
+            PpobDetailRow(icon: Icons.person_outline, label: 'Nama Pelanggan', value: data != null ? (data['nama'] ?? data['customer_name'] ?? '-').toString() : '-'),
+            PpobDetailRow(icon: Icons.calendar_month_outlined, label: 'Periode', value: periode),
+            PpobDetailRow(icon: Icons.description_outlined, label: 'Angsuran', value: data != null ? _formatPrice(tagihanAmount) : '-'),
+            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: data != null ? _formatPrice(admin) : '-'),
+          ],
+          totalLabel: data != null ? _formatPrice(total) : 'Rp 0',
+          confirmLabel: 'Bayar Sekarang',
+          loading: _isMultifinanceInquiring,
+          onConfirm: canConfirm ? _payMultifinanceBill : null,
+        ),
+      ),
+    );
+  }
+
   // Layout desktop dua-kolom: kiri = input nomor + grid nominal (scroll),
   // kanan = ringkasan transaksi sticky yang update live saat nominal
   // dipilih. Tombol "Konfirmasi Pembayaran" memanggil _onProductSelected
@@ -3767,25 +6001,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         left: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(color: desktopPrimaryBtn.withValues(alpha: 0.08), shape: BoxShape.circle),
-                  alignment: Alignment.center,
-                  child: Icon(_desktopCategoryIcon, color: desktopPrimaryBtn, size: 24),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.title, style: GoogleFonts.hankenGrotesk(fontSize: 20, fontWeight: FontWeight.w800, color: desktopTextPrimary)),
-                    Text(_desktopCategorySubtitle, style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary)),
-                  ],
-                ),
-              ],
-            ),
+            _buildDesktopCategoryHeader(),
             const SizedBox(height: 28),
             const PpobStepHeader(step: 1, title: 'Isi Nomor Tujuan'),
             const SizedBox(height: 12),
@@ -3880,7 +6096,7 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     );
   }
 
-  Widget _buildDesktopProductGrid() {
+  Widget _buildDesktopProductGrid({String? emptyMessage}) {
     if (_isLoadingProducts) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 40),
@@ -3892,7 +6108,8 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Center(
           child: Text(
-            _customerIdController.text.trim().isEmpty ? 'Masukkan nomor tujuan terlebih dahulu' : 'Belum ada produk tersedia',
+            emptyMessage ??
+                (_customerIdController.text.trim().isEmpty ? 'Masukkan nomor tujuan terlebih dahulu' : 'Belum ada produk tersedia'),
             style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary),
           ),
         ),
@@ -3953,18 +6170,41 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             !(_isEmoney && hasInitialBrand) &&
             !(hasInitialBrand && _brands.length <= 1));
 
-    // Layout desktop dua-kolom baru hanya untuk kategori "sederhana" (Pulsa,
-    // Paket Data/Telfon/SMS, dan kategori grid generik lain) yang cocok
-    // dengan referensi desain. Kategori dengan alur khusus (PLN, e-money,
-    // game, inject, hub) tetap pakai layout mobile lama (masih berfungsi
-    // penuh, hanya dipusatkan di window lebar alih-alih dipaksa 460px).
-    final supportsDesktopTwoColumn = !_isPln &&
-        !_isTopupGameFiltered &&
-        !_isCategoryInquiry &&
-        !_isInternetHub &&
-        !_isMultifinanceHub &&
-        !_isEmoney &&
-        !_isInject;
+    // Token Listrik (PLN Prabayar) punya layout desktop khusus meniru
+    // referensi desain: input ID Pelanggan dengan verifikasi otomatis +
+    // grid nominal, terpisah dari layout desktop dua-kolom generik (Pulsa,
+    // dll). Tab Pascabayar (jika ada) tetap pakai layout mobile existing.
+    if (isDesktop(context) && isPlnPrabayarTab) {
+      return _buildDesktopPlnLayout();
+    }
+
+    // PLN Pasca (postpaid) juga punya layout desktop khusus meniru
+    // referensi desain: cek tagihan otomatis + kartu info pelanggan +
+    // rincian tagihan, terpisah dari layout prabayar di atas.
+    if (isDesktop(context) && isPlnPostpaidTab) {
+      return _buildDesktopPlnPascaLayout();
+    }
+
+    // Top Up E-Wallet (hub generik, brand dipilih di dalam halaman ini)
+    // juga punya layout desktop khusus meniru referensi desain. Varian
+    // dengan initialBrand (mis. dari promo card) tetap pakai layout lama.
+    if (isDesktop(context) && _isEmoney && !hasInitialBrand) {
+      return _buildDesktopEwalletLayout();
+    }
+
+    // Hub "Internet & TV" (IndiHome, ICONNET, CBN, MyRepublic, Biznet) juga
+    // punya layout desktop khusus meniru referensi desain.
+    if (isDesktop(context) && _isInternetHub) {
+      return _buildDesktopInternetLayout();
+    }
+
+    // Hub "Multifinance" (33 provider cicilan/kredit) juga punya layout
+    // desktop khusus mengikuti pola yang sama.
+    if (isDesktop(context) && _isMultifinanceHub) {
+      return _buildDesktopMultifinanceLayout();
+    }
+
+    final supportsDesktopTwoColumn = _supportsDesktopTwoColumn;
     if (isDesktop(context) && supportsDesktopTwoColumn) {
       return _buildDesktopLayout(showBrandTabs);
     }
@@ -5318,6 +7558,11 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
                                   color: brandColor,
                                   size: 24,
                                 ),
+                                errorBuilder: (_, __, ___) => Icon(
+                                  brandIcon,
+                                  color: brandColor,
+                                  size: 24,
+                                ),
                               )
                             : Image.asset(
                                 brandLogo,
@@ -5433,6 +7678,28 @@ class _PlnPostpaidInlinePinScreenState
       if (response.containsKey('transaction')) {
         Provider.of<AuthProvider>(context, listen: false).updateBalance();
         final tx = response['transaction'] as Map<String, dynamic>? ?? {};
+
+        if (isDesktop(context)) {
+          TransactionSuccessDialog.show(
+            context: context,
+            subtitle: '${widget.productName} berhasil dibayar',
+            orderId: (tx['order_id'] ?? '-').toString(),
+            rows: [
+              MapEntry('ID Pelanggan', widget.customerNo),
+              MapEntry('Nama', widget.customerName),
+              MapEntry('Produk', widget.productName),
+            ],
+            totalLabel: _formatPrice(widget.amount),
+            onClose: () {
+              // Tutup dialog sukses (root navigator) lalu halaman PIN ini
+              // sendiri (local navigator), balik ke form transaksi.
+              Navigator.of(context, rootNavigator: true).pop();
+              Navigator.of(context).pop();
+            },
+          );
+          return;
+        }
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

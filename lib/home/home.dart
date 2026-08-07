@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:modipay/widgets/desktop_title_wrapper.dart';
-import 'package:modipay/promo/promo_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:modipay/utils/toast.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -39,7 +38,6 @@ import 'package:modipay/design/design.dart';
 import 'transfer/bank_transfer_screen.dart';
 import 'transfer/sendmoney.dart';
 import 'limit/limit_screen.dart';
-import 'topup/topup_channel_screen.dart';
 import 'qris/qris_merchant_screen.dart';
 import 'qris/qris_merchant_register_screen.dart';
 import 'qris/qris_scan_screen.dart';
@@ -593,38 +591,7 @@ class _HomeState extends State<Home> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Transfer ke rekening bank hanya untuk akun yang sudah
-              // diaktifkan admin (transfer_verified). Selaras dengan guard
-              // server-side di BankTransferController.
-              if (auth.transferVerified)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE3F2FD),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.account_balance_rounded, color: Color(0xFF1E88E5)),
-                  ),
-                  title: const Text(
-                    'Transfer ke Rekening Bank',
-                    style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
-                  ),
-                  subtitle: const Text(
-                    'Kirim saldo ke berbagai rekening bank di Indonesia',
-                    style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _openTransaction(const BankTransferScreen());
-                  },
-                ),
               // Transfer sesama pengguna (peer) disembunyikan untuk agen.
-              if (auth.transferVerified && !auth.isAgent)
-                const Divider(height: 24, thickness: 1, color: Color(0xFFF3F4F6)),
               if (!auth.isAgent)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -652,7 +619,7 @@ class _HomeState extends State<Home> {
                   },
                 ),
               // Tidak ada metode transfer yang tersedia untuk akun ini.
-              if (!auth.transferVerified && auth.isAgent)
+              if (auth.isAgent)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
@@ -753,7 +720,7 @@ class _HomeState extends State<Home> {
         // 'topup_game_list'). Override di sini akan membatalkan logika
         // tersebut bila admin menyetel field-field ini dengan nilai keliru.
         return normalized;
-      }).toList();
+      }).where((item) => !isHiddenPpobMenuItem(item)).toList();
     }
 
     setState(() {
@@ -1109,12 +1076,6 @@ class _HomeState extends State<Home> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _buildCardAction(
-                                icon: Icons.add_circle_rounded,
-                                label: 'Isi Saldo',
-                                color: const Color(0xFF1E88E5),
-                                onTap: () => _navigateAndRefresh(const TopupChannelScreen()),
-                              ),
                               _buildCardAction(
                                 icon: Icons.swap_horiz_rounded,
                                 label: 'Transfer',
@@ -1675,7 +1636,7 @@ class _HomeState extends State<Home> {
     if (brandLowerForBpjs.contains('bpjs') ||
         categoryLowerForBpjs.contains('bpjs') ||
         nameLowerForBpjs.contains('bpjs')) {
-      _openTransaction(const BpjsScreen(), customContext: customContext);
+      _openTransaction(const BpjsScreen(), customContext: customContext, wideDesktop: true);
       return;
     }
 
@@ -1687,7 +1648,49 @@ class _HomeState extends State<Home> {
     if (brandLowerForPdam.contains('pdam') ||
         categoryLowerForPdam.contains('pdam') ||
         nameLowerForPdam.contains('pdam')) {
-      _openTransaction(const PdamScreen(), customContext: customContext);
+      _openTransaction(const PdamScreen(), customContext: customContext, wideDesktop: true);
+      return;
+    }
+
+    // "Internet & TV" (item "Indihome" yang di-rename oleh
+    // normalizePpobMenuItem) harus tetap pakai hub multi-provider
+    // PPOBProductScreen._isInternetHub. Intersep di sini SEBELUM
+    // resolvePpobRouteType — tanpa ini, item postpaid generik akan
+    // ke-resolve sebagai routeType 'postpaid' dan dibuka lewat
+    // PPOBPostpaidScreen (layar terpisah yang tidak punya hub/layout ini).
+    final categoryLowerForInternet = (item['category'] ?? '').toString().toLowerCase();
+    final nameLowerForInternet = (item['name'] ?? '').toString().toLowerCase();
+    if (categoryLowerForInternet.contains('tagihan internet') ||
+        nameLowerForInternet == 'internet & tv') {
+      _openTransaction(
+        PPOBProductScreen(
+          category: (item['category'] ?? 'Tagihan Internet').toString(),
+          title: (item['name'] ?? 'Internet & TV').toString(),
+          cmd: (item['cmd'] as String?)?.trim().isNotEmpty == true ? (item['cmd'] as String).trim() : 'pasca',
+        ),
+        customContext: customContext,
+        wideDesktop: true,
+      );
+      return;
+    }
+
+    // "Multifinance" (halaman induk, bukan brand spesifik) juga harus tetap
+    // pakai hub PPOBProductScreen._isMultifinanceHub — intersep sebelum
+    // resolvePpobRouteType dengan alasan yang sama seperti Internet & TV
+    // di atas.
+    final categoryLowerForMultifinance = (item['category'] ?? '').toString().trim().toLowerCase();
+    final nameLowerForMultifinance = (item['name'] ?? '').toString().trim().toLowerCase();
+    if (categoryLowerForMultifinance == 'multifinance' ||
+        nameLowerForMultifinance == 'multifinance') {
+      _openTransaction(
+        PPOBProductScreen(
+          category: (item['category'] ?? 'Multifinance').toString(),
+          title: (item['name'] ?? 'Multifinance').toString(),
+          cmd: (item['cmd'] as String?)?.trim().isNotEmpty == true ? (item['cmd'] as String).trim() : 'pasca',
+        ),
+        customContext: customContext,
+        wideDesktop: true,
+      );
       return;
     }
 
@@ -1772,7 +1775,7 @@ class _HomeState extends State<Home> {
       // PDAM menggunakan screen khusus dengan pilihan kota
       final brandLower = (item['brand'] ?? '').toString().toLowerCase();
       if (brandLower.contains('pdam')) {
-        _openTransaction(const PdamScreen(), customContext: customContext);
+        _openTransaction(const PdamScreen(), customContext: customContext, wideDesktop: true);
       } else {
         _openTransaction(PPOBPostpaidScreen(
           brand: (item['brand'] ?? item['category'] ?? '').toString(),
@@ -2095,12 +2098,6 @@ class _HomeState extends State<Home> {
                     onTap: _desktopActiveScreen != null ? _closeDesktopActiveScreen : _onRefresh,
                   ),
                   _desktopSidebarItem(
-                    icon: Icons.account_balance_wallet_outlined,
-                    label: 'Saldo',
-                    active: _activeDesktopMenu == 'saldo',
-                    onTap: () => _openTransaction(const TopupChannelScreen(), menuKey: 'saldo'),
-                  ),
-                  _desktopSidebarItem(
                     icon: Icons.sim_card_outlined,
                     label: 'Prepaid',
                     expandable: true,
@@ -2118,11 +2115,6 @@ class _HomeState extends State<Home> {
                     onTap: () => setState(() => _postpaidExpanded = !_postpaidExpanded),
                   ),
                   if (_postpaidExpanded) _desktopSidebarSubItems(_pembayaranDisplayItems),
-                  _desktopSidebarItem(
-                    icon: Icons.local_offer_outlined,
-                    label: 'Promo',
-                    onTap: () => _navigateAndRefresh(const PromoScreen()),
-                  ),
                   _desktopSidebarItem(
                     icon: Icons.history_rounded,
                     label: 'Riwayat Transaksi',
@@ -2382,31 +2374,6 @@ class _HomeState extends State<Home> {
                 height: 48,
                 decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(14)),
                 child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 24),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              ElevatedButton.icon(
-                onPressed: () => _openTransaction(const TopupChannelScreen()),
-                icon: const Icon(Icons.add_circle_outline, size: 18),
-                label: const Text('Isi Saldo'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: desktopBalanceGradEnd,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                onPressed: () => _openTransaction(const BankTransferScreen()),
-                icon: const Icon(Icons.send_rounded, size: 16, color: Colors.white),
-                label: const Text('Transfer Bank', style: TextStyle(color: Colors.white)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white54),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
               ),
             ],
           ),

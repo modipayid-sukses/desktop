@@ -5,10 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:modipay/utils/toast.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../utils/responsive.dart';
 import '../../services/api_service.dart';
+import '../../services/app_exception.dart';
 import '../../utils/colornotifire.dart';
+import '../../utils/color.dart';
+import '../../providers/auth_provider.dart';
+import '../../design/design.dart';
 import 'pdam_inquiry_screen.dart';
 import 'components/saved_customers_bottom_sheet.dart';
 
@@ -44,6 +50,12 @@ class _PdamScreenState extends State<PdamScreen> {
   // Inquiry state
   bool _isInquiring = false;
   String? _inquiryError;
+
+  // Desktop: hasil inquiry ditampilkan inline di halaman yang sama (bukan
+  // navigasi ke PdamInquiryResultScreen seperti alur mobile), meniru
+  // referensi desain dua-kolom.
+  Map<String, dynamic>? _inquiryData;
+  bool _isPaying = false;
 
   // Search di bottom-sheet
   final TextEditingController _searchController = TextEditingController();
@@ -270,6 +282,7 @@ class _PdamScreenState extends State<PdamScreen> {
                                   setState(() {
                                     _selectedCity = city;
                                     _inquiryError = null;
+                                    _inquiryData = null;
                                   });
                                   Navigator.pop(ctx);
                                 },
@@ -389,6 +402,10 @@ class _PdamScreenState extends State<PdamScreen> {
 
       if (isSuccess && result['data'] is Map) {
         final data = Map<String, dynamic>.from(result['data'] as Map);
+        if (isDesktop(context)) {
+          setState(() => _inquiryData = data);
+          return;
+        }
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -416,8 +433,11 @@ class _PdamScreenState extends State<PdamScreen> {
   }
 
   void _clearError() {
-    if (_inquiryError != null) {
-      setState(() => _inquiryError = null);
+    if (_inquiryError != null || _inquiryData != null) {
+      setState(() {
+        _inquiryError = null;
+        _inquiryData = null;
+      });
     }
   }
 
@@ -431,8 +451,429 @@ class _PdamScreenState extends State<PdamScreen> {
       setState(() {
         _customerIdController.text = selectedNo;
         _inquiryError = null;
+        _inquiryData = null;
       });
     }
+  }
+
+  // ─── Desktop: helpers & pembayaran inline ───────────────────────────────
+
+  double _toDouble(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
+    final clean = value.toString().replaceAll(RegExp(r'[^0-9.]'), '');
+    return double.tryParse(clean) ?? 0;
+  }
+
+  String _money(dynamic v) {
+    final n = _toDouble(v);
+    return 'Rp ${NumberFormat('#,###', 'id_ID').format(n.toInt())}';
+  }
+
+  List<Map<String, dynamic>> get _tagihanList {
+    final data = _inquiryData;
+    if (data == null || data['tagihan'] is! List) return [];
+    return List<Map<String, dynamic>>.from(
+      (data['tagihan'] as List).whereType<Map>().map(Map<String, dynamic>.from),
+    );
+  }
+
+  /// Alur bayar desktop: dialog PIN kasir (sama seperti flow PPOB desktop
+  /// lain) lalu `ApiService.purchaseLoketbayar` — API yang sama persis
+  /// dengan yang dipakai `_PdamPayPinScreenState._pay` di alur mobile,
+  /// hanya menambahkan kasirCode/kasirPin sesuai pola `TransactionPinAuthDialog`.
+  Future<void> _payDesktop() async {
+    final data = _inquiryData;
+    if (data == null) return;
+    final total = _toDouble(data['total'] ?? data['selling_price']);
+    if (total <= 0) {
+      showToast(msg: 'Total tagihan tidak valid');
+      return;
+    }
+    final refId = (data['ref_id'] ?? '').toString().trim();
+    if (refId.isEmpty) {
+      showToast(msg: 'Ref ID tidak ditemukan, silakan cek tagihan ulang');
+      return;
+    }
+    final kodeProduk = (data['kode_produk'] ??
+            (_selectedCity != null ? _citySkuOf(_selectedCity!) : ''))
+        .toString();
+    final customerNo =
+        (data['idpel'] ?? data['customer_no'] ?? _customerIdController.text.trim()).toString();
+    final customerName = (data['nama'] ?? data['customer_name'] ?? '-').toString();
+    final cityName = _selectedCity != null ? _cityNameOf(_selectedCity!) : 'PDAM';
+
+    await TransactionPinAuthDialog.show(
+      context: context,
+      onConfirm: (kasirCode, kasirPin) async {
+        setState(() => _isPaying = true);
+        final stopwatch = Stopwatch()..start();
+        try {
+          final response = await ApiService.purchaseLoketbayar(
+            kodeProduk: kodeProduk,
+            customerNo: customerNo,
+            nominal: total.toInt(),
+            refId: refId,
+            pin: kasirPin,
+            kasirCode: kasirCode,
+            kasirPin: kasirPin,
+            productName: 'PDAM $cityName',
+          );
+          stopwatch.stop();
+          if (!mounted) return;
+          setState(() => _isPaying = false);
+
+          if (response.containsKey('transaction')) {
+            Provider.of<AuthProvider>(context, listen: false).updateBalance();
+            final tx = response['transaction'] as Map<String, dynamic>? ?? {};
+            Navigator.of(context, rootNavigator: true).pop();
+            TransactionSuccessDialog.show(
+              context: context,
+              subtitle: 'Tagihan PDAM $cityName berhasil dibayar',
+              orderId: (tx['order_id'] ?? '-').toString(),
+              rows: [
+                MapEntry('ID Pelanggan', customerNo),
+                MapEntry('Nama', customerName),
+                MapEntry('Wilayah', cityName),
+              ],
+              totalLabel: _money(total),
+            );
+          } else {
+            throw AppException(response['message']?.toString() ?? 'Pembayaran gagal');
+          }
+        } catch (e) {
+          if (mounted) setState(() => _isPaying = false);
+          if (e is AppException) rethrow;
+          throw AppException(ApiService.userFriendlyMessage(e, fallback: 'Pembayaran gagal'));
+        }
+      },
+    );
+  }
+
+  Widget _desktopHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(color: desktopPrimaryBtn.withValues(alpha: 0.08), shape: BoxShape.circle),
+          alignment: Alignment.center,
+          child: const Icon(Icons.water_drop_rounded, color: desktopPrimaryBtn, size: 24),
+        ),
+        const SizedBox(width: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Pembayaran PDAM', style: GoogleFonts.hankenGrotesk(fontSize: 20, fontWeight: FontWeight.w800, color: desktopTextPrimary)),
+            Text('Bayar tagihan air PDAM dengan mudah dan cepat', style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _desktopDropdownField() {
+    return InkWell(
+      onTap: _showCityPicker,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: desktopSurfaceCard,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: desktopBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_outlined, size: 20, color: desktopTextSecondary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedCity != null
+                    ? _cityNameOf(_selectedCity!)
+                    : (_isLoadingCities ? 'Memuat daftar kota...' : 'Pilih wilayah PDAM'),
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 14,
+                  fontWeight: _selectedCity != null ? FontWeight.w700 : FontWeight.w500,
+                  color: _selectedCity != null ? desktopTextPrimary : desktopTextSecondary.withValues(alpha: 0.7),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (_isLoadingCities)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(desktopAccentBlue)),
+              )
+            else
+              const Icon(Icons.keyboard_arrow_down_rounded, color: desktopTextSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _desktopTrustBadge(IconData icon, String title, String subtitle) {
+    return Expanded(
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: desktopAccentBlue),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title, style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+                Text(subtitle, style: GoogleFonts.hankenGrotesk(fontSize: 10.5, color: desktopTextSecondary)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _billInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: Text(label, style: GoogleFonts.hankenGrotesk(fontSize: 12.5, color: desktopTextSecondary))),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopTextPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopBillInfo() {
+    final data = _inquiryData;
+    if (data == null) {
+      // ── Empty state: "Informasi tagihan akan muncul di sini" ──────────
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        decoration: BoxDecoration(
+          color: desktopSurfacePage,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: desktopBorder.withValues(alpha: 0.6)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(color: desktopSurfaceCard, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: const Icon(Icons.receipt_long_outlined, size: 26, color: desktopTextSecondary),
+            ),
+            const SizedBox(height: 14),
+            Text('Informasi tagihan akan muncul di sini', style: GoogleFonts.hankenGrotesk(fontSize: 13.5, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+            const SizedBox(height: 4),
+            Text(
+              'Lengkapi langkah 1 dan 2, lalu klik "Cek Tagihan" untuk melihat detail tagihan.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.hankenGrotesk(fontSize: 12, color: desktopTextSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final customerId = _customerIdController.text.trim();
+    final tagihan = _tagihanList;
+    final cityName = _selectedCity != null ? _cityNameOf(_selectedCity!) : '-';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: desktopSurfacePage,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Data Pelanggan', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+          const SizedBox(height: 8),
+          _billInfoRow('No. Pelanggan', (data['idpel'] ?? data['customer_no'] ?? customerId).toString()),
+          _billInfoRow('Nama', (data['nama'] ?? data['customer_name'] ?? '-').toString()),
+          _billInfoRow('Kota', cityName),
+          if ((data['alamat'] ?? '').toString().isNotEmpty) _billInfoRow('Alamat', data['alamat'].toString()),
+          if (tagihan.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Divider(color: desktopBorder.withValues(alpha: 0.6), height: 1),
+            const SizedBox(height: 10),
+            Text('Rincian Pemakaian', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+            const SizedBox(height: 8),
+            for (int i = 0; i < tagihan.length; i++) ...[
+              if (i > 0) const SizedBox(height: 6),
+              _billInfoRow('Periode', (tagihan[i]['periode'] ?? '-').toString()),
+              if (tagihan[i]['pemakaian'] != null) _billInfoRow('Pemakaian', '${tagihan[i]['pemakaian']} m³'),
+              _billInfoRow('Tagihan', _money(tagihan[i]['nominal'] ?? tagihan[i]['tagihan'])),
+            ],
+          ],
+          const SizedBox(height: 14),
+          Divider(color: desktopBorder.withValues(alpha: 0.6), height: 1),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(color: desktopSurfaceCard, borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              children: [
+                Text('Total Bayar', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopTextSecondary)),
+                const Spacer(),
+                Text(
+                  _money(data['total'] ?? data['selling_price']),
+                  style: GoogleFonts.hankenGrotesk(fontSize: 17, fontWeight: FontWeight.w800, color: desktopAccentBlue),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Layout desktop dua-kolom khusus PDAM: kiri = pilih wilayah + ID
+  // Pelanggan + tombol "Cek Tagihan" + informasi tagihan inline, kanan =
+  // ringkasan transaksi sticky. Tombol "Bayar Sekarang" memanggil
+  // _payDesktop (dialog PIN kasir lalu ApiService.purchaseLoketbayar).
+  Widget _buildDesktopLayout() {
+    final data = _inquiryData;
+    final customerId = _customerIdController.text.trim();
+    final cityName = _selectedCity != null ? _cityNameOf(_selectedCity!) : null;
+    final total = data != null ? _toDouble(data['total'] ?? data['selling_price']) : 0.0;
+    final tagihanAmount = data != null ? _toDouble(data['nominal'] ?? data['tagihan']) : 0.0;
+    final admin = data != null ? _toDouble(data['admin']) : 0.0;
+    final periode = _tagihanList.isNotEmpty ? (_tagihanList.first['periode'] ?? '-').toString() : '-';
+    final canConfirm = data != null && !_isPaying;
+
+    return Scaffold(
+      backgroundColor: desktopSurfacePage,
+      body: PpobDesktopTwoColumnLayout(
+        left: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _desktopHeader(),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 1, title: 'Masukkan Wilayah PDAM'),
+            const SizedBox(height: 12),
+            _desktopDropdownField(),
+            const SizedBox(height: 12),
+            const PpobDesktopBanner(
+              icon: Icons.info_outline_rounded,
+              title: 'Pastikan wilayah PDAM yang Anda pilih sesuai dengan tempat pelanggan.',
+              tone: PpobBannerTone.info,
+            ),
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 2, title: 'Masukkan ID Pelanggan'),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: desktopBorderedField(
+                    icon: Icons.person_outline_rounded,
+                    controller: _customerIdController,
+                    focusNode: _customerIdFocus,
+                    keyboardType: TextInputType.number,
+                    hint: 'Contoh: 12345678901',
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (_) => _clearError(),
+                    onSubmitted: (_) => _isInquiring ? null : _doInquiry(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _isInquiring ? null : _doInquiry,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: desktopPrimaryBtn,
+                      disabledBackgroundColor: desktopPrimaryBtn.withValues(alpha: 0.5),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: _isInquiring
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.4, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                          )
+                        : Text('Cek Tagihan', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+            if (_inquiryError != null && !_isInquiring) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _kErrorBg,
+                  border: Border.all(color: _kErrorBorder),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(_inquiryError!, style: GoogleFonts.hankenGrotesk(fontSize: 12.5, color: _kErrorText)),
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              const PpobDesktopBanner(
+                icon: Icons.info_outline_rounded,
+                title: 'Masukkan ID Pelanggan dengan benar untuk mendapatkan informasi tagihan.',
+                tone: PpobBannerTone.info,
+              ),
+            ],
+            const SizedBox(height: 28),
+            const PpobStepHeader(step: 3, title: 'Informasi Tagihan'),
+            const SizedBox(height: 12),
+            _buildDesktopBillInfo(),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: desktopBorder.withValues(alpha: 0.5)))),
+              child: Row(
+                children: [
+                  _desktopTrustBadge(Icons.verified_rounded, 'Tagihan Resmi', 'Langsung dari PDAM'),
+                  _desktopTrustBadge(Icons.bolt_rounded, 'Proses Cepat', '1-3 detik'),
+                  _desktopTrustBadge(Icons.shield_outlined, 'Aman & Terpercaya', 'Transaksi terenkripsi'),
+                  _desktopTrustBadge(Icons.access_time_rounded, '24/7', 'Layanan tersedia'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        right: PpobDesktopSummaryPanel(
+          rows: [
+            const PpobDetailRow(icon: Icons.water_drop_outlined, label: 'Penyedia', value: 'PDAM'),
+            PpobDetailRow(icon: Icons.location_on_outlined, label: 'Wilayah PDAM', value: cityName ?? '-'),
+            PpobDetailRow(icon: Icons.badge_outlined, label: 'ID Pelanggan', value: data != null ? (data['idpel'] ?? data['customer_no'] ?? customerId).toString() : '-'),
+            PpobDetailRow(icon: Icons.person_outline, label: 'Nama Pelanggan', value: data != null ? (data['nama'] ?? data['customer_name'] ?? '-').toString() : '-'),
+            const PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Produk', value: 'Pembayaran PDAM'),
+            PpobDetailRow(icon: Icons.calendar_month_outlined, label: 'Bulan Tagihan', value: data != null ? periode : '-'),
+            PpobDetailRow(icon: Icons.description_outlined, label: 'Jumlah Tagihan', value: data != null ? _money(tagihanAmount) : '-'),
+            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: data != null ? _money(admin) : '-'),
+          ],
+          totalLabel: data != null ? _money(total) : 'Rp 0',
+          confirmLabel: 'Bayar Sekarang',
+          loading: _isPaying,
+          onConfirm: canConfirm ? _payDesktop : null,
+        ),
+      ),
+    );
   }
 
   // ─── Build ──────────────────────────────────────────────────────────────
@@ -440,6 +881,10 @@ class _PdamScreenState extends State<PdamScreen> {
   @override
   Widget build(BuildContext context) {
     notifire = Provider.of<ColorNotifire>(context, listen: true);
+
+    if (isDesktop(context)) {
+      return _buildDesktopLayout();
+    }
 
     return Scaffold(
       resizeToAvoidBottomInset: false,

@@ -7,3 +7,5 @@ export 'app_text_field.dart';
 export 'app_badge.dart';
 export 'app_alert.dart';
 export 'ppob_desktop_widgets.dart';
+export 'transaction_pin_auth_dialog.dart';
+export 'transaction_success_dialog.dart';

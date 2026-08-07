@@ -94,6 +94,22 @@ Map<String, dynamic> normalizePpobMenuItem(
     item['inquiryType'] = 'pln';
   }
 
+  // Item "Indihome" tunggal dari admin panel dibuka sebagai hub multi-provider
+  // "Internet & TV" (IndiHome, ICONNET, CBN, MyRepublic, Biznet) — cocokkan
+  // category ke 'Tagihan Internet' supaya PPOBProductScreen._isInternetHub
+  // ter-trigger (lihat ppob_product_screen.dart). Dicek longgar (contains,
+  // bukan exact-match) karena admin panel bisa memberi category/name yang
+  // sudah mengandung kata lain di sekitarnya (mis. "Tagihan Indihome").
+  final brandLowerForIndihome = (item['brand'] ?? '').toString().trim().toLowerCase();
+  final isIndihomeLike = !nameLower.contains('tagihan internet') &&
+      (categoryLower.contains('indihome') ||
+          nameLower.contains('indihome') ||
+          brandLowerForIndihome.contains('indihome'));
+  if (isIndihomeLike) {
+    item['name'] = 'Internet & TV';
+    item['category'] = 'Tagihan Internet';
+  }
+
   // Tandai shortcut "TopUp Game" pada grid pembelian (bukan item brand game
   // individual seperti "Free Fire"). Shortcut ini akan dibuka sebagai daftar
   // game (PPOBTopUpGameListScreen) — penanda dipakai di home untuk routing.
@@ -266,4 +282,30 @@ void reclassifyPostpaidItems(
     pembayaran.add(item);
     return true;
   });
+}
+
+// Menu yang disembunyikan dari seluruh tampilan (sidebar, quick-access
+// dashboard, "Lihat Semua", promo, riwayat) tanpa perlu ubah admin panel.
+const List<String> _hiddenMenuKeywords = [
+  'gas negara',
+  'pgn',
+  'tv pasca',
+  'tv berbayar',
+  'tv kabel',
+];
+
+bool isHiddenPpobMenuItem(Map<String, dynamic> item) {
+  final name = (item['name'] ?? '').toString().trim().toLowerCase();
+  final category = (item['category'] ?? '').toString().toLowerCase();
+  final hay = '$name $category';
+  if (_hiddenMenuKeywords.any((k) => hay.contains(k))) return true;
+
+  // Item "Tagihan Internet" berdiri sendiri di admin panel selain
+  // "Indihome" (yang di-rename jadi "Internet & TV" dan otomatis diberi
+  // category yang sama persis — lihat blok isIndihomeLike di atas).
+  // Dicek exact-match pada NAMA saja supaya hasil rename Indihome tidak
+  // ikut tersembunyi.
+  if (name == 'tagihan internet') return true;
+
+  return false;
 }

@@ -11,7 +11,7 @@ class ApiService {
   // Override with --dart-define=API_BASE_URL=http://<your-ip>:8000/api for local dev.
   static const String _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://dev.modipay.biz.id/api',
+    defaultValue: 'https://desktop.modipay.biz.id/api',
   );
 
   static String get baseUrl => _baseUrl;
@@ -1054,6 +1054,13 @@ class ApiService {
     String? category,
     String paymentSource = 'saldo',
     double? amount,
+    // Identifies the desktop-app cashier who confirmed this sale. The
+    // backend decides whether these are actually required (a store only
+    // enforces kasir_code/kasir_pin once it has at least one Kasir
+    // registered — see ValidatesKasir::validateKasirOrPin server-side), so
+    // it's safe to always pass them alongside `pin`.
+    String? kasirCode,
+    String? kasirPin,
   }) async {
     return _postJson(
       '$_baseUrl/ppob/purchase',
@@ -1067,6 +1074,8 @@ class ApiService {
         if (category != null && category.isNotEmpty) 'category': category,
         'payment_source': paymentSource,
         if (amount != null) 'amount': amount,
+        if (kasirCode != null) 'kasir_code': kasirCode,
+        if (kasirPin != null) 'kasir_pin': kasirPin,
       }),
       fallbackMessage: 'Gagal melakukan pembelian.',
     );
@@ -1083,6 +1092,8 @@ class ApiService {
     bool biometricAuth = false,
     String paymentSource = 'saldo',
     String? productName,
+    String? kasirCode,
+    String? kasirPin,
   }) async {
     return _postJson(
       '$_baseUrl/loketbayar/purchase',
@@ -1096,6 +1107,8 @@ class ApiService {
         if (biometricAuth) 'biometric_auth': true,
         'payment_source': paymentSource,
         if (productName != null) 'product_name': productName,
+        if (kasirCode != null) 'kasir_code': kasirCode,
+        if (kasirPin != null) 'kasir_pin': kasirPin,
       }),
       fallbackMessage: 'Gagal melakukan pembelian.',
     );

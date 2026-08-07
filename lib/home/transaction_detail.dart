@@ -1,13 +1,23 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:modipay/bottombar/bottombar.dart';
 import 'package:modipay/home/print_receipt_page.dart';
 import 'package:modipay/services/api_service.dart' show ApiService;
 import 'package:intl/intl.dart';
+import 'package:modipay/utils/color.dart';
+import 'package:modipay/utils/responsive.dart';
 import 'package:modipay/utils/transaction_helpers.dart';
 import 'package:modipay/profile/complaint_form_screen.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 
 class TransactionDetail extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -20,6 +30,8 @@ class TransactionDetail extends StatefulWidget {
 class _TransactionDetailState extends State<TransactionDetail> {
   Map<String, dynamic> _hydratedPlnData = const {};
   bool _isCheckingStatus = false;
+  final GlobalKey _desktopReceiptKey = GlobalKey();
+  bool _isCapturingReceipt = false;
 
   @override
   void initState() {
@@ -58,6 +70,14 @@ class _TransactionDetailState extends State<TransactionDetail> {
   String _cleanOrderId(String value) {
     if (value.startsWith('PPOB-')) return value.substring(5);
     return value;
+  }
+
+  /// Beberapa provider (PLN sandbox/dummy) mengembalikan `customer_name`
+  /// yang sudah dibungkus label sendiri, mis. "NAMA: TEST USER" — buang
+  /// prefix itu supaya tidak dobel dengan label "Nama"/"Nama Penerima"
+  /// yang sudah kita render di UI.
+  String _stripNamePrefix(String value) {
+    return value.replaceFirst(RegExp(r'^\s*nama\s*:\s*', caseSensitive: false), '').trim();
   }
 
   String _formatTokenCode(String token) {
@@ -265,6 +285,109 @@ class _TransactionDetailState extends State<TransactionDetail> {
             PrintReceiptPage(data: _data, autoDownload: autoDownload),
       ),
     );
+  }
+
+  // ----------------- desktop receipt capture (Bukti Transaksi) -----------------
+
+  Future<Uint8List?> _captureDesktopReceipt() async {
+    try {
+      final boundary = _desktopReceiptKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _requestGalleryPermission() async {
+    if (Platform.isIOS) {
+      final status = await Permission.photos.request();
+      return status.isGranted || status.isLimited;
+    }
+    if (Platform.isAndroid) {
+      final photoStatus = await Permission.photos.request();
+      if (photoStatus.isGranted || photoStatus.isLimited) return true;
+      final storageStatus = await Permission.storage.request();
+      return storageStatus.isGranted;
+    }
+    return true;
+  }
+
+  Future<void> _downloadDesktopReceipt() async {
+    if (_isCapturingReceipt) return;
+    setState(() => _isCapturingReceipt = true);
+    try {
+      final granted = await _requestGalleryPermission();
+      if (!granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Izin penyimpanan ditolak')),
+        );
+        return;
+      }
+      final bytes = await _captureDesktopReceipt();
+      if (bytes == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menyimpan bukti transaksi')),
+        );
+        return;
+      }
+      final orderId = (_data['order_id'] ?? _data['id'] ??
+              DateTime.now().millisecondsSinceEpoch)
+          .toString();
+      final result = await ImageGallerySaverPlus.saveImage(
+        bytes,
+        name: 'BUKTI_TRANSAKSI_$orderId',
+      );
+      if (!mounted) return;
+      final ok = result is Map ? result['isSuccess'] == true : false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ok
+              ? 'Bukti transaksi berhasil disimpan'
+              : 'Gagal menyimpan bukti transaksi'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal menyimpan bukti transaksi')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCapturingReceipt = false);
+    }
+  }
+
+  Future<void> _shareDesktopReceipt() async {
+    if (_isCapturingReceipt) return;
+    setState(() => _isCapturingReceipt = true);
+    try {
+      final bytes = await _captureDesktopReceipt();
+      if (bytes == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal membagikan bukti transaksi')),
+        );
+        return;
+      }
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/bukti_transaksi_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles([XFile(file.path)], text: 'Bukti transaksi');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal membagikan bukti transaksi')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCapturingReceipt = false);
+    }
   }
 
   // ----------------- check status -----------------
@@ -665,6 +788,10 @@ class _TransactionDetailState extends State<TransactionDetail> {
 
   @override
   Widget build(BuildContext context) {
+    if (isDesktop(context)) {
+      return _buildDesktopLayout(context);
+    }
+
     final data = _data;
     final amount = _parseAmount(data['amount']);
     final orderId =
@@ -1124,6 +1251,1024 @@ class _TransactionDetailState extends State<TransactionDetail> {
     );
   }
 
+  // ================= Desktop layout ("Detail Transaksi" two-column) =======
+  //
+  // Wide/desktop-only redesign matching the "Vivid Enterprise" reference:
+  // left card = full transaction breakdown, right card = printable "Bukti
+  // Transaksi" receipt with download/share actions, bottom = PRINT/CEK
+  // STATUS. Mobile layout above is untouched. Reuses the same data-parsing
+  // helpers as the mobile branch (`_buildCategoryRows`) via
+  // `_desktopCategoryData` so both stay in sync with backend field names.
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    final data = _data;
+    final amount = _parseAmount(data['amount']);
+    final orderId = (data['order_id'] ?? data['id'] ?? '-').toString();
+    final cleanOrderId = _cleanOrderId(orderId);
+    final productName =
+        (data['name'] ?? data['product_name'] ?? '-').toString();
+    final category = (data['category'] ?? '-').toString();
+    final rawStatus = (data['status'] ??
+            data['transaction_status'] ??
+            data['payment_status'] ??
+            'pending')
+        .toString();
+    final status = _normalizeStatus(rawStatus);
+    final createdAt = parseDateTime(data['created_at']);
+    final customerNo = _pickFirstNonEmpty([
+      data['customer_no'],
+      data['customer_id'],
+      data['destination'],
+      data['target'],
+      data['phone_number'],
+    ]);
+    final paymentMethod =
+        _pickFirstNonEmpty([data['payment_method'], data['bank_name']]);
+
+    final isPending = status == 'pending';
+    final isSuccess = status == 'success';
+    final isExpired = status == 'expired';
+
+    final statusColor = isSuccess
+        ? desktopSuccessFg
+        : (isPending
+            ? desktopWarningAmber
+            : (isExpired ? desktopTextSecondary : desktopErrorRed));
+    final statusBg = isSuccess
+        ? desktopSuccessBg
+        : (isPending
+            ? desktopWarningAmber.withValues(alpha: 0.12)
+            : (isExpired
+                ? desktopTextSecondary.withValues(alpha: 0.1)
+                : desktopErrorRed.withValues(alpha: 0.1)));
+    final statusIcon = isSuccess
+        ? Icons.check_circle_rounded
+        : (isPending
+            ? Icons.access_time_rounded
+            : (isExpired ? Icons.timer_off_outlined : Icons.error_rounded));
+    final statusLabel = isSuccess
+        ? 'Sukses'
+        : (isPending
+            ? 'Dalam Proses'
+            : (isExpired ? 'Kedaluwarsa' : 'Gagal'));
+    final statusBanner = isSuccess
+        ? 'Transaksi Berhasil'
+        : (isPending
+            ? 'Transaksi Dalam Proses'
+            : (isExpired ? 'Transaksi Kedaluwarsa' : 'Transaksi Gagal'));
+    final statusSubtitle = isSuccess
+        ? 'Terima kasih, transaksi Anda berhasil diproses.'
+        : (isPending
+            ? 'Transaksi Anda sedang diproses, mohon tunggu.'
+            : (isExpired
+                ? 'Transaksi ini sudah tidak berlaku.'
+                : 'Transaksi tidak dapat diproses.'));
+
+    final currencyFormat = NumberFormat('#,###', 'id_ID');
+    final headerDateFormat = DateFormat('d MMM yyyy • HH:mm', 'id_ID');
+    final detailDateFormat = DateFormat('dd MMM yyyy, HH:mm:ss', 'id_ID');
+    final kind = _detectKind();
+
+    final catData = _desktopCategoryData(
+      kind: kind,
+      data: data,
+      orderId: orderId,
+      amount: amount,
+      customerNo: customerNo,
+      paymentMethod: paymentMethod,
+      currencyFormat: currencyFormat,
+    );
+
+    final leftRows = <_KV>[
+      _KV('Id transaksi', cleanOrderId, copyable: true),
+      _KV('Nama Produk', productName),
+      ...catData.rows,
+    ];
+
+    final receiptRows = <_KV>[
+      _KV('Produk', productName),
+      // "No. Ref"/"No. Referensi" selalu ditambahkan ulang di bawah dengan
+      // label baku "No. Referensi" — buang dulu biar tidak dobel di struk.
+      ...catData.rows.where((e) => e.label != 'No. Referensi' && e.label != 'No. Ref'),
+      _KV('ID Transaksi', cleanOrderId, copyable: true, dividerBefore: true),
+      _KV('No. Referensi', cleanOrderId),
+    ];
+
+    // Everything (title bar, both cards, PRINT/CEK STATUS) lives inside one
+    // shared max-width panel so the header always lines up with the content
+    // beneath it — previously the title bar spanned the full window while
+    // the cards were centered in a narrower column, so on wide windows the
+    // title drifted away from what it was labeling.
+    const panelMaxWidth = 1080.0;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFE8EAEF),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: panelMaxWidth),
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: desktopSurfacePage,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: desktopBorder.withValues(alpha: 0.35)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 28, offset: const Offset(0, 14)),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            decoration: BoxDecoration(
+                              color: desktopSurfaceCard,
+                              border: Border(
+                                bottom: BorderSide(color: desktopBorder.withValues(alpha: 0.3)),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                InkWell(
+                                  onTap: () => Navigator.pop(context),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(6),
+                                    child: Icon(Icons.close_rounded, size: 22, color: desktopTextPrimary),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    'Detail Transaksi',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.hankenGrotesk(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      color: desktopTextPrimary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 34),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: _desktopLeftCard(
+                                        statusColor: statusColor,
+                                        statusBg: statusBg,
+                                        statusIcon: statusIcon,
+                                        statusBanner: statusBanner,
+                                        statusSubtitle: statusSubtitle,
+                                        statusLabel: statusLabel,
+                                        headerDateLabel: headerDateFormat.format(createdAt),
+                                        orderId: cleanOrderId,
+                                        productName: productName,
+                                        category: category,
+                                        kind: kind,
+                                        rows: leftRows,
+                                        infoText: catData.infoText,
+                                        footerRows: [
+                                          _KV('Waktu', detailDateFormat.format(createdAt)),
+                                          _KV(
+                                            'Sumber Dana',
+                                            (data['payment_source'] ?? 'saldo').toString() == 'limit'
+                                                ? 'Limit'
+                                                : 'Saldo',
+                                          ),
+                                        ],
+                                        statusRowColor: statusColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 24),
+                                    SizedBox(
+                                      width: 340,
+                                      child: _desktopReceiptCard(
+                                        statusColor: statusColor,
+                                        statusBg: statusBg,
+                                        statusIcon: statusIcon,
+                                        statusBanner: statusBanner,
+                                        dateLabel: detailDateFormat.format(createdAt),
+                                        rows: receiptRows,
+                                        infoText: catData.infoText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                                _desktopActionRow(isPending: isPending),
+                                if (status == 'pending' || status == 'failed') ...[
+                                  const SizedBox(height: 14),
+                                  Center(
+                                    child: TextButton(
+                                      onPressed: () {
+                                        final txId = data['id'] is int
+                                            ? data['id'] as int
+                                            : int.tryParse(data['id']?.toString() ?? '');
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ComplaintFormScreen(
+                                              transactionId: txId,
+                                              transactionCode: orderId,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        'Laporkan Masalah',
+                                        style: GoogleFonts.hankenGrotesk(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: desktopErrorRed,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _desktopLeftCard({
+    required Color statusColor,
+    required Color statusBg,
+    required IconData statusIcon,
+    required String statusBanner,
+    required String statusSubtitle,
+    required String statusLabel,
+    required String headerDateLabel,
+    required String orderId,
+    required String productName,
+    required String category,
+    required String kind,
+    required List<_KV> rows,
+    required String infoText,
+    required List<_KV> footerRows,
+    required Color statusRowColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: desktopSurfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: desktopBorder.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: statusBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(statusIcon, size: 20, color: statusColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        statusBanner,
+                        style: GoogleFonts.hankenGrotesk(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: statusColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        statusSubtitle,
+                        style: GoogleFonts.hankenGrotesk(fontSize: 12.5, color: desktopTextSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text(
+                headerDateLabel,
+                style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary),
+              ),
+              Text(
+                '  •  ID Transaksi: ',
+                style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary),
+              ),
+              Flexible(
+                child: Text(
+                  orderId,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: desktopAccentBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Divider(color: desktopBorder.withValues(alpha: 0.5)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: desktopAccentBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                alignment: Alignment.center,
+                child: _categoryIconFallback(kind, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      productName,
+                      style: GoogleFonts.hankenGrotesk(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: desktopTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: desktopSurfacePage,
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Text(
+                            category.toUpperCase(),
+                            style: GoogleFonts.hankenGrotesk(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: desktopTextSecondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: statusColor.withValues(alpha: 0.5)),
+                          ),
+                          child: Text(
+                            statusLabel,
+                            style: GoogleFonts.hankenGrotesk(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Divider(color: desktopBorder.withValues(alpha: 0.5)),
+          const SizedBox(height: 14),
+          Text(
+            'Detail Transaksi',
+            style: GoogleFonts.hankenGrotesk(fontSize: 15, fontWeight: FontWeight.w800, color: desktopTextPrimary),
+          ),
+          const SizedBox(height: 10),
+          for (final kv in rows) _desktopRowOrTotal(kv, statusRowColor: statusRowColor),
+          if (infoText.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Info',
+              style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopTextSecondary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              infoText,
+              style: GoogleFonts.hankenGrotesk(fontSize: 12.5, color: desktopTextSecondary, height: 1.45),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Divider(color: desktopBorder.withValues(alpha: 0.5)),
+          const SizedBox(height: 4),
+          for (final kv in footerRows) _desktopDetailRow(kv),
+          _desktopDetailRow(_KV('Status', statusLabel), valueColor: statusRowColor, isBadge: true, badgeBg: statusBg),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopRowOrTotal(_KV kv, {required Color statusRowColor}) {
+    if (kv.isTotal) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: desktopAccentBlue.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(kv.label, style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+              Text(
+                kv.value,
+                style: GoogleFonts.hankenGrotesk(fontSize: 18, fontWeight: FontWeight.w800, color: desktopAccentBlue),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return _desktopDetailRow(kv);
+  }
+
+  Widget _desktopDetailRow(
+    _KV kv, {
+    Color? valueColor,
+    bool isBadge = false,
+    Color? badgeBg,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              kv.label,
+              style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: isBadge
+                      ? Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              kv.value,
+                              style: GoogleFonts.hankenGrotesk(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: valueColor ?? desktopTextPrimary,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          kv.value,
+                          textAlign: TextAlign.right,
+                          style: GoogleFonts.hankenGrotesk(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: valueColor ?? desktopTextPrimary,
+                          ),
+                        ),
+                ),
+                if (kv.copyable) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () async {
+                      await Clipboard.setData(ClipboardData(text: kv.copyValue ?? kv.value));
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${kv.label} disalin')),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: const Padding(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(Icons.copy_rounded, size: 14, color: desktopAccentBlue),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopReceiptCard({
+    required Color statusColor,
+    required Color statusBg,
+    required IconData statusIcon,
+    required String statusBanner,
+    required String dateLabel,
+    required List<_KV> rows,
+    required String infoText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bukti Transaksi',
+          style: GoogleFonts.hankenGrotesk(fontSize: 15, fontWeight: FontWeight.w800, color: desktopTextPrimary),
+        ),
+        const SizedBox(height: 14),
+        ClipPath(
+          clipper: const _ReceiptScallopClipper(),
+          child: RepaintBoundary(
+            key: _desktopReceiptKey,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              decoration: BoxDecoration(
+                color: desktopSurfaceCard,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 18, offset: const Offset(0, 8)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(color: desktopAccentBlue, shape: BoxShape.circle),
+                        alignment: Alignment.center,
+                        child: Text('m', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'modipay',
+                        style: GoogleFonts.hankenGrotesk(fontSize: 17, fontWeight: FontWeight.w800, color: desktopAccentBlue),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 13, color: statusColor),
+                          const SizedBox(width: 5),
+                          Text(
+                            statusBanner,
+                            style: GoogleFonts.hankenGrotesk(fontSize: 11.5, fontWeight: FontWeight.w800, color: statusColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Text(
+                      dateLabel,
+                      style: GoogleFonts.hankenGrotesk(fontSize: 11.5, color: desktopTextSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(color: desktopBorder.withValues(alpha: 0.5), height: 1),
+                  const SizedBox(height: 8),
+                  for (final kv in rows) ...[
+                    if (kv.dividerBefore || kv.isTotal) ...[
+                      const SizedBox(height: 4),
+                      Divider(color: desktopBorder.withValues(alpha: 0.4), height: 1),
+                      const SizedBox(height: 8),
+                    ],
+                    kv.isTotal
+                        ? Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Text(kv.label, style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopTextPrimary)),
+                                const Spacer(),
+                                Text(
+                                  kv.value,
+                                  style: GoogleFonts.hankenGrotesk(fontSize: 17, fontWeight: FontWeight.w800, color: desktopAccentBlue),
+                                ),
+                              ],
+                            ),
+                          )
+                        : _receiptRow(kv.label, kv.value),
+                  ],
+                  if (infoText.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Divider(color: desktopBorder.withValues(alpha: 0.4), height: 1),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Info',
+                      style: GoogleFonts.hankenGrotesk(fontSize: 11.5, fontWeight: FontWeight.w700, color: desktopTextSecondary),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      infoText,
+                      style: GoogleFonts.hankenGrotesk(fontSize: 11.5, color: desktopTextSecondary, height: 1.4),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: desktopAccentBlue.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_rounded, size: 15, color: desktopAccentBlue),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Simpan bukti transaksi ini sebagai referensi Anda.',
+                            style: GoogleFonts.hankenGrotesk(fontSize: 11.5, color: desktopTextSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: _isCapturingReceipt ? null : _downloadDesktopReceipt,
+                  icon: const Icon(Icons.download_rounded, size: 16, color: desktopAccentBlue),
+                  label: Text('Download', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopAccentBlue)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: desktopBorder),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: _isCapturingReceipt ? null : _shareDesktopReceipt,
+                  icon: const Icon(Icons.ios_share_rounded, size: 16, color: desktopAccentBlue),
+                  label: Text('Bagikan', style: GoogleFonts.hankenGrotesk(fontSize: 13, fontWeight: FontWeight.w700, color: desktopAccentBlue)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: desktopBorder),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Struk (kartu "Bukti Transaksi") cuma ~300px lebar bersih. Nilai pendek
+  // (mis. "Gratis!", "R1M/900") tetap sebaris dengan labelnya, tapi nilai
+  // panjang (nomor order, token PLN berspasi, nama produk+nominal) diukur
+  // dulu — kalau tidak muat sebaris, baru dipindah ke baris sendiri di
+  // bawah label supaya tidak patah di tengah kata/nomor secara acak
+  // (mis. "LB-" kepisah sendirian dari "FOPZNDGJAEXF").
+  static const double _kReceiptContentWidth = 300;
+
+  Widget _receiptRow(String label, String value, {double maxWidth = _kReceiptContentWidth}) {
+    final labelStyle = GoogleFonts.hankenGrotesk(fontSize: 12.5, color: desktopTextSecondary);
+    final valueStyle = GoogleFonts.hankenGrotesk(fontSize: 12.5, fontWeight: FontWeight.w700, color: desktopTextPrimary);
+
+    final labelWidth = (TextPainter(
+      text: TextSpan(text: label, style: labelStyle),
+      textDirection: ui.TextDirection.ltr,
+    )..layout())
+        .width;
+    final valueWidth = (TextPainter(
+      text: TextSpan(text: value, style: valueStyle),
+      textDirection: ui.TextDirection.ltr,
+    )..layout())
+        .width;
+    final fitsInline = valueWidth <= (maxWidth - labelWidth - 12);
+
+    if (fitsInline) {
+      // `Spacer()` + `Flexible()` both default to flex:1, so they'd split
+      // the remaining width 50/50 — but `Flexible` is loose-fit and only
+      // claims as much of its half as the text needs, leaving the other
+      // half as dead space nothing pushes into. Short values then land
+      // well short of the shared right edge instead of flush against it.
+      // `Expanded` + `Align` instead always claims the *entire* remaining
+      // width and aligns the text to its right edge, so every row's value
+      // lines up on the same right margin regardless of its own length.
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: labelStyle),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(value, textAlign: TextAlign.right, style: valueStyle),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: labelStyle),
+          const SizedBox(height: 3),
+          SizedBox(
+            width: double.infinity,
+            child: Text(value, textAlign: TextAlign.right, style: valueStyle),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopActionRow({required bool isPending}) {
+    if (isPending) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: _isCheckingStatus ? null : _checkTransactionStatus,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: desktopPrimaryBtn,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: _isCheckingStatus
+              ? const SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Text('CEK STATUS', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.6)),
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: () => _showPrintAdminPopup(),
+              icon: const Icon(Icons.print_outlined, size: 18, color: desktopAccentBlue),
+              label: Text('PRINT', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w800, color: desktopAccentBlue, letterSpacing: 0.6)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: desktopAccentBlue, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _isCheckingStatus ? null : _checkTransactionStatus,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: desktopPrimaryBtn,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _isCheckingStatus
+                  ? const SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text('CEK STATUS', style: GoogleFonts.hankenGrotesk(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.6)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Data breakdown per kategori transaksi untuk layout desktop — sumber
+  /// logika sama dengan `_buildCategoryRows` (mobile) supaya field backend
+  /// yang dibaca tetap konsisten, hanya representasinya (`_KV`) yang beda.
+  ({List<_KV> rows, String infoText}) _desktopCategoryData({
+    required String kind,
+    required Map<String, dynamic> data,
+    required String orderId,
+    required double amount,
+    required String customerNo,
+    required String paymentMethod,
+    required NumberFormat currencyFormat,
+  }) {
+    if (kind == 'bank_transfer') {
+      final note = _asMap(data['note']);
+      final meta = _asMap(data['meta']);
+      final bankSrc = <String, dynamic>{...data, ...note, ...meta};
+
+      String s(String key) => (bankSrc[key] ?? '').toString().trim();
+      double n(String key) {
+        final v = bankSrc[key];
+        if (v is num) return v.toDouble();
+        if (v is String) {
+          return double.tryParse(v.replaceAll(',', '').trim()) ?? 0.0;
+        }
+        return 0.0;
+      }
+
+      final accountName = s('account_name').isNotEmpty ? s('account_name') : s('nama_penerima');
+      final accountNumber = s('account_number').isNotEmpty
+          ? s('account_number')
+          : s('nomor_rekening').isNotEmpty
+              ? s('nomor_rekening')
+              : customerNo;
+      final bankName = s('bank_name').isNotEmpty
+          ? s('bank_name')
+          : s('bank').isNotEmpty
+              ? s('bank')
+              : paymentMethod;
+      final notes = s('notes');
+      final providerReff = s('reff').isNotEmpty ? s('reff') : s('provider_ref');
+
+      final amountVal = n('amount') > 0 ? n('amount') : amount;
+      final adminVal = n('admin') > 0 ? n('admin') : n('fee');
+      final totalVal = n('total') > 0 ? n('total') : (amountVal + adminVal > 0 ? amountVal + adminVal : amount);
+
+      String money(double v) => 'Rp ${currencyFormat.format(v.toInt())}';
+
+      return (
+        rows: <_KV>[
+          if (bankName.isNotEmpty) _KV('Bank Tujuan', bankName),
+          if (accountNumber.isNotEmpty) _KV('No. Rekening', accountNumber, copyable: true),
+          if (accountName.isNotEmpty) _KV('Nama Penerima', accountName),
+          _KV('No. Ref', _cleanOrderId(orderId)),
+          if (providerReff.isNotEmpty && providerReff != _cleanOrderId(orderId)) _KV('Reff', providerReff),
+          _KV('Nominal', money(amountVal)),
+          _KV('Biaya Admin', adminVal > 0 ? money(adminVal) : 'Gratis!'),
+          if (notes.isNotEmpty) _KV('Catatan', notes),
+          _KV('Total Bayar', money(totalVal), isTotal: true),
+        ],
+        infoText: '',
+      );
+    }
+
+    if (kind == 'pln_prepaid') {
+      final joined = _joinedPlnData(data);
+      String s(String key) => (joined[key] ?? '').toString().trim();
+      double n(String key) {
+        final v = joined[key];
+        if (v is num) return v.toDouble();
+        if (v is String) {
+          return double.tryParse(v.replaceAll(',', '').trim()) ?? 0.0;
+        }
+        return 0.0;
+      }
+
+      final idpel = s('meter_no').isNotEmpty
+          ? s('meter_no')
+          : s('subscriber_id').isNotEmpty
+              ? s('subscriber_id')
+              : s('customer_no');
+      final nama = _stripNamePrefix(s('customer_name'));
+      final tariffDaya = s('tariff_daya');
+      final standMeter = s('subscriber_id') == s('meter_no') ? '' : s('subscriber_id');
+      final adminVal = n('admin');
+      final totalVal = n('total') > 0 ? n('total') : amount;
+      final info = s('info');
+      final rawToken = s('token');
+      final formattedToken = _formatTokenCode(rawToken);
+
+      String moneyOrDash(double v) => v > 0 ? 'Rp ${currencyFormat.format(v.toInt())}' : 'Gratis!';
+
+      return (
+        rows: <_KV>[
+          if (idpel.isNotEmpty) _KV('IDPEL', idpel),
+          if (nama.isNotEmpty) _KV('Nama', nama),
+          if (tariffDaya.isNotEmpty) _KV('Tarif/Daya', tariffDaya),
+          if (standMeter.isNotEmpty) _KV('Stand Meter', standMeter),
+          _KV('No. Ref', _cleanOrderId(orderId)),
+          if (rawToken.isNotEmpty) _KV('Token', formattedToken, copyable: true, copyValue: rawToken),
+          _KV('Biaya Admin', moneyOrDash(adminVal)),
+          _KV('Total Bayar', 'Rp ${currencyFormat.format(totalVal.toInt())}', isTotal: true),
+        ],
+        infoText: info,
+      );
+    }
+
+    // Default (Pulsa, Data, E-Money, Voucher, PLN Pascabayar, Generic)
+    final note = _asMap(data['note']);
+    final meta = _asMap(data['meta']);
+    final genSrc = <String, dynamic>{...meta, ...note};
+    double parseNum(dynamic v) {
+      if (v is num) return v.toDouble();
+      if (v is String) {
+        return double.tryParse(v.replaceAll(',', '').trim()) ?? 0.0;
+      }
+      return 0.0;
+    }
+
+    final notedNominal = parseNum(genSrc['nominal']);
+    final notedAdmin = parseNum(genSrc['admin']);
+    final rootAdmin = parseNum(data['admin']);
+    final adminVal = notedAdmin > 0 ? notedAdmin : rootAdmin;
+    // E-wallet: `nominal` mentah dari provider (mis. Loketbayar) bisa beda
+    // dari harga retail yang sebenarnya kita jual — harga retail yang benar
+    // didapat dari total dipotong dikurangi biaya admin (retail + admin =
+    // total charge), bukan nominal provider.
+    final hargaVal = kind == 'emoney' && amount > adminVal
+        ? amount - adminVal
+        : (notedNominal > 0 ? notedNominal : amount);
+    final hargaText = 'Rp ${currencyFormat.format(hargaVal.toInt())}';
+    final adminText = adminVal > 0 ? 'Rp ${currencyFormat.format(adminVal.toInt())}' : 'Gratis!';
+    final receiverName = _stripNamePrefix((genSrc['customer_name'] ?? '').toString());
+    final serialNumber = _pickFirstNonEmpty([
+      data['provider_ref'],
+      data['serial_number'],
+      data['sn'],
+    ]);
+
+    return (
+      rows: <_KV>[
+        if (customerNo.isNotEmpty) _KV(_destLabel(kind), customerNo),
+        if (receiverName.isNotEmpty) _KV('Nama Penerima', receiverName),
+        _KV('Metode Pembayaran', paymentMethod.isEmpty ? '-' : paymentMethod),
+        _KV('Kode Promosi', '-'),
+        _KV('Harga', hargaText),
+        _KV('Biaya Admin', adminText),
+        if (serialNumber.isNotEmpty) _KV('Serial Number', serialNumber, copyable: true),
+        _KV('Total', 'Rp ${currencyFormat.format(amount.toInt())}', isTotal: true),
+        _KV('No. Referensi', _cleanOrderId(orderId)),
+      ],
+      infoText: '',
+    );
+  }
+
   /// Bangun deretan baris detail sesuai kategori transaksi.
   ///
   /// Khusus PLN Prabayar mengikuti breakdown yang diminta user:
@@ -1241,7 +2386,7 @@ class _TransactionDetailState extends State<TransactionDetail> {
           : s('subscriber_id').isNotEmpty
               ? s('subscriber_id')
               : s('customer_no');
-      final nama = s('customer_name');
+      final nama = _stripNamePrefix(s('customer_name'));
       final tariffDaya = s('tariff_daya');
       final standMeter = s('subscriber_id') == s('meter_no')
           ? '' // hindari duplikat dengan IDPEL
@@ -1328,16 +2473,22 @@ class _TransactionDetailState extends State<TransactionDetail> {
     final notedNominal = parseNum(genSrc['nominal']);
     final notedAdmin = parseNum(genSrc['admin']);
     final rootAdmin = parseNum(data['admin']);
-    final hargaVal = notedNominal > 0 ? notedNominal : amount;
-    final hargaText = 'Rp ${currencyFormat.format(hargaVal.toInt())}';
     final adminVal = notedAdmin > 0 ? notedAdmin : rootAdmin;
+    // E-wallet: `nominal` mentah dari provider (mis. Loketbayar) bisa beda
+    // dari harga retail yang sebenarnya kita jual — harga retail yang benar
+    // didapat dari total dipotong dikurangi biaya admin (retail + admin =
+    // total charge), bukan nominal provider.
+    final hargaVal = kind == 'emoney' && amount > adminVal
+        ? amount - adminVal
+        : (notedNominal > 0 ? notedNominal : amount);
+    final hargaText = 'Rp ${currencyFormat.format(hargaVal.toInt())}';
     final adminTextLocal = adminVal > 0
         ? 'Rp ${currencyFormat.format(adminVal.toInt())}'
         : 'Gratis!';
 
     // Nama penerima dari note (mis. e-wallet bebas nominal). Untuk pulsa
     // umumnya kosong. Tampilkan kalau ada.
-    final receiverName = (genSrc['customer_name'] ?? '').toString().trim();
+    final receiverName = _stripNamePrefix((genSrc['customer_name'] ?? '').toString());
 
     final serialNumber = _pickFirstNonEmpty([
       data['provider_ref'],
@@ -1391,7 +2542,7 @@ class _TransactionDetailState extends State<TransactionDetail> {
     }
   }
 
-  Widget _categoryIconFallback(String kind) {
+  Widget _categoryIconFallback(String kind, {double size = 74}) {
     IconData icon;
     Color color;
     switch (kind) {
@@ -1417,7 +2568,7 @@ class _TransactionDetailState extends State<TransactionDetail> {
         icon = Icons.receipt_long_rounded;
         color = const Color(0xFF1E63C6);
     }
-    return Icon(icon, size: 74, color: color);
+    return Icon(icon, size: size, color: color);
   }
 
   Widget _row(
@@ -1477,4 +2628,57 @@ class _TransactionDetailState extends State<TransactionDetail> {
       ),
     );
   }
+}
+
+/// Label/value pair for the desktop "Detail Transaksi" and "Bukti
+/// Transaksi" rows. `isTotal` renders as a highlighted total box instead of
+/// a plain row; `copyable` adds a copy-to-clipboard icon.
+class _KV {
+  final String label;
+  final String value;
+  final bool copyable;
+  final String? copyValue;
+  final bool isTotal;
+  final bool dividerBefore;
+
+  const _KV(
+    this.label,
+    this.value, {
+    this.copyable = false,
+    this.copyValue,
+    this.isTotal = false,
+    this.dividerBefore = false,
+  });
+}
+
+/// Clips a scalloped ("torn receipt paper") top edge for the desktop
+/// "Bukti Transaksi" card, punching half-circle notches out of a
+/// rounded-rect using [Path.combine] so the geometry stays simple and
+/// artifact-free at any card width.
+class _ReceiptScallopClipper extends CustomClipper<Path> {
+  const _ReceiptScallopClipper({this.notchRadius = 6, this.cornerRadius = 16});
+
+  final double notchRadius;
+  final double cornerRadius;
+
+  @override
+  Path getClip(Size size) {
+    final base = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Offset.zero & size,
+        Radius.circular(cornerRadius),
+      ));
+    if (size.width <= 0) return base;
+
+    final count = (size.width / (notchRadius * 2.4)).floor().clamp(4, 60);
+    final gap = size.width / count;
+    final notches = Path();
+    for (var i = 0; i <= count; i++) {
+      notches.addOval(Rect.fromCircle(center: Offset(i * gap, 0), radius: notchRadius));
+    }
+    return Path.combine(PathOperation.difference, base, notches);
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:modipay/login/login_router.dart';
 import 'package:modipay/home/home.dart';
-import 'package:modipay/home/topup/topup_channel_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/utils/colornotifire.dart';
 import 'package:modipay/design/design.dart';
@@ -87,8 +86,8 @@ class _BottombarState extends State<Bottombar> {
         backgroundColor: notifire.getprimerycolor,
         body: PageStorage(bucket: bucket, child: currentScreen),
         resizeToAvoidBottomInset: false,
-        floatingActionButtonLocation: showBottomNav ? FloatingActionButtonLocation.centerDocked : null,
-        floatingActionButton: showBottomNav ? _buildTopupFab() : null,
+        floatingActionButtonLocation: null,
+        floatingActionButton: null,
         bottomNavigationBar: showBottomNav ? _buildBottomNav(context) : null,
       ),
     );
@@ -138,41 +137,6 @@ class _BottombarState extends State<Bottombar> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTopupFab() {
-    return Container(
-      width: 62,
-      height: 62,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0D47A1).withValues(alpha: 0.35),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: FloatingActionButton(
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const TopupChannelScreen()),
-          );
-        },
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
       ),
     );
   }

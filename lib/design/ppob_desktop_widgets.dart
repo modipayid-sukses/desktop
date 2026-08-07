@@ -161,6 +161,8 @@ class PpobNominalCard extends StatelessWidget {
               Text(
                 priceLabel,
                 style: GoogleFonts.hankenGrotesk(fontSize: 12, fontWeight: FontWeight.w600, color: desktopTextSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

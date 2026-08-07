@@ -55,6 +55,9 @@ class _SeealltransactionState extends State<Seealltransaction> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   DateTime? _selectedDate;
+  int _uiPage = 1;
+  int? _apiTotal;
+  static const int _pageSize = 10;
 
   String _selectedType = 'Semua';
   bool _prepaidExpanded = false;
@@ -186,7 +189,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
             ? '${ApiService.baseUrl.replaceFirst('/api', '')}$rawUrl'
             : rawUrl;
         return normalized;
-      }).toList();
+      }).where((item) => !isHiddenPpobMenuItem(item)).toList();
     }
 
     if (mounted) {
@@ -361,12 +364,18 @@ class _SeealltransactionState extends State<Seealltransaction> {
     );
 
     if (!mounted || picked == null) return;
-    setState(() => _selectedDate = picked);
+    setState(() {
+      _selectedDate = picked;
+      _uiPage = 1;
+    });
   }
 
   void _clearDateFilter() {
     if (_selectedDate == null) return;
-    setState(() => _selectedDate = null);
+    setState(() {
+      _selectedDate = null;
+      _uiPage = 1;
+    });
   }
 
   String _formatSelectedDate(DateTime date) {
@@ -382,6 +391,12 @@ class _SeealltransactionState extends State<Seealltransaction> {
     }
   }
 
+  int? _parseTotal(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString());
+  }
+
   Future<void> _loadTransactions() async {
     try {
       final response = await ApiService.getTransactions(page: 1);
@@ -390,6 +405,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
           _transactions = List<Map<String, dynamic>>.from(response['data'] ?? []);
           _currentPage = response['current_page'] ?? 1;
           _lastPage = response['last_page'] ?? 1;
+          _apiTotal = _parseTotal(response['total']);
           _isLoading = false;
         });
       }
@@ -399,6 +415,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
   }
 
   Future<void> _loadMore() async {
+    if (_loadingMore || _currentPage >= _lastPage) return;
     setState(() => _loadingMore = true);
     try {
       final response = await ApiService.getTransactions(page: _currentPage + 1);
@@ -407,11 +424,22 @@ class _SeealltransactionState extends State<Seealltransaction> {
           _transactions.addAll(List<Map<String, dynamic>>.from(response['data'] ?? []));
           _currentPage = response['current_page'] ?? _currentPage;
           _lastPage = response['last_page'] ?? _lastPage;
+          _apiTotal = _parseTotal(response['total']) ?? _apiTotal;
           _loadingMore = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  /// Pastikan cukup data lokal untuk menampilkan [page] (10 item/halaman) di
+  /// tabel desktop, memicu fetch halaman backend berikutnya bila perlu —
+  /// lihat _goToUiPage di bagian layout desktop.
+  void _ensureUiPageLoaded(int page) {
+    final needed = page * _pageSize;
+    if (needed > _filteredItems.length && _currentPage < _lastPage && !_loadingMore) {
+      _loadMore();
     }
   }
 
@@ -985,13 +1013,9 @@ class _SeealltransactionState extends State<Seealltransaction> {
                       : SingleChildScrollView(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(28),
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 1280),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                             Row(
                               children: [
                                 Text(
@@ -1022,8 +1046,6 @@ class _SeealltransactionState extends State<Seealltransaction> {
                             _buildDesktopTableCard(df, currency, statusBg, statusFg, statusLabel),
                           ],
                         ),
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -1073,7 +1095,10 @@ class _SeealltransactionState extends State<Seealltransaction> {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  onChanged: (v) => setState(() => _searchQuery = v),
+                  onChanged: (v) => setState(() {
+                    _searchQuery = v;
+                    _uiPage = 1;
+                  }),
                   style: GoogleFonts.hankenGrotesk(
                     fontSize: 13.5,
                     color: desktopTextPrimary,
@@ -1124,7 +1149,10 @@ class _SeealltransactionState extends State<Seealltransaction> {
                       return ChoiceChip(
                         label: Text(filter['label']!),
                         selected: selected,
-                        onSelected: (_) => setState(() => _selectedType = filter['label']!),
+                        onSelected: (_) => setState(() {
+                          _selectedType = filter['label']!;
+                          _uiPage = 1;
+                        }),
                         selectedColor: desktopPrimaryBtn,
                         backgroundColor: desktopSurfacePage,
                         labelStyle: GoogleFonts.hankenGrotesk(
@@ -1228,7 +1256,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
               child: Row(
                 children: [
                   Expanded(
-                    flex: 3,
+                    flex: 2,
                     child: Text(
                       'Tanggal',
                       style: GoogleFonts.hankenGrotesk(
@@ -1239,7 +1267,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
                     ),
                   ),
                   Expanded(
-                    flex: 4,
+                    flex: 3,
                     child: Text(
                       'Produk',
                       style: GoogleFonts.hankenGrotesk(
@@ -1250,9 +1278,20 @@ class _SeealltransactionState extends State<Seealltransaction> {
                     ),
                   ),
                   Expanded(
-                    flex: 3,
+                    flex: 2,
                     child: Text(
                       'Nomor Tujuan',
+                      style: GoogleFonts.hankenGrotesk(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: desktopTextSecondary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Kasir',
                       style: GoogleFonts.hankenGrotesk(
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
@@ -1283,19 +1322,54 @@ class _SeealltransactionState extends State<Seealltransaction> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 28),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Saldo Akhir',
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.hankenGrotesk(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: desktopTextSecondary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 44,
+                    child: Text(
+                      'Aksi',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.hankenGrotesk(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: desktopTextSecondary,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
             Divider(height: 1, color: desktopBorder.withOpacity(0.5)),
-            ListView.builder(
+            Builder(builder: (context) {
+              final totalPages = filtered.isEmpty ? 1 : (filtered.length / _pageSize).ceil();
+              final effectivePage = _uiPage.clamp(1, totalPages);
+              final pageStart = (effectivePage - 1) * _pageSize;
+              final pageEnd = (pageStart + _pageSize).clamp(0, filtered.length);
+              final pagedItems = filtered.sublist(pageStart.clamp(0, filtered.length), pageEnd);
+              return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: filtered.length,
+              itemCount: pagedItems.length,
               itemBuilder: (context, idx) {
-                final item = filtered[idx];
+                final item = pagedItems[idx];
                 final name = (item['name'] ?? item['product_name'] ?? '-').toString();
                 final target = _pickFirstNonEmpty([item['customer_no'], item['customer_id'], item['target'], item['order_id']]);
+                final kasir = _pickFirstNonEmpty([item['cashier_name'], item['kasir_name'], item['kasir'], item['cashier']]);
+                final saldoAkhirRaw = item['balance_after'] ?? item['ending_balance'] ?? item['saldo_akhir'] ?? item['balance'];
+                final saldoAkhirVal = saldoAkhirRaw is num
+                    ? saldoAkhirRaw.toDouble()
+                    : double.tryParse(saldoAkhirRaw?.toString() ?? '');
+                final saldoAkhirStr = saldoAkhirVal != null ? currency.format(saldoAkhirVal) : '-';
                 final amount = effectiveTransactionTotal(item);
                 final status = statusLabel(item);
                 final statusKey = item['is_pending'] == true
@@ -1331,7 +1405,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
                     child: Row(
                       children: [
                         Expanded(
-                          flex: 3,
+                          flex: 2,
                           child: Text(
                             df.format(parseDateTime(item['created_at'])),
                             style: GoogleFonts.hankenGrotesk(
@@ -1342,7 +1416,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
                           ),
                         ),
                         Expanded(
-                          flex: 4,
+                          flex: 3,
                           child: Row(
                             children: [
                               Container(
@@ -1379,9 +1453,20 @@ class _SeealltransactionState extends State<Seealltransaction> {
                           ),
                         ),
                         Expanded(
-                          flex: 3,
+                          flex: 2,
                           child: Text(
                             target,
+                            style: GoogleFonts.hankenGrotesk(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              color: desktopTextSecondary,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            kasir,
                             style: GoogleFonts.hankenGrotesk(
                               fontWeight: FontWeight.w500,
                               fontSize: 13,
@@ -1426,20 +1511,50 @@ class _SeealltransactionState extends State<Seealltransaction> {
                             ),
                           ),
                         ),
-                        const SizedBox(
-                          width: 28,
-                          child: Icon(
-                            Icons.chevron_right_rounded,
-                            size: 18,
-                            color: desktopBorder,
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            saldoAkhirStr,
+                            textAlign: TextAlign.right,
+                            style: GoogleFonts.hankenGrotesk(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              color: desktopTextSecondary,
+                            ),
                           ),
+                        ),
+                        SizedBox(
+                          width: 44,
+                          child: statusKey == 'failed'
+                              ? Center(
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(20),
+                                    onTap: _loadAllData,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: Icon(
+                                        Icons.refresh_rounded,
+                                        size: 18,
+                                        color: desktopAccentBlue,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : const Center(
+                                  child: Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 18,
+                                    color: desktopBorder,
+                                  ),
+                                ),
                         ),
                       ],
                     ),
                   ),
                 );
               },
-            ),
+              );
+            }),
             if (_loadingMore)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1451,8 +1566,130 @@ class _SeealltransactionState extends State<Seealltransaction> {
                   ),
                 ),
               ),
+            const SizedBox(height: 16),
+            _buildPaginationFooter(filtered.length),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationFooter(int totalFiltered) {
+    final noFilters = _selectedType == 'Semua' && _searchQuery.isEmpty && _selectedDate == null;
+    final displayTotal = (noFilters && _apiTotal != null && _apiTotal! > totalFiltered)
+        ? _apiTotal!
+        : totalFiltered;
+    final totalPages = totalFiltered == 0 ? 1 : (displayTotal / _pageSize).ceil();
+    final page = _uiPage.clamp(1, totalPages);
+    final start = totalFiltered == 0 ? 0 : (page - 1) * _pageSize + 1;
+    final end = (page * _pageSize).clamp(0, totalFiltered);
+
+    void goTo(int p) {
+      final clamped = p.clamp(1, totalPages);
+      setState(() => _uiPage = clamped);
+      _ensureUiPageLoaded(clamped);
+    }
+
+    final pageNumbers = _buildPageNumberList(page, totalPages);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          totalFiltered == 0
+              ? 'Tidak ada transaksi'
+              : 'Menampilkan $start-$end dari $displayTotal transaksi',
+          style: GoogleFonts.hankenGrotesk(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+            color: desktopTextSecondary,
+          ),
+        ),
+        if (totalPages > 1)
+          Row(
+            children: [
+              _paginationArrow(Icons.chevron_left_rounded, page > 1, () => goTo(page - 1)),
+              const SizedBox(width: 6),
+              ...pageNumbers.map((p) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: p == null
+                        ? SizedBox(
+                            width: 28,
+                            child: Center(
+                              child: Text(
+                                '...',
+                                style: GoogleFonts.hankenGrotesk(
+                                  color: desktopTextSecondary,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                          )
+                        : _pageNumberButton(p, p == page, () => goTo(p)),
+                  )),
+              const SizedBox(width: 6),
+              _paginationArrow(Icons.chevron_right_rounded, page < totalPages, () => goTo(page + 1)),
+            ],
+          ),
+      ],
+    );
+  }
+
+  List<int?> _buildPageNumberList(int current, int total) {
+    if (total <= 7) {
+      return List.generate(total, (i) => i + 1);
+    }
+    final pages = <int>{1, total, current};
+    if (current - 1 >= 1) pages.add(current - 1);
+    if (current + 1 <= total) pages.add(current + 1);
+    final sorted = pages.toList()..sort();
+    final result = <int?>[];
+    for (int i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i] - sorted[i - 1] > 1) {
+        result.add(null);
+      }
+      result.add(sorted[i]);
+    }
+    return result;
+  }
+
+  Widget _paginationArrow(IconData icon, bool enabled, VoidCallback onTap) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          border: Border.all(color: desktopBorder.withOpacity(0.6)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 18, color: enabled ? desktopTextPrimary : desktopBorder),
+      ),
+    );
+  }
+
+  Widget _pageNumberButton(int page, bool active, VoidCallback onTap) {
+    return InkWell(
+      onTap: active ? null : onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? desktopPrimaryBtn : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: active ? null : Border.all(color: desktopBorder.withOpacity(0.4)),
+        ),
+        child: Text(
+          '$page',
+          style: GoogleFonts.hankenGrotesk(
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+            color: active ? Colors.white : desktopTextPrimary,
+          ),
+        ),
       ),
     );
   }

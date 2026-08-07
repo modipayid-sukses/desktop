@@ -526,7 +526,7 @@ class _PromoScreenState extends State<PromoScreen> {
             ? '${ApiService.baseUrl.replaceFirst('/api', '')}$rawUrl'
             : rawUrl;
         return normalized;
-      }).toList();
+      }).where((item) => !isHiddenPpobMenuItem(item)).toList();
     }
 
     if (mounted) {

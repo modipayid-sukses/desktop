@@ -91,7 +91,7 @@ class _PPOBAllServicesScreenState extends State<PPOBAllServicesScreen> {
             if (m['initial_brand'] != null) normalized['initialBrand'] = m['initial_brand'];
             if (m['route_type'] != null) normalized['routeType'] = m['route_type'];
             return normalized;
-          }).toList();
+          }).where((item) => !isHiddenPpobMenuItem(item)).toList();
         }
         if (!mounted) return;
         setState(() {
