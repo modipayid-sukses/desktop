@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:modipay/login/auth_choice_screen.dart';
+import 'package:modipay/login/login_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -63,10 +63,11 @@ class _OnbondingState extends State<Onbonding> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_onboardingSeenKey, true);
 
+    final loginScreen = await resolveLoginScreen();
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const AuthChoiceScreen()),
+      MaterialPageRoute(builder: (_) => loginScreen),
     );
   }
 

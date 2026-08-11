@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:modipay/bottombar/bottombar.dart';
-import 'package:modipay/login/auth_choice_screen.dart';
+import 'package:modipay/login/login_router.dart';
 import 'package:modipay/onbonding.dart';
 import 'package:modipay/login/setup_pin_screen.dart';
 import 'package:modipay/providers/auth_provider.dart';
@@ -105,9 +105,11 @@ class _SplashscreenState extends State<Splashscreen> {
         );
         return;
       }
+      final loginScreen = await resolveLoginScreen();
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const AuthChoiceScreen()),
+        MaterialPageRoute(builder: (_) => loginScreen),
       );
     }
   }
