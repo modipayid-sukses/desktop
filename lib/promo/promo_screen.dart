@@ -15,7 +15,6 @@ import 'package:modipay/utils/string.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/home/home.dart';
 import 'package:modipay/home/seealltransaction.dart';
-import 'package:modipay/home/topup/topup_channel_screen.dart';
 import 'package:modipay/profile/profile.dart' as profile_page;
 import 'package:modipay/profile/helpsupport.dart';
 import 'package:modipay/home/notifications.dart';
@@ -1066,12 +1065,6 @@ class _PromoScreenState extends State<PromoScreen> {
                     label: 'Beranda',
                     active: false,
                     onTap: () => Navigator.pop(context),
-                  ),
-                  _desktopSidebarItem(
-                    icon: Icons.account_balance_wallet_outlined,
-                    label: 'Saldo',
-                    active: _activeDesktopMenu == 'saldo',
-                    onTap: () => _openTransaction(const TopupChannelScreen(), menuKey: 'saldo'),
                   ),
                   _desktopSidebarItem(
                     icon: Icons.sim_card_outlined,

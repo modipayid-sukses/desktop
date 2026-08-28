@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:modipay/promo/promo_screen.dart';
 import 'package:modipay/services/api_service.dart';
 import 'package:modipay/home/transaction_detail.dart';
 import 'package:modipay/utils/transaction_helpers.dart';
@@ -29,7 +28,6 @@ import 'package:modipay/home/ppob/ppob_topup_game_list_screen.dart';
 import 'package:modipay/home/ppob/ppob_postpaid_screen.dart';
 import 'package:modipay/home/ppob/ppob_emoney_brand_screen.dart';
 import 'package:modipay/home/ppob/ppob_product_screen.dart';
-import 'package:modipay/home/topup/topup_channel_screen.dart';
 import 'package:modipay/utils/toast.dart';
 
 import '../utils/colornotifire.dart';
@@ -1845,12 +1843,6 @@ class _SeealltransactionState extends State<Seealltransaction> {
                     onTap: () => Navigator.pop(context),
                   ),
                   _desktopSidebarItem(
-                    icon: Icons.account_balance_wallet_outlined,
-                    label: 'Saldo',
-                    active: _activeDesktopMenu == 'saldo',
-                    onTap: () => _openTransaction(const TopupChannelScreen(), menuKey: 'saldo'),
-                  ),
-                  _desktopSidebarItem(
                     icon: Icons.sim_card_outlined,
                     label: 'Prepaid',
                     expandable: true,
@@ -1868,20 +1860,6 @@ class _SeealltransactionState extends State<Seealltransaction> {
                     onTap: () => setState(() => _postpaidExpanded = !_postpaidExpanded),
                   ),
                   if (_postpaidExpanded) _desktopSidebarSubItems(_pembayaranItems),
-                  _desktopSidebarItem(
-                    icon: Icons.local_offer_outlined,
-                    label: 'Promo',
-                    onTap: () => WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PromoScreen(),
-                        ),
-                      );
-                    }),
-                  ),
                   _desktopSidebarItem(
                     icon: Icons.history_rounded,
                     label: 'Riwayat Transaksi',
