@@ -9,3 +9,5 @@ export 'app_alert.dart';
 export 'ppob_desktop_widgets.dart';
 export 'transaction_pin_auth_dialog.dart';
 export 'transaction_success_dialog.dart';
+export 'transaction_pending_dialog.dart';
+export 'transaction_failed_dialog.dart';

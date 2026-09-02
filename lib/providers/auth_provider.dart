@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/app_exception.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
+import '../services/pending_ppob_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _user;
@@ -69,6 +72,10 @@ class AuthProvider extends ChangeNotifier {
       final ok = await fetchProfile();
       if (!ok) return;
       try { await NotificationService.instance.syncTokenWithServer(); } catch (_) {}
+      // App baru dibuka/reload dengan sesi yang masih valid — lanjutkan
+      // polling transaksi PPOB yang statusnya masih pending sebelum app
+      // ditutup, supaya tidak "hilang" dari pandangan user.
+      unawaited(PendingPpobService.instance.resumePendingFromHistory());
     }
   }
 
@@ -87,6 +94,7 @@ class AuthProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
         try { await NotificationService.instance.syncTokenWithServer(); } catch (_) {}
+        unawaited(PendingPpobService.instance.resumePendingFromHistory());
 
         _isLoading = false;
         notifyListeners();
@@ -119,6 +127,7 @@ class AuthProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
         try { await NotificationService.instance.syncTokenWithServer(); } catch (_) {}
+        unawaited(PendingPpobService.instance.resumePendingFromHistory());
 
         _isLoading = false;
         notifyListeners();
@@ -281,6 +290,7 @@ class AuthProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
         try { await NotificationService.instance.syncTokenWithServer(); } catch (_) {}
+        unawaited(PendingPpobService.instance.resumePendingFromHistory());
 
         _isLoading = false;
         notifyListeners();

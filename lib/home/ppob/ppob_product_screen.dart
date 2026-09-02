@@ -29,6 +29,7 @@ import 'components/ppob_cellular_form.dart';
 import 'components/saved_customers_bottom_sheet.dart';
 import '../../utils/responsive.dart';
 import '../../design/design.dart';
+import '../../services/pending_ppob_service.dart';
 
 
 class PPOBProductScreen extends StatefulWidget {
@@ -3233,20 +3234,53 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
     if (isDesktop(context)) {
       final adminFee = _asAdminFee(product);
       final destinationLabel = _isPln ? 'ID Pelanggan' : 'Nomor Tujuan';
-      TransactionSuccessDialog.show(
-        context: context,
-        subtitle: '${widget.title} berhasil dikirim',
-        orderId: (tx['order_id'] ?? '-').toString(),
-        rows: [
-          MapEntry(destinationLabel, customerId),
-          if ((_selectedBrand ?? '').trim().isNotEmpty) MapEntry('Operator', _selectedBrand!),
-          MapEntry('Produk', (product['product_name'] ?? widget.title).toString()),
-          MapEntry('Nominal', _formatPrice(price)),
-          MapEntry('Harga', _formatPrice(price)),
-          MapEntry('Admin', _formatPrice(adminFee)),
-        ],
-        totalLabel: _formatPrice(price + adminFee),
-      );
+      final orderId = (tx['order_id'] ?? '-').toString();
+
+      void showSuccess(Map<String, dynamic> finalTx) {
+        TransactionSuccessDialog.show(
+          context: context,
+          subtitle: '${widget.title} berhasil dikirim',
+          orderId: (finalTx['order_id'] ?? orderId).toString(),
+          rows: [
+            MapEntry(destinationLabel, customerId),
+            if ((_selectedBrand ?? '').trim().isNotEmpty) MapEntry('Operator', _selectedBrand!),
+            MapEntry('Produk', (product['product_name'] ?? widget.title).toString()),
+            MapEntry('Nominal', _formatPrice(price)),
+            MapEntry('Harga', _formatPrice(price)),
+            MapEntry('Admin', _formatPrice(adminFee)),
+          ],
+          totalLabel: _formatPrice(price + adminFee),
+        );
+      }
+
+      // Backend PPOB/Loketbayar memproses transaksi secara async — respons
+      // ini cuma tanda transaksi diterima (status 'pending'), belum tentu
+      // sukses. Lihat ppob_pending_timeout_frontend_prompt.md di repo
+      // modiback: harus polling /ppob/check-status sampai final, TANPA
+      // membuat transaksi baru untuk customer_no yang sama selama masih
+      // pending.
+      if ((tx['status'] ?? '').toString() == 'pending') {
+        PendingPpobService.instance.track(orderId, initialTransaction: tx);
+        TransactionPendingDialog.show(
+          context: context,
+          orderId: orderId,
+          description: '${product['product_name'] ?? widget.title} untuk $customerId',
+          onCompleted: (finalTx) {
+            PendingPpobService.instance.dismiss(orderId);
+            showSuccess(finalTx);
+          },
+          onFailed: (finalTx) {
+            PendingPpobService.instance.dismiss(orderId);
+            TransactionFailedDialog.show(
+              context: context,
+              orderId: orderId,
+              reason: TransactionFailedDialog.reasonFromTransaction(finalTx),
+            );
+          },
+        );
+      } else {
+        showSuccess(tx);
+      }
       return;
     }
 

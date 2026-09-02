@@ -11,6 +11,7 @@ import 'package:modipay/utils/color.dart';
 import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/services/device_identity_service.dart';
 import 'package:modipay/services/notification_service.dart';
+import 'package:modipay/services/pending_ppob_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -64,6 +65,9 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(),
+        ),
+        ChangeNotifierProvider.value(
+          value: PendingPpobService.instance,
         ),
       ],
       child: GetMaterialApp(

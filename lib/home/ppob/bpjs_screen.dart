@@ -15,6 +15,7 @@ import '../../utils/colornotifire.dart';
 import '../../utils/color.dart';
 import '../../providers/auth_provider.dart';
 import '../../design/design.dart';
+import '../../services/pending_ppob_service.dart';
 import 'bpjs_inquiry_screen.dart';
 import 'components/saved_customers_bottom_sheet.dart';
 
@@ -551,17 +552,50 @@ class _BpjsScreenState extends State<BpjsScreen> {
             Provider.of<AuthProvider>(context, listen: false).updateBalance();
             final tx = response['transaction'] as Map<String, dynamic>? ?? {};
             Navigator.of(context, rootNavigator: true).pop();
-            TransactionSuccessDialog.show(
-              context: context,
-              subtitle: 'Tagihan $productName berhasil dibayar',
-              orderId: (tx['order_id'] ?? '-').toString(),
-              rows: [
-                MapEntry('Nomor Peserta', customerNo),
-                MapEntry('Nama Peserta', customerName),
-                MapEntry('Jenis', productName),
-              ],
-              totalLabel: _money(total),
-            );
+
+            final orderId = (tx['order_id'] ?? '-').toString();
+            void showSuccess(Map<String, dynamic> finalTx) {
+              TransactionSuccessDialog.show(
+                context: context,
+                subtitle: 'Tagihan $productName berhasil dibayar',
+                orderId: (finalTx['order_id'] ?? orderId).toString(),
+                rows: [
+                  MapEntry('Nomor Peserta', customerNo),
+                  MapEntry('Nama Peserta', customerName),
+                  MapEntry('Jenis', productName),
+                ],
+                totalLabel: _money(total),
+              );
+            }
+
+            // Backend PPOB/Loketbayar memproses transaksi secara async — respons
+            // ini cuma tanda transaksi diterima (status 'pending'), belum tentu
+            // sukses. Lihat ppob_pending_timeout_frontend_prompt.md di repo
+            // modiback: harus polling /ppob/check-status sampai final, TANPA
+            // membuat transaksi baru untuk customer_no yang sama selama masih
+            // pending.
+            if ((tx['status'] ?? '').toString() == 'pending') {
+              PendingPpobService.instance.track(orderId, initialTransaction: tx);
+              TransactionPendingDialog.show(
+                context: context,
+                orderId: orderId,
+                description: 'Tagihan $productName untuk $customerNo',
+                onCompleted: (finalTx) {
+                  PendingPpobService.instance.dismiss(orderId);
+                  showSuccess(finalTx);
+                },
+                onFailed: (finalTx) {
+                  PendingPpobService.instance.dismiss(orderId);
+                  TransactionFailedDialog.show(
+                    context: context,
+                    orderId: orderId,
+                    reason: TransactionFailedDialog.reasonFromTransaction(finalTx),
+                  );
+                },
+              );
+            } else {
+              showSuccess(tx);
+            }
           } else {
             throw AppException(response['message']?.toString() ?? 'Pembayaran gagal');
           }

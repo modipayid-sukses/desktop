@@ -1114,6 +1114,19 @@ class ApiService {
     );
   }
 
+  /// Cek status transaksi PPOB yang masih `pending` (dipanggil berulang oleh
+  /// `PendingPpobService` sampai statusnya `completed`/`failed`). Backend
+  /// meng-handle transaksi Digiflazz maupun Loketbayar lewat endpoint yang
+  /// sama — lihat PpobController::checkStatus di backend.
+  static Future<Map<String, dynamic>> checkPpobStatus({required String orderId}) async {
+    return _postJson(
+      '$_baseUrl/ppob/check-status',
+      auth: true,
+      body: jsonEncode({'order_id': orderId}),
+      fallbackMessage: 'Gagal memeriksa status transaksi.',
+    );
+  }
+
   static Future<Map<String, dynamic>> checkGameUsername({
     required String gameCode,
     required String userId,
