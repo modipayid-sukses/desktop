@@ -264,38 +264,36 @@ class _TransactionSuccessDialogState extends State<TransactionSuccessDialog> {
             BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 32, offset: const Offset(0, 12)),
           ],
         ),
-        child: Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(28, 16, 28, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildHeader(context),
-                const SizedBox(height: 4),
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: const BoxDecoration(color: desktopSuccessBg, shape: BoxShape.circle),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.check_rounded, color: desktopSuccessFg, size: 34),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Transaksi Berhasil',
-                  style: GoogleFonts.hankenGrotesk(fontSize: 19, fontWeight: FontWeight.w800, color: desktopTextPrimary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.subtitle,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary),
-                ),
-                const SizedBox(height: 20),
-                _buildReceiptCard(dateLabel),
-                const SizedBox(height: 20),
-                _buildActions(context),
-              ],
-            ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(28, 16, 28, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 4),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(color: desktopSuccessBg, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: const Icon(Icons.check_rounded, color: desktopSuccessFg, size: 34),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Transaksi Berhasil',
+                style: GoogleFonts.hankenGrotesk(fontSize: 19, fontWeight: FontWeight.w800, color: desktopTextPrimary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.hankenGrotesk(fontSize: 13, color: desktopTextSecondary),
+              ),
+              const SizedBox(height: 20),
+              _buildReceiptCard(dateLabel),
+              const SizedBox(height: 20),
+              _buildActions(context),
+            ],
           ),
         ),
       ),

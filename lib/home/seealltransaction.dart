@@ -2267,7 +2267,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
     if (brandLowerForBpjs.contains('bpjs') ||
         categoryLowerForBpjs.contains('bpjs') ||
         nameLowerForBpjs.contains('bpjs')) {
-      _openTransaction(const BpjsScreen());
+      _openTransaction(const BpjsScreen(), wideDesktop: true);
       return;
     }
 
@@ -2277,7 +2277,47 @@ class _SeealltransactionState extends State<Seealltransaction> {
     if (brandLowerForPdam.contains('pdam') ||
         categoryLowerForPdam.contains('pdam') ||
         nameLowerForPdam.contains('pdam')) {
-      _openTransaction(const PdamScreen());
+      _openTransaction(const PdamScreen(), wideDesktop: true);
+      return;
+    }
+
+    // "Internet & TV" (item "Indihome" yang di-rename oleh
+    // normalizePpobMenuItem) harus tetap pakai hub multi-provider
+    // PPOBProductScreen._isInternetHub. Intersep di sini SEBELUM
+    // resolvePpobRouteType — tanpa ini, item postpaid generik akan
+    // ke-resolve sebagai routeType 'postpaid' dan dibuka lewat
+    // PPOBPostpaidScreen (layar terpisah yang tidak punya hub/layout ini).
+    final categoryLowerForInternet = (item['category'] ?? '').toString().toLowerCase();
+    final nameLowerForInternet = (item['name'] ?? '').toString().toLowerCase();
+    if (categoryLowerForInternet.contains('tagihan internet') ||
+        nameLowerForInternet == 'internet & tv') {
+      _openTransaction(
+        PPOBProductScreen(
+          category: (item['category'] ?? 'Tagihan Internet').toString(),
+          title: (item['name'] ?? 'Internet & TV').toString(),
+          cmd: (item['cmd'] as String?)?.trim().isNotEmpty == true ? (item['cmd'] as String).trim() : 'pasca',
+        ),
+        wideDesktop: true,
+      );
+      return;
+    }
+
+    // "Multifinance" (halaman induk, bukan brand spesifik) juga harus tetap
+    // pakai hub PPOBProductScreen._isMultifinanceHub — intersep sebelum
+    // resolvePpobRouteType dengan alasan yang sama seperti Internet & TV
+    // di atas.
+    final categoryLowerForMultifinance = (item['category'] ?? '').toString().trim().toLowerCase();
+    final nameLowerForMultifinance = (item['name'] ?? '').toString().trim().toLowerCase();
+    if (categoryLowerForMultifinance == 'multifinance' ||
+        nameLowerForMultifinance == 'multifinance') {
+      _openTransaction(
+        PPOBProductScreen(
+          category: (item['category'] ?? 'Multifinance').toString(),
+          title: (item['name'] ?? 'Multifinance').toString(),
+          cmd: (item['cmd'] as String?)?.trim().isNotEmpty == true ? (item['cmd'] as String).trim() : 'pasca',
+        ),
+        wideDesktop: true,
+      );
       return;
     }
 
@@ -2352,7 +2392,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
     } else if (routeType == 'postpaid') {
       final brandLower = (item['brand'] ?? '').toString().toLowerCase();
       if (brandLower.contains('pdam')) {
-        _openTransaction(const PdamScreen());
+        _openTransaction(const PdamScreen(), wideDesktop: true);
       } else {
         _openTransaction(PPOBPostpaidScreen(
           brand: (item['brand'] ?? item['category'] ?? '').toString(),
