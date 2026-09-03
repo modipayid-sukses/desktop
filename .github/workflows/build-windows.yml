@@ -29,7 +29,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Windows release
-        run: flutter build windows --release
+        run: flutter build windows --release --dart-define=API_BASE_URL=https://desktop.modipay.biz.id/api
         env:
           # firebase_cpp_sdk_windows ships a CMakeLists.txt requiring an old
           # cmake_minimum_required version that newer CMake (4.x) on the
