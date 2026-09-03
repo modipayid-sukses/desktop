@@ -591,7 +591,38 @@ class _HomeState extends State<Home> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Transfer ke rekening bank hanya untuk akun yang sudah
+              // diaktifkan admin (transfer_verified). Selaras dengan guard
+              // server-side di BankTransferController.
+              if (auth.transferVerified)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.account_balance_rounded, color: Color(0xFF1E88E5)),
+                  ),
+                  title: const Text(
+                    'Transfer ke Rekening Bank',
+                    style: TextStyle(fontFamily: 'Gilroy Bold', fontSize: 15),
+                  ),
+                  subtitle: const Text(
+                    'Kirim saldo ke berbagai rekening bank di Indonesia',
+                    style: TextStyle(fontFamily: 'Gilroy Medium', fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openTransaction(const BankTransferScreen());
+                  },
+                ),
               // Transfer sesama pengguna (peer) disembunyikan untuk agen.
+              if (auth.transferVerified && !auth.isAgent)
+                const Divider(height: 24, thickness: 1, color: Color(0xFFF3F4F6)),
               if (!auth.isAgent)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -619,7 +650,7 @@ class _HomeState extends State<Home> {
                   },
                 ),
               // Tidak ada metode transfer yang tersedia untuk akun ini.
-              if (auth.isAgent)
+              if (!auth.transferVerified && auth.isAgent)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
@@ -2374,6 +2405,20 @@ class _HomeState extends State<Home> {
                 height: 48,
                 decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(14)),
                 child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 24),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _showTransferOptions(),
+                icon: const Icon(Icons.send_rounded, size: 16, color: Colors.white),
+                label: const Text('Transfer Bank', style: TextStyle(color: Colors.white)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white54),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
               ),
             ],
           ),
