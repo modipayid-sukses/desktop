@@ -301,7 +301,6 @@ class UniversalReceipt extends StatelessWidget {
         info = info.replaceAll(RegExp(r'^[\s/|-]+|[\s/|-]+$'), '').trim();
       }
 
-      final admin = _toDouble(joined['admin']);
       final totalBayar = _toDouble(joined['total']) > 0
           ? _toDouble(joined['total'])
           : amount;
@@ -312,8 +311,6 @@ class UniversalReceipt extends StatelessWidget {
         _kv('Tarif/Daya', tariffDaya, textStyle),
         if (standMeter != '-') _kv('Stand Meter', standMeter, textStyle),
         _kv('No. Ref', noRef, textStyle),
-        const SizedBox(height: 4),
-        _kv('Biaya Admin', admin > 0 ? _money(admin) : 'Gratis!', textStyle),
         const SizedBox(height: 8),
         _dash(),
         const SizedBox(height: 8),
@@ -533,6 +530,12 @@ class UniversalReceipt extends StatelessWidget {
       // `amount` = saldo dipotong (= nominal + admin panel) dari Transaction root.
       final nominal =
           _toDouble(joined['nominal']) > 0 ? _toDouble(joined['nominal']) : amount;
+      // Biaya admin hanya ditampilkan untuk produk pascabayar (BPJS, PDAM,
+      // internet/TV pascabayar, dll). Produk prepaid (pulsa, data, e-money,
+      // voucher) tidak menampilkan baris biaya admin di struk.
+      final categoryLower =
+          (data['category'] ?? joined['category'] ?? '').toString().toLowerCase();
+      final isPostpaid = categoryLower.contains('pasca');
 
       detailRows.addAll([
         _kv('Produk', productName, textStyle),
@@ -543,7 +546,8 @@ class UniversalReceipt extends StatelessWidget {
         if (providerRef.isNotEmpty) _kv('No. Ref', providerRef, textStyle),
         const SizedBox(height: 4),
         _kv('Nominal', _money(nominal), textStyle),
-        _kv('Admin', admin > 0 ? _money(admin) : 'Gratis!', textStyle),
+        if (isPostpaid)
+          _kv('Admin', admin > 0 ? _money(admin) : 'Gratis!', textStyle),
         const SizedBox(height: 8),
         _dash(),
         const SizedBox(height: 8),

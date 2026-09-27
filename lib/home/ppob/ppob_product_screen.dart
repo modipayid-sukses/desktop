@@ -4401,7 +4401,6 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             const PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Produk', value: 'Token Listrik'),
             PpobDetailRow(icon: Icons.confirmation_number_outlined, label: 'Nominal', value: (selected?['product_name'] ?? '-').toString()),
             PpobDetailRow(icon: Icons.sell_outlined, label: 'Harga', value: selected != null ? _formatPrice(price) : 'Rp 0'),
-            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: _formatPrice(adminFee)),
           ],
           totalLabel: _formatPrice(total),
           confirmLabel: 'Beli Sekarang',
@@ -4795,10 +4794,9 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             const PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Produk', value: 'Top Up E-Wallet'),
             PpobDetailRow(icon: Icons.confirmation_number_outlined, label: 'Nominal', value: selected != null ? _formatPrice(nominal) : '-'),
             // "Harga" = harga retail = nominal + price dari response API,
-            // belum termasuk admin — admin ditambahkan terpisah di baris di
-            // bawah, dan digabung ke "Total Pembayaran" (`totalLabel`).
+            // belum termasuk admin — admin digabung langsung ke "Total
+            // Pembayaran" (`totalLabel`) tanpa baris terpisah (produk prepaid).
             PpobDetailRow(icon: Icons.sell_outlined, label: 'Harga', value: selected != null ? _formatPrice(harga) : 'Rp 0'),
-            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: _formatPrice(adminFee)),
           ],
           totalLabel: _formatPrice(total),
           confirmLabel: 'Top Up Sekarang',
@@ -6120,7 +6118,6 @@ class _PPOBProductScreenState extends State<PPOBProductScreen> {
             PpobDetailRow(icon: Icons.inventory_2_outlined, label: 'Produk', value: (selected?['product_name'] ?? widget.title).toString()),
             PpobDetailRow(icon: Icons.confirmation_number_outlined, label: 'Nominal', value: selected != null ? _formatPrice(price) : '-'),
             PpobDetailRow(icon: Icons.payments_outlined, label: 'Harga', value: selected != null ? _formatPrice(price) : 'Rp 0'),
-            PpobDetailRow(icon: Icons.receipt_long_outlined, label: 'Admin', value: _formatPrice(adminFee)),
           ],
           totalLabel: _formatPrice(total),
           loading: _isValidatingRecipient,
@@ -8127,13 +8124,6 @@ class _PpobTransactionDetailTemplatePageState
                 _paymentRow('Nomor Handphone', widget.customerId, textSecondary, textPrimary),
               const SizedBox(height: AppSpacing.sm),
               _paymentRow('Harga', widget.formatPrice(price), textSecondary, textPrimary),
-              const SizedBox(height: AppSpacing.sm),
-              _paymentRow(
-                'Biaya Admin',
-                adminFee <= 0 ? 'Gratis!' : widget.formatPrice(adminFee),
-                textSecondary,
-                textPrimary,
-              ),
               const SizedBox(height: AppSpacing.sm),
               Divider(height: 1, color: borderColor),
               const SizedBox(height: AppSpacing.sm),

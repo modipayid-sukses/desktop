@@ -17,6 +17,7 @@ import 'package:modipay/home/home.dart';
 import 'package:modipay/home/seealltransaction.dart';
 import 'package:modipay/profile/profile.dart' as profile_page;
 import 'package:modipay/profile/helpsupport.dart';
+import 'package:modipay/profile/laporan_screen.dart';
 import 'package:modipay/home/notifications.dart';
 import 'package:modipay/design/design.dart';
 import 'package:modipay/login/login_router.dart';
@@ -53,6 +54,9 @@ class _PromoScreenState extends State<PromoScreen> {
   // Layar transaksi aktif di desktop, dirender di content pane (di samping
   // sidebar) bukan sebagai Dialog mengambang — lihat _openTransaction.
   Widget? _desktopActiveScreen;
+  // true untuk layar yang butuh lebar penuh (mis. tabel laporan), bukan
+  // modal sempit 460px yang jadi default content pane.
+  bool _wideDesktopActiveScreen = false;
   // Key stabil agar Navigator bersarang tidak kehilangan stack rute saat
   // parent rebuild selagi alur transaksi berlangsung di beberapa layar.
   GlobalKey<NavigatorState>? _contentNavKey;
@@ -541,7 +545,7 @@ class _PromoScreenState extends State<PromoScreen> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen)).then((_) => _loadPromos());
   }
 
-  void _openTransaction(Widget screen, {BuildContext? customContext, String? menuKey}) {
+  void _openTransaction(Widget screen, {BuildContext? customContext, String? menuKey, bool wideDesktop = false}) {
     final ctx = customContext ?? context;
     if (!isDesktop(ctx)) {
       _navigateAndRefresh(screen);
@@ -562,6 +566,7 @@ class _PromoScreenState extends State<PromoScreen> {
       setState(() {
         _contentNavKey = GlobalKey<NavigatorState>();
         _desktopActiveScreen = screen;
+        _wideDesktopActiveScreen = wideDesktop;
         if (menuKey != null) {
           _activeDesktopMenu = menuKey;
           _activeSubMenuName = null;
@@ -575,6 +580,7 @@ class _PromoScreenState extends State<PromoScreen> {
       if (!mounted) return;
       setState(() {
         _desktopActiveScreen = null;
+        _wideDesktopActiveScreen = false;
         _contentNavKey = null;
         _activeDesktopMenu = 'promo';
         _activeSubMenuName = null;
@@ -609,40 +615,54 @@ class _PromoScreenState extends State<PromoScreen> {
           ),
           const SizedBox(height: 14),
           Expanded(
-            child: Center(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const modalWidth = 460.0;
-                  final modalHeight = constraints.maxHeight;
-                  return SizedBox(
-                    width: modalWidth,
-                    height: modalHeight,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: MediaQuery(
-                        data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            appBarTheme: Theme.of(context).appBarTheme.copyWith(
-                              elevation: 0,
-                              scrolledUnderElevation: 0,
-                              shadowColor: const Color(0xFF000007),
-                            ),
-                          ),
-                          child: Navigator(
-                            key: _contentNavKey,
-                            onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
-                          ),
-                        ),
+            child: _wideDesktopActiveScreen
+                ? Theme(
+                    data: Theme.of(context).copyWith(
+                      appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                        elevation: 0,
+                        scrolledUnderElevation: 0,
+                        shadowColor: const Color(0xFF000007),
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
+                    child: Navigator(
+                      key: _contentNavKey,
+                      onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                    ),
+                  )
+                : Center(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        const modalWidth = 460.0;
+                        final modalHeight = constraints.maxHeight;
+                        return SizedBox(
+                          width: modalWidth,
+                          height: modalHeight,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: MediaQuery(
+                              data: MediaQuery.of(context).copyWith(size: Size(modalWidth, modalHeight)),
+                              child: Theme(
+                                data: Theme.of(context).copyWith(
+                                  appBarTheme: Theme.of(context).appBarTheme.copyWith(
+                                    elevation: 0,
+                                    scrolledUnderElevation: 0,
+                                    shadowColor: const Color(0xFF000007),
+                                  ),
+                                ),
+                                child: Navigator(
+                                  key: _contentNavKey,
+                                  onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => screen),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -1105,6 +1125,12 @@ class _PromoScreenState extends State<PromoScreen> {
                     }),
                   ),
                   _desktopSidebarItem(
+                    icon: Icons.bar_chart_rounded,
+                    label: 'Laporan',
+                    active: _activeDesktopMenu == 'laporan',
+                    onTap: () => _openTransaction(const LaporanScreen(), menuKey: 'laporan', wideDesktop: true),
+                  ),
+                  _desktopSidebarItem(
                     icon: Icons.headset_mic_outlined,
                     label: 'Bantuan / CS',
                     active: _activeDesktopMenu == 'bantuan',
@@ -1258,6 +1284,8 @@ class _PromoScreenState extends State<PromoScreen> {
         return 'Promo';
       case 'riwayat':
         return 'Riwayat Transaksi';
+      case 'laporan':
+        return 'Laporan';
       case 'bantuan':
         return 'Bantuan / CS';
       case 'notifikasi':

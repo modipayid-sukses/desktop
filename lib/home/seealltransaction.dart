@@ -16,6 +16,7 @@ import 'package:modipay/providers/auth_provider.dart';
 import 'package:modipay/home/notifications.dart';
 import 'package:modipay/profile/helpsupport.dart';
 import 'package:modipay/profile/profile.dart' as profile_page;
+import 'package:modipay/profile/laporan_screen.dart';
 import 'package:modipay/login/login_router.dart';
 import 'package:modipay/home/ppob/ppob_menu_route.dart';
 import 'package:modipay/design/design.dart';
@@ -1362,7 +1363,7 @@ class _SeealltransactionState extends State<Seealltransaction> {
                 final item = pagedItems[idx];
                 final name = (item['name'] ?? item['product_name'] ?? '-').toString();
                 final target = _pickFirstNonEmpty([item['customer_no'], item['customer_id'], item['target'], item['order_id']]);
-                final kasir = _pickFirstNonEmpty([item['cashier_name'], item['kasir_name'], item['kasir'], item['cashier']]);
+                final kasir = _pickFirstNonEmpty([item['kasir_code'], item['cashier_name'], item['kasir_name'], item['kasir'], item['cashier']]);
                 final saldoAkhirRaw = item['balance_after'] ?? item['ending_balance'] ?? item['saldo_akhir'] ?? item['balance'];
                 final saldoAkhirVal = saldoAkhirRaw is num
                     ? saldoAkhirRaw.toDouble()
@@ -1867,6 +1868,12 @@ class _SeealltransactionState extends State<Seealltransaction> {
                     onTap: _desktopActiveScreen != null ? _closeDesktopActiveScreen : _loadAllData,
                   ),
                   _desktopSidebarItem(
+                    icon: Icons.bar_chart_rounded,
+                    label: 'Laporan',
+                    active: _activeDesktopMenu == 'laporan',
+                    onTap: () => _openTransaction(const LaporanScreen(), menuKey: 'laporan', wideDesktop: true),
+                  ),
+                  _desktopSidebarItem(
                     icon: Icons.headset_mic_outlined,
                     label: 'Bantuan / CS',
                     active: _activeDesktopMenu == 'bantuan',
@@ -1949,6 +1956,8 @@ class _SeealltransactionState extends State<Seealltransaction> {
         return 'Promo';
       case 'riwayat':
         return 'Riwayat Transaksi';
+      case 'laporan':
+        return 'Laporan';
       case 'bantuan':
         return 'Bantuan / CS';
       case 'notifikasi':
