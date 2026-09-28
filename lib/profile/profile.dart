@@ -23,6 +23,7 @@ import 'kyc_screen.dart';
 import 'notification.dart';
 import 'receipt_settings_screen.dart';
 import 'agent_management_screen.dart';
+import 'laporan_screen.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -389,6 +390,14 @@ class _ProfileState extends State<Profile> {
               _sectionCard(
                 title: 'Informasi',
                 children: [
+                  _menuTile(
+                    icon: Icons.bar_chart_rounded,
+                    title: 'Laporan',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LaporanScreen()),
+                    ),
+                  ),
                   _menuTile(
                     icon: Icons.receipt_long_outlined,
                     title: 'Pengaturan Struk',

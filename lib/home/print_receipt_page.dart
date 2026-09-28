@@ -7,10 +7,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:modipay/services/receipt_settings_service.dart';
+import 'package:modipay/utils/receipt_paper_size.dart';
 import 'package:modipay/widgets/universal_receipt.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Halaman cetak struk: menampilkan layout struk thermal (UniversalReceipt)
@@ -34,11 +37,24 @@ class _PrintReceiptPageState extends State<PrintReceiptPage> {
   Map<String, String> _receiptSettings = const {};
   bool _busy = false;
   bool _settingsLoaded = false;
+  ReceiptPaperSize _paperSize = ReceiptPaperSize.mm80;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadPaperSize();
+  }
+
+  Future<void> _loadPaperSize() async {
+    final size = await ReceiptPaperSizeService.loadPreferred();
+    if (!mounted) return;
+    setState(() => _paperSize = size);
+  }
+
+  Future<void> _onPaperSizeSelected(ReceiptPaperSize size) async {
+    setState(() => _paperSize = size);
+    await ReceiptPaperSizeService.savePreferred(size);
   }
 
   Future<void> _loadSettings() async {
@@ -129,6 +145,59 @@ class _PrintReceiptPageState extends State<PrintReceiptPage> {
     }
   }
 
+  Future<Uint8List> _buildFallbackPdfBytes() async {
+    final orderId = (widget.data['order_id'] ?? widget.data['id'] ?? '-').toString();
+    final doc = pw.Document();
+    doc.addPage(
+      pw.Page(
+        pageFormat: _paperSize.pdfPageFormat,
+        build: (_) => pw.Center(
+          child: pw.Text('Struk transaksi $orderId'),
+        ),
+      ),
+    );
+    return doc.save();
+  }
+
+  Future<void> _printReceipt() async {
+    if (_busy) return;
+    if (Platform.isIOS) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Print di iOS sementara tidak tersedia')),
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final bytes = await _captureBytes();
+      final pageFormat = _paperSize.pdfPageFormat;
+      await Printing.layoutPdf(
+        format: pageFormat,
+        onLayout: (_) async {
+          if (bytes == null) return _buildFallbackPdfBytes();
+          final image = pw.MemoryImage(bytes);
+          final doc = pw.Document();
+          doc.addPage(
+            pw.Page(
+              pageFormat: pageFormat,
+              build: (_) => pw.Center(
+                child: pw.Image(image, fit: pw.BoxFit.contain),
+              ),
+            ),
+          );
+          return doc.save();
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal membuka dialog cetak')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _shareReceipt() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -176,6 +245,11 @@ class _PrintReceiptPageState extends State<PrintReceiptPage> {
         centerTitle: true,
         actions: [
           IconButton(
+            tooltip: 'Cetak',
+            onPressed: _busy ? null : _printReceipt,
+            icon: const Icon(Icons.print_rounded, color: Colors.white),
+          ),
+          IconButton(
             tooltip: 'Bagikan',
             onPressed: _busy ? null : _shareReceipt,
             icon: _busy
@@ -196,28 +270,64 @@ class _PrintReceiptPageState extends State<PrintReceiptPage> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 380),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: RepaintBoundary(
-                        key: _receiptKey,
-                        child: UniversalReceipt(
-                          data: widget.data,
-                          receiptSettings: _receiptSettings,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: ReceiptPaperSize.values.map((size) {
+                            final selected = size == _paperSize;
+                            return ChoiceChip(
+                              label: Text(
+                                size.label,
+                                style: TextStyle(
+                                  fontFamily: 'Gilroy Bold',
+                                  fontSize: 12,
+                                  color: selected
+                                      ? Colors.white
+                                      : const Color(0xFF3F75B7),
+                                ),
+                              ),
+                              selected: selected,
+                              onSelected: _busy
+                                  ? null
+                                  : (_) => _onPaperSizeSelected(size),
+                              selectedColor: const Color(0xFF3F75B7),
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(
+                                  color: Color(0xFF3F75B7), width: 1),
+                            );
+                          }).toList(),
                         ),
                       ),
-                    ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: RepaintBoundary(
+                            key: _receiptKey,
+                            child: UniversalReceipt(
+                              data: widget.data,
+                              receiptSettings: _receiptSettings,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -227,6 +337,29 @@ class _PrintReceiptPageState extends State<PrintReceiptPage> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Row(
             children: [
+              Expanded(
+                child: SizedBox(
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _busy ? null : _printReceipt,
+                    icon: const Icon(Icons.print_rounded, color: Colors.white),
+                    label: const Text(
+                      'Cetak',
+                      style: TextStyle(
+                        fontFamily: 'Gilroy Bold',
+                        fontSize: 15,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3F75B7),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: SizedBox(
                   height: 50,

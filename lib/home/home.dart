@@ -44,6 +44,7 @@ import 'qris/qris_scan_screen.dart';
 import '../login/login_router.dart';
 import '../profile/helpsupport.dart';
 import '../profile/profile.dart' as profile_page;
+import '../profile/laporan_screen.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -2152,6 +2153,12 @@ class _HomeState extends State<Home> {
                     onTap: () => _navigateAndRefresh(const Seealltransaction()),
                   ),
                   _desktopSidebarItem(
+                    icon: Icons.bar_chart_rounded,
+                    label: 'Laporan',
+                    active: _activeDesktopMenu == 'laporan',
+                    onTap: () => _openTransaction(const LaporanScreen(), menuKey: 'laporan', wideDesktop: true),
+                  ),
+                  _desktopSidebarItem(
                     icon: Icons.headset_mic_outlined,
                     label: 'Bantuan / CS',
                     active: _activeDesktopMenu == 'bantuan',
@@ -2234,6 +2241,8 @@ class _HomeState extends State<Home> {
         return 'Promo';
       case 'riwayat':
         return 'Riwayat Transaksi';
+      case 'laporan':
+        return 'Laporan';
       case 'bantuan':
         return 'Bantuan / CS';
       case 'notifikasi':

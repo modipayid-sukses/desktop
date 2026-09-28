@@ -10,6 +10,7 @@ import 'package:modipay/services/receipt_settings_service.dart';
 import 'package:modipay/widgets/purchase_receipt.dart';
 import 'package:modipay/widgets/pln_prepaid_receipt.dart';
 import 'package:modipay/utils/media.dart';
+import 'package:modipay/utils/receipt_paper_size.dart';
 import 'package:modipay/utils/responsive.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -31,17 +32,30 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
   final GlobalKey _receiptKey = GlobalKey();
   bool _printing = false;
   Map<String, String> _receiptSettings = const {};
+  ReceiptPaperSize _paperSize = ReceiptPaperSize.mm80;
 
   @override
   void initState() {
     super.initState();
     _loadReceiptSettings();
+    _loadPaperSize();
   }
 
   Future<void> _loadReceiptSettings() async {
     final settings = await ReceiptSettingsService.load();
     if (!mounted) return;
     setState(() => _receiptSettings = settings);
+  }
+
+  Future<void> _loadPaperSize() async {
+    final size = await ReceiptPaperSizeService.loadPreferred();
+    if (!mounted) return;
+    setState(() => _paperSize = size);
+  }
+
+  Future<void> _onPaperSizeSelected(ReceiptPaperSize size) async {
+    setState(() => _paperSize = size);
+    await ReceiptPaperSizeService.savePreferred(size);
   }
 
   DateTime _parseDateTime(dynamic value) {
@@ -120,6 +134,7 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
     final doc = pw.Document();
     doc.addPage(
       pw.Page(
+        pageFormat: _paperSize.pdfPageFormat,
         build: (_) => pw.Container(
           padding: const pw.EdgeInsets.all(24),
           child: pw.Column(
@@ -179,9 +194,11 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
     setState(() => _printing = true);
     try {
       final bytes = await _captureReceiptBytesWithRetry();
+      final pageFormat = _paperSize.pdfPageFormat;
 
       await Printing.layoutPdf(
-        onLayout: (format) async {
+        format: pageFormat,
+        onLayout: (_) async {
           if (bytes == null) {
             return _buildFallbackPdfBytes();
           }
@@ -190,7 +207,7 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
           final doc = pw.Document();
           doc.addPage(
             pw.Page(
-              pageFormat: format,
+              pageFormat: pageFormat,
               build: (_) => pw.Center(
                 child: pw.Image(image, fit: pw.BoxFit.contain),
               ),
@@ -307,6 +324,30 @@ class _PurchaseTransactionDetailState extends State<PurchaseTransactionDetail> {
               ),
             ),
             const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: ReceiptPaperSize.values.map((size) {
+                final selected = size == _paperSize;
+                return ChoiceChip(
+                  label: Text(
+                    size.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: selected ? Colors.white : const Color(0xFF1565C0),
+                    ),
+                  ),
+                  selected: selected,
+                  onSelected:
+                      _printing ? null : (_) => _onPaperSizeSelected(size),
+                  selectedColor: const Color(0xFF1565C0),
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFF1565C0), width: 1),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
             // Print button
             SizedBox(
               width: double.infinity,
